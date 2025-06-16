@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambiance Weaver - Premium iOS App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #ffffff;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+            font-weight: 400;
+            margin-bottom: 56px;
+        }
+        
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 60px;
+            margin-top: 180px;
+        }
+        
+        .phone-mockup {
+            width: 320px;
+            height: 600px;
+            background: linear-gradient(145deg, #1a1a1a, #0f0f0f);
+            border-radius: 35px;
+            padding: 8px;
+            box-shadow: 
+                0 20px 60px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
+            margin: 0 auto;
+            transition: opacity 0.3s ease;
+        }
+        
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #121212;
+            border-radius: 27px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .screen-label {
+            position: absolute;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 156, 147, 0.2);
+            color: #2d9c93;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(45, 156, 147, 0.3);
+        }
+        
+        /* Onboarding Screen */
+        .onboarding-screen {
+            background: url('cover.png') center center/cover no-repeat, linear-gradient(135deg, #1a2332 0%, #0f1419 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px 40px;
+            height: 100%;
+        }
+        
+        .app-logo {
+            width: 120px;
+            height: 120px;
+            /* background: linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%); */
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            /* box-shadow: 0 12px 32px rgba(45, 156, 147, 0.3); */
+        }
+        
+        .app-logo i {
+            font-size: 48px;
+            color: #ffffff;
+        }
+        
+        .app-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+        
+        .app-subtitle {
+            font-size: 16px;
+            color: #a0a0a0;
+            line-height: 1.5;
+            margin-bottom: 60px;
+            max-width: 250px;
+        }
+        
+        .get-started-btn {
+            width: 200px;
+            height: 50px;
+            background: linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%);
+            border: none;
+            border-radius: 25px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(45, 156, 147, 0.3);
+        }
+        
+        .get-started-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(45, 156, 147, 0.4);
+        }
+        
+        /* Main Screen */
+        .main-screen {
+            padding: 60px 24px 100px;
+        }
+        
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+        
+        .welcome-subtitle {
+            font-size: 14px;
+            color: #a0a0a0;
+            line-height: 1.4;
+        }
+        
+        .input-section {
+            margin-bottom: 32px;
+            position: relative;
+        }
+        
+        .input-row {
+            display: block;
+            position: relative;
+        }
+        
+        .input-controls-header {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        
+        .text-input {
+            width: 100%;
+            height: auto;
+            min-height: 120px;
+            max-height: 180px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(45, 156, 147, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .text-input:focus {
+            outline: none;
+            border-color: #2d9c93;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(45, 156, 147, 0.1);
+        }
+        
+        .text-input::placeholder {
+            color: #666;
+        }
+        
+        .text-input.no-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            overflow-y: hidden;
+            resize: none;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        .input-divider {
+            border: none;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 32px 0;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 32px 0;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .divider span {
+            padding: 0 16px;
+            color: #666;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .inspiration-tags {
+            margin-top: 32px;
+        }
+        
+        .tag-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.13);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(.4,2,.6,1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 24px 0 rgba(45, 156, 147, 0.10), 0 1.5px 4px 0 rgba(0,0,0,0.10);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tag-card:hover {
+            background: rgba(45, 156, 147, 0.13);
+            border-color: rgba(45, 156, 147, 0.25);
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 8px 32px 0 rgba(45, 156, 147, 0.18), 0 2px 8px 0 rgba(0,0,0,0.13);
+        }
+        
+        .tag-icon {
+            font-size: 24px;
+            color: #2d9c93;
+            margin-bottom: 8px;
+        }
+        
+        .tag-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        /* AI Chat Screen */
+        .chat-screen {
+            padding-top: 44px;
+            padding-bottom: 83px;
+        }
+        
+        .chat-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+        }
+        
+        .ai-assistant {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .ai-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #2d9c93, #1a5f5a);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 18px;
+        }
+        
+        .ai-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+        
+        .ai-info p {
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+        }
+        
+        .message-bubble {
+            background: rgba(45, 156, 147, 0.1);
+            border: 1px solid rgba(45, 156, 147, 0.2);
+            border-radius: 18px;
+            padding: 16px;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 85%;
+            backdrop-filter: blur(10px);
+        }
+        
+        .choice-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .choice-btn {
+            background: rgba(255, 255, 255, 0.10);
+            border: 1.5px solid rgba(45, 156, 147, 0.10);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: #ffffff;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(.4,2,.6,1);
+            text-align: left;
+            box-shadow: 0 2px 12px 0 rgba(45, 156, 147, 0.10), 0 1px 3px 0 rgba(0,0,0,0.10);
+            margin-bottom: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .choice-btn:hover {
+            background: rgba(45, 156, 147, 0.13);
+            border-color: rgba(45, 156, 147, 0.22);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 24px 0 rgba(45, 156, 147, 0.18), 0 2px 8px 0 rgba(0,0,0,0.13);
+        }
+        
+        /* Soundscape Player Screen */
+        .player-screen {
+            background: url('coffee.png') center center/cover no-repeat, linear-gradient(135deg, rgba(45, 156, 147, 0.1) 0%, rgba(26, 95, 90, 0.1) 100%);
+            position: relative;
+            overflow: visible;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .background-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(18, 18, 18, 0.3) 0%, rgba(18, 18, 18, 0.8) 100%);
+            z-index: 1;
+        }
+        
+        .player-content {
+            position: relative;
+            z-index: 2;
+            padding: 40px 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .soundscape-info {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .soundscape-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+        
+        .soundscape-description {
+            font-size: 14px;
+            color: #a0a0a0;
+            line-height: 1.4;
+        }
+        
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn.play-pause {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #2d9c93, #1a5f5a);
+            border: none;
+            font-size: 24px;
+            box-shadow: 0 8px 24px rgba(45, 156, 147, 0.3);
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .control-btn.play-pause:hover {
+            transform: scale(1.05);
+        }
+        
+        .audio-controls {
+            flex: 1;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .control-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+        
+        .control-value {
+            font-size: 12px;
+            color: #d4af37;
+            font-weight: 600;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            transition: all 0.2s ease;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #d4af37;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #d4af37;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .action-btn.favorite {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .action-btn.favorite:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+        
+        .lockscreen-player {
+            background: url('coffee.png') center center/cover no-repeat, #222;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-radius: 27px;
+            overflow: hidden;
+        }
+        .lockscreen-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            background: inherit;
+            filter: brightness(0.7) blur(6px) contrast(0.85);
+            z-index: 1;
+        }
+        .lockscreen-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #fff;
+            text-shadow: 0 2px 16px rgba(0,0,0,0.5);
+        }
+        .lockscreen-content .play-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.18);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #fff;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lockscreen-content .play-btn:hover {
+            background: rgba(255,255,255,0.32);
+            transform: scale(1.08);
+        }
+        
+        /* 交互样式 */
+        .phone-mockup {
+            transition: opacity 0.3s ease;
+        }
+
+        .tag-card.selected {
+            background: rgba(45, 156, 147, 0.2);
+            border-color: rgba(45, 156, 147, 0.4);
+            transform: translateY(-4px) scale(1.03);
+        }
+
+        .choice-btn.selected {
+            background: rgba(45, 156, 147, 0.2);
+            border-color: rgba(45, 156, 147, 0.4);
+        }
+
+        .action-btn.favorite.active {
+            background: rgba(255, 77, 77, 0.1);
+            border-color: rgba(255, 77, 77, 0.3);
+        }
+
+        .action-btn.favorite.active i {
+            color: #ff4d4d;
+        }
+
+        /* 滑块样式增强 */
+        .slider:hover::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+
+        .slider:active::-webkit-slider-thumb {
+            transform: scale(1.1);
+        }
+
+        /* 按钮点击效果 */
+        .control-btn:active,
+        .action-btn:active,
+        .choice-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.play-pause:active {
+            transform: scale(0.98);
+        }
+
+        /* 锁屏播放按钮动画 */
+        .lockscreen-content .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 导航栏样式 */
+        .nav-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .back-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            border: none;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(255,255,255,0.95);
+        }
+
+        .back-button i {
+            color: #222;
+            font-size: 18px;
+        }
+
+        .nav-title {
+            flex: 1;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* 底部标签栏 */
+        .tab-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 83px;
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #8e8e93;
+            text-decoration: none;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-item.active {
+            color: #2d9c93;
+        }
+
+        .tab-item i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .chat-with-ai-btn {
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%);
+            border: none;
+            border-radius: 25px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 32px;
+            display: none;
+        }
+
+        .chat-with-ai-btn.visible {
+            display: block;
+        }
+
+        .chat-input-container {
+            position: absolute;
+            bottom: 83px;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input {
+            width: 100%;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 0 16px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .create-soundscape-btn {
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%);
+            border: none;
+            border-radius: 25px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .create-soundscape-btn.visible {
+            display: block;
+        }
+
+        .ai-suggestion {
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            font-size: 14px;
+            color: #aaa;
+            opacity: 0.7;
+            pointer-events: none;
+            user-select: none;
+            z-index: 2;
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(45,156,147,0.10);
+            transition: background 0.2s;
+        }
+        .send-btn:hover {
+            background: linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%);
+        }
+
+        .input-help {
+            position: relative;
+            margin-left: 0;
+            margin-right: 0;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .input-help:hover {
+            color: #2d9c93;
+        }
+        .input-help-popup {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 8px;
+            background: rgba(30,32,34,0.98);
+            color: #fff;
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-size: 14px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+            z-index: 1000;
+            width: 260px;
+        }
+        .input-help-popup.visible {
+            visibility: visible;
+            opacity: 0.98;
+            pointer-events: auto;
+        }
+
+        .voice-btn {
+            position: static;
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .voice-btn:hover {
+            background: #fff;
+        }
+
+        /* Player页面顶部返回按钮样式 */
+        .player-back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            border: none;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(45,156,147,0.10);
+        }
+        .player-back-btn:hover {
+            background: #fff;
+        }
+        .player-back-btn i {
+            color: #222;
+            font-size: 18px;
+        }
+
+        /* 四格排布 */
+        .inspiration-tags.inspiration-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px 16px;
+            margin-top: 32px;
+        }
+        .inspiration-tags.inspiration-grid .tag-card {
+            margin: 0;
+            min-width: 0;
+        }
+
+        .control-btn.big-btn {
+            background: rgba(255,255,255,0.13);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            box-shadow: 0 2px 8px rgba(45,156,147,0.08);
+            border-radius: 50%;
+            font-size: 22px;
+            width: 56px;
+            height: 56px;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .control-btn.big-btn:hover {
+            background: rgba(45,156,147,0.13);
+            box-shadow: 0 4px 16px rgba(45,156,147,0.13);
+        }
+        .control-btn.main-btn {
+            background: linear-gradient(135deg, #2d9c93, #1a5f5a);
+            border: none;
+            box-shadow: 0 8px 32px rgba(45,156,147,0.18);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 32px;
+            width: 80px;
+            height: 80px;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .control-btn.main-btn:hover {
+            background: linear-gradient(135deg, #1a5f5a, #2d9c93);
+            box-shadow: 0 12px 36px rgba(45,156,147,0.22);
+        }
+
+        .action-btn {
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(45,156,147,0.08);
+            font-weight: 600;
+            border-width: 1.5px;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(255,255,255,0.13);
+            color: #fff;
+            transition: background 0.18s, color 0.18s;
+        }
+        .action-btn:hover {
+            background: rgba(45,156,147,0.13);
+            color: #d4af37;
+        }
+
+        /* icon美化 */
+        .input-row .modern-icon {
+            background: none;
+            border: none;
+            box-shadow: none;
+            color: #2d9c93;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            border-radius: 50%;
+            transition: background 0.18s, color 0.18s;
+            margin-left: 4px;
+            margin-right: 0;
+            padding: 0;
+        }
+        .input-row .modern-icon:hover {
+            background: rgba(45,156,147,0.08);
+            color: #1a5f5a;
+        }
+
+        .main-screen.popup-active {
+            overflow: visible !important; /* Temporarily override to show popup outside scroll area */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ambiance Weaver</h1>
+            <p>Premium iOS App Design - Wellness & Productivity Soundscapes</p>
+        </div>
+        
+        <div class="screens-grid">
+            <!-- Screen 1: Onboarding -->
+            <div class="phone-mockup">
+                <div class="screen-label">1. Onboarding</div>
+                <div class="screen">
+                    <div class="onboarding-screen">
+                        <div class="app-logo">
+                            <img src="logo.png" alt="App Logo" style="width: 100px; height: 100px; border-radius: 28px;">
+                        </div>
+                        <h1 class="app-title">Ambiance Weaver</h1>
+                        <p class="app-subtitle">Transform your thoughts into personalized soundscapes for focus, relaxation, and inspiration</p>
+                        <button class="get-started-btn">Get Started</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screen 2: Main Interaction -->
+            <div class="phone-mockup">
+                <div class="screen-label">2. Main Interaction</div>
+                <div class="screen">
+                    <div class="nav-bar">
+                        <button class="back-button"><i class="fas fa-chevron-left"></i></button>
+                        <div class="nav-title">Create Soundscape</div>
+                    </div>
+                    <div class="main-screen" style="overflow-y:auto;max-height:calc(100% - 44px - 83px);">
+                        <div class="welcome-section">
+                            <h2 class="welcome-title">Welcome back, Alex</h2>
+                            <p class="welcome-subtitle">Describe your perfect atmosphere or paste a poem, quote, or movie line to inspire music</p>
+                        </div>
+                        <div class="input-section">
+                            <div class="input-row">
+                                <div class="input-controls-header">
+                                    <button class="voice-btn modern-icon" title="Voice input"><i class="fas fa-microphone"></i></button>
+                                    <div class="input-help modern-icon" title="What can I type?">
+                                        <i class="fas fa-question-circle"></i>
+                                        <div class="input-help-popup">
+                                            <b>What can I type?</b><br>
+                                            <ul style="margin:8px 0 0 16px;padding:0;">
+                                                <li>Describe your ideal soundscape</li>
+                                                <li>Paste a poem, quote, or movie line</li>
+                                                <li>Try: "A cozy café on a rainy afternoon"</li>
+                                                <li>Try: "Gentle forest sounds with a distant waterfall"</li>
+                                                <li>Try: "The calm before a thunderstorm"</li>
+                                                <li>Try: "A quiet library with turning pages"</li>
+                                                <li>Try: "\"To see a world in a grain of sand...\""</li>
+                                            </ul>
+                                            <div style="margin-top:8px;color:#b2dfdb;">AI will generate a unique soundscape for you!</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <textarea class="text-input no-scrollbar" placeholder='Try: "A cozy café on a rainy afternoon"
+Try: "Gentle forest sounds with a distant waterfall"
+Try: "The calm before a thunderstorm"
+Try: "A quiet library with turning pages"
+Try: "To see a world in a grain of sand..."' style="resize:none;overflow:hidden;"></textarea>
+                                <div class="ai-suggestion"></div>
+                            </div>
+                        </div>
+                        <hr class="input-divider">
+                        <div class="inspiration-tags inspiration-grid">
+                            <div class="tag-card">
+                                <div class="tag-icon"><i class="fas fa-brain"></i></div>
+                                <div class="tag-title">Focus</div>
+                            </div>
+                            <div class="tag-card">
+                                <div class="tag-icon"><i class="fas fa-bed"></i></div>
+                                <div class="tag-title">Relax</div>
+                            </div>
+                            <div class="tag-card">
+                                <div class="tag-icon"><i class="fas fa-lightbulb"></i></div>
+                                <div class="tag-title">Inspire</div>
+                            </div>
+                            <div class="tag-card">
+                                <div class="tag-icon"><i class="fas fa-spa"></i></div>
+                                <div class="tag-title">Meditate</div>
+                            </div>
+                        </div>
+                        <button class="chat-with-ai-btn">Chat with Ambiance AI</button>
+                    </div>
+                    <div class="tab-bar">
+                        <a href="#" class="tab-item active">
+                            <i class="fas fa-home"></i>
+                            <span>Home</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-compass"></i>
+                            <span>Explore</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-heart"></i>
+                            <span>Favorites</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screen 3: AI Chat -->
+            <div class="phone-mockup">
+                <div class="screen-label">3. AI Chat</div>
+                <div class="screen">
+                    <div class="nav-bar">
+                        <button class="back-button"><i class="fas fa-chevron-left"></i></button>
+                        <div class="nav-title">Ambiance AI</div>
+                    </div>
+                    <div class="chat-screen" style="overflow-y:auto;max-height:calc(100% - 44px - 83px);">
+                        <div class="chat-messages">
+                            <div class="message">
+                                <div class="message-bubble">
+                                    I love the cozy café scene you described! To create the perfect atmosphere, I'd like to know more about the rain you mentioned.
+                                    <div class="choice-buttons">
+                                        <button class="choice-btn">Light drizzle on windows</button>
+                                        <button class="choice-btn">Steady rainfall outside</button>
+                                        <button class="choice-btn">Heavy rain with thunder</button>
+                                        <button class="choice-btn">No rain, just cozy indoors</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="message" style="display: none;">
+                                <div class="message-bubble">
+                                    Perfect! And for the café ambiance - what kind of background sounds would complement your focus?
+                                    <div class="choice-buttons">
+                                        <button class="choice-btn">Gentle coffee shop chatter</button>
+                                        <button class="choice-btn">Quiet instrumental music</button>
+                                        <button class="choice-btn">Minimal - just subtle sounds</button>
+                                        <button class="choice-btn">Ambient city sounds</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="input-divider">
+                        <div class="input-row" style="margin-bottom:0;">
+                            <input type="text" class="chat-input" placeholder="Type your message...">
+                            <button class="send-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        <button class="create-soundscape-btn">Create Your Personalized Soundscape</button>
+                    </div>
+                    <div class="tab-bar">
+                        <a href="#" class="tab-item active">
+                            <i class="fas fa-home"></i>
+                            <span>Home</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-compass"></i>
+                            <span>Explore</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-heart"></i>
+                            <span>Favorites</span>
+                        </a>
+                        <a href="#" class="tab-item">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screen 4: Soundscape Player -->
+            <div class="phone-mockup">
+                <div class="screen-label">4. Soundscape Player</div>
+                <div class="screen" style="position:relative;">
+                    <button class="player-back-btn"><i class="fas fa-chevron-left"></i></button>
+                    <div class="player-screen">
+                        <div class="background-overlay"></div>
+                        <div class="player-content" style="width:100%;max-width:320px;padding:24px 10px 0 10px;">
+                            <div class="soundscape-info" style="text-align:center;margin-bottom:18px;">
+                                <h2 class="soundscape-title" style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-0.01em;">Rainy Café Focus</h2>
+                                <p class="soundscape-description" style="font-size:0.95rem;color:#e0e0e0;line-height:1.3;">A cozy café atmosphere with gentle rain and soft background chatter</p>
+                            </div>
+                            <div class="playback-controls" style="display:flex;justify-content:center;align-items:center;gap:36px;margin-bottom:28px;">
+                                <button class="control-btn big-btn"><i class="fas fa-step-backward"></i></button>
+                                <button class="control-btn play-pause main-btn"><i class="fas fa-pause"></i></button>
+                                <button class="control-btn big-btn"><i class="fas fa-step-forward"></i></button>
+                            </div>
+                            <div class="audio-controls" style="width:100%;margin-bottom:12px;">
+                                <div class="control-group">
+                                    <div class="control-label">
+                                        <span class="control-name">Rain Intensity</span>
+                                        <span class="control-value">75%</span>
+                                    </div>
+                                    <input type="range" class="slider" min="0" max="100" value="75">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-label">
+                                        <span class="control-name">Café Chatter</span>
+                                        <span class="control-value">45%</span>
+                                    </div>
+                                    <input type="range" class="slider" min="0" max="100" value="45">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-label">
+                                        <span class="control-name">Coffee Machine</span>
+                                        <span class="control-value">30%</span>
+                                    </div>
+                                    <input type="range" class="slider" min="0" max="100" value="30">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-label">
+                                        <span class="control-name">Footsteps</span>
+                                        <span class="control-value">20%</span>
+                                    </div>
+                                    <input type="range" class="slider" min="0" max="100" value="20">
+                                </div>
+                            </div>
+                            <div class="action-buttons" style="margin-top:10px;gap:10px;">
+                                <button class="action-btn favorite" style="font-size:13px;padding:0 8px;">
+                                    <i class="fas fa-heart"></i>
+                                    Save to Favorites
+                                </button>
+                                <button class="action-btn" style="font-size:13px;padding:0 8px;">
+                                    <i class="fas fa-share"></i>
+                                    Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screen 5: Lock Screen Music -->
+            <div class="phone-mockup">
+                <div class="screen-label">6. lock screen sound</div>
+                <div class="screen">
+                    <div class="lockscreen-player" style="height:100%;position:relative;">
+                        <div class="lockscreen-bg"></div>
+                        <div class="lockscreen-time" style="position:absolute;top:38px;left:0;width:100%;text-align:center;z-index:2;">
+                            <div style="font-size:1.1rem;letter-spacing:0.08em;color:#f5f5f5;opacity:0.85;">Friday, June 6</div>
+                            <div style="font-size:3.2rem;font-weight:700;line-height:1;color:#fff;margin-top:8px;letter-spacing:0.01em;">2:05</div>
+                        </div>
+                        <div class="lockscreen-music" style="position:absolute;left:50%;bottom:32px;transform:translateX(-50%);width:90%;max-width:270px;z-index:2;">
+                            <div style="background:rgba(30,32,34,0.60);backdrop-filter:blur(16px);border-radius:22px;padding:20px 18px 14px 18px;box-shadow:0 4px 24px rgba(0,0,0,0.18);border:1.5px solid rgba(255,255,255,0.10);">
+                                <div style="display:flex;align-items:center;gap:14px;">
+                                    <div style="width:40px;height:40px;background:#222;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+                                        <i class="fas fa-mug-hot" style="font-size:1.5rem;color:#fff;"></i>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:700;font-size:1.1rem;color:#fff;letter-spacing:0.01em;">Rainy Café Focus</div>
+                                        <div style="font-size:0.97rem;color:#e0e0e0;opacity:0.85;">Ambiance Weaver</div>
+                                    </div>
+                                </div>
+                                <div style="margin:18px 0 10px 0;">
+                                    <div style="height:4px;width:100%;background:rgba(255,255,255,0.18);border-radius:2px;overflow:hidden;">
+                                        <div style="width:60%;height:100%;background:linear-gradient(90deg,#d4af37,#fff);border-radius:2px;"></div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#e0e0e0;margin-top:2px;opacity:0.8;">
+                                        <span>2:57</span>
+                                        <span>-0:45</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:center;gap:22px;margin-top:4px;">
+                                    <button style="background:none;border:none;color:#fff;font-size:1.3rem;opacity:0.7;cursor:pointer;border-radius:50%;width:36px;height:36px;transition:background 0.2s;"><i class="fas fa-backward"></i></button>
+                                    <button style="background:linear-gradient(135deg,#2d9c93,#1a5f5a);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.10);cursor:pointer;transition:background 0.2s;"><i class="fas fa-play"></i></button>
+                                    <button style="background:none;border:none;color:#fff;font-size:1.3rem;opacity:0.7;cursor:pointer;border-radius:50%;width:36px;height:36px;transition:background 0.2s;"><i class="fas fa-forward"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 全局状态管理
+        const state = {
+            isPlaying: false,
+            currentScreen: 0,
+            soundscape: {
+                rainIntensity: 75,
+                cafeChatter: 45,
+                coffeeMachine: 30,
+                footsteps: 20
+            },
+            chatState: {
+                currentQuestion: 1,
+                selectedOptions: []
+            }
+        };
+
+        // 初始化所有交互
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeOnboarding();
+            initializeMainScreen();
+            initializeChatScreen();
+            initializePlayerScreen();
+            initializeLockScreen();
+            initializeNavigation();
+        });
+
+        // 初始化导航
+        function initializeNavigation() {
+            const backButtons = document.querySelectorAll('.back-button');
+            backButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const currentScreen = btn.closest('.phone-mockup');
+                    currentScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        currentScreen.style.display = 'none';
+                    }, 300);
+                });
+            });
+
+            const tabItems = document.querySelectorAll('.tab-item');
+            tabItems.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    tabItems.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                });
+            });
+        }
+
+        // 初始化 Onboarding 页面
+        function initializeOnboarding() {
+            const getStartedBtn = document.querySelector('.get-started-btn');
+            getStartedBtn.addEventListener('click', () => {
+                document.querySelector('.phone-mockup:nth-child(1)').style.opacity = '0';
+                setTimeout(() => {
+                    document.querySelector('.phone-mockup:nth-child(1)').style.display = 'none';
+                }, 300);
+            });
+        }
+
+        // 初始化主页面
+        function initializeMainScreen() {
+            const tagCards = document.querySelectorAll('.tag-card');
+            const chatWithAiBtn = document.querySelector('.chat-with-ai-btn');
+            const textInput = document.querySelector('.text-input');
+            const mainScreen = document.querySelector('.main-screen');
+
+            let tagSelected = false;
+            let textEntered = false;
+
+            tagCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    tagCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    tagSelected = true;
+                    if (tagSelected || textEntered) chatWithAiBtn.classList.add('visible');
+                });
+            });
+
+            textInput.addEventListener('input', () => {
+                textEntered = textInput.value.trim().length > 0;
+                if (tagSelected || textEntered) chatWithAiBtn.classList.add('visible');
+            });
+
+            chatWithAiBtn.addEventListener('click', () => {
+                const chatScreen = document.querySelector('.phone-mockup:nth-child(3)');
+                const mainScreenMockup = document.querySelector('.phone-mockup:nth-child(2)');
+                mainScreenMockup.style.opacity = '0';
+                setTimeout(() => {
+                    mainScreenMockup.style.display = 'none';
+                    chatScreen.style.display = 'block';
+                    setTimeout(() => {
+                        chatScreen.style.opacity = '1';
+                    }, 50);
+                }, 300);
+            });
+
+            // 问号浮窗逻辑
+            const helpBtn = document.querySelector('.input-help');
+            const helpPopup = document.querySelector('.input-help-popup');
+            let hideTimer;
+
+            const showPopup = () => {
+                clearTimeout(hideTimer);
+                helpPopup.classList.add('visible');
+            };
+
+            const hidePopup = () => {
+                hideTimer = setTimeout(() => {
+                    helpPopup.classList.remove('visible');
+                }, 100);
+            };
+
+            helpBtn.addEventListener('mouseenter', showPopup);
+            helpBtn.addEventListener('mouseleave', hidePopup);
+            helpPopup.addEventListener('mouseenter', showPopup);
+            helpPopup.addEventListener('mouseleave', hidePopup);
+        }
+
+        // 初始化聊天页面
+        function initializeChatScreen() {
+            const choiceButtons = document.querySelectorAll('.choice-btn');
+            const chatInput = document.querySelector('.chat-input');
+            const createSoundscapeBtn = document.querySelector('.create-soundscape-btn');
+            const messages = document.querySelectorAll('.message');
+
+            choiceButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 获取当前问题组的所有按钮
+                    const currentQuestionButtons = btn.closest('.message').querySelectorAll('.choice-btn');
+                    
+                    // 移除当前问题组其他按钮的选中状态
+                    currentQuestionButtons.forEach(b => b.classList.remove('selected'));
+                    // 添加当前按钮的选中状态
+                    btn.classList.add('selected');
+
+                    // 更新状态
+                    state.chatState.selectedOptions[state.chatState.currentQuestion - 1] = btn.textContent;
+
+                    // 如果是第一个问题，显示第二个问题
+                    if (state.chatState.currentQuestion === 1) {
+                        state.chatState.currentQuestion = 2;
+                        messages[1].style.display = 'block';
+                    }
+
+                    // 如果两个问题都回答了，显示创建按钮
+                    if (state.chatState.selectedOptions.length === 2) {
+                        createSoundscapeBtn.classList.add('visible');
+                    }
+                });
+            });
+
+            createSoundscapeBtn.addEventListener('click', () => {
+                const chatScreen = document.querySelector('.phone-mockup:nth-child(3)');
+                const playerScreen = document.querySelector('.phone-mockup:nth-child(4)');
+                
+                chatScreen.style.opacity = '0';
+                setTimeout(() => {
+                    chatScreen.style.display = 'none';
+                    playerScreen.style.display = 'block';
+                    setTimeout(() => {
+                        playerScreen.style.opacity = '1';
+                    }, 50);
+                }, 300);
+            });
+        }
+
+        // 初始化播放器页面
+        function initializePlayerScreen() {
+            const playPauseBtn = document.querySelector('.play-pause');
+            const sliders = document.querySelectorAll('.slider');
+            const favoriteBtn = document.querySelector('.action-btn.favorite');
+
+            // 播放/暂停按钮
+            playPauseBtn.addEventListener('click', () => {
+                state.isPlaying = !state.isPlaying;
+                const icon = playPauseBtn.querySelector('i');
+                icon.className = state.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+            });
+
+            // 滑块控制
+            sliders.forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    const controlName = e.target.previousElementSibling.querySelector('.control-name').textContent;
+                    const controlValue = e.target.previousElementSibling.querySelector('.control-value');
+                    controlValue.textContent = `${value}%`;
+                    
+                    // 更新状态
+                    switch(controlName) {
+                        case 'Rain Intensity':
+                            state.soundscape.rainIntensity = value;
+                            break;
+                        case 'Café Chatter':
+                            state.soundscape.cafeChatter = value;
+                            break;
+                        case 'Coffee Machine':
+                            state.soundscape.coffeeMachine = value;
+                            break;
+                        case 'Footsteps':
+                            state.soundscape.footsteps = value;
+                            break;
+                    }
+                });
+            });
+
+            // 收藏按钮
+            favoriteBtn.addEventListener('click', () => {
+                favoriteBtn.classList.toggle('active');
+                const icon = favoriteBtn.querySelector('i');
+                icon.style.color = favoriteBtn.classList.contains('active') ? '#ff4d4d' : '#d4af37';
+            });
+        }
+
+        // 初始化锁屏页面
+        function initializeLockScreen() {
+            const lockPlayBtn = document.querySelector('.lockscreen-player .play-btn');
+            lockPlayBtn.addEventListener('click', () => {
+                state.isPlaying = !state.isPlaying;
+                const icon = lockPlayBtn.querySelector('i');
+                icon.className = state.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+            });
+        }
+
+        // AI 智能补全功能
+        const suggestionMap = {
+            cafe: "cafe on a rainy afternoon",
+            rain: "rain gently falling outside the window",
+            forest: "forest with birds chirping softly",
+            thunder: "thunder rumbling in the distance",
+            fireplace: "fireplace crackling warmly",
+            ocean: "ocean waves rolling onto the shore"
+        };
+        const textInput = document.querySelector('.text-input');
+        const aiSuggestion = document.querySelector('.ai-suggestion');
+        textInput.addEventListener('input', () => {
+            const val = textInput.value.trim().toLowerCase();
+            let suggestion = '';
+            Object.keys(suggestionMap).forEach(key => {
+                if(val.endsWith(key)) suggestion = suggestionMap[key];
+            });
+            aiSuggestion.textContent = suggestion && !val.endsWith(suggestion) ? suggestion : '';
+        });
+        textInput.addEventListener('keydown', (e) => {
+            if(e.key === 'Tab' && aiSuggestion.textContent) {
+                e.preventDefault();
+                textInput.value = aiSuggestion.textContent;
+                aiSuggestion.textContent = '';
+            }
+        });
+
+        const voiceBtn = document.querySelector('.voice-btn');
+        voiceBtn.addEventListener('click', () => {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Your browser does not support speech recognition.');
+                return;
+            }
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.start();
+            voiceBtn.classList.add('listening');
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                textInput.value = transcript;
+                textInput.dispatchEvent(new Event('input'));
+                voiceBtn.classList.remove('listening');
+            };
+            recognition.onerror = () => {
+                voiceBtn.classList.remove('listening');
+            };
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening');
+            };
+        });
+    </script>
+</body>
+</html>

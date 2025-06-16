@@ -1,0 +1,31 @@
+import React from 'react';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { theme } from './theme';
+import MainScreen from './components/MainScreen';
+import Overview from './components/Overview';
+import Onboarding from './components/Onboarding';
+import Player from './components/Player';
+import Lockscreen from './components/Lockscreen';
+import ChatScreen from './components/ChatScreen';
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/main" element={<MainScreen />} />
+          <Route path="/chat" element={<ChatScreen />} />
+          <Route path="/player" element={<Player />} />
+          <Route path="/lockscreen" element={<Lockscreen />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+export default App;
