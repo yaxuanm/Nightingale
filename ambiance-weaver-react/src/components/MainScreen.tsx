@@ -50,7 +50,7 @@ const MainScreen = () => {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    navigate('/chat', { state: { initialInput: suggestion, mode: mode } });
+    setInputValue(suggestion);
   };
 
   return (

@@ -17,78 +17,68 @@ class AudioEffectsService:
 
     def apply_reverb(self, audio: AudioSegment, params: Dict[str, Any]) -> AudioSegment:
         """
-        应用混响效果
+        Apply reverb effect
         params:
-            - room_size: 混响房间大小 (0.0-1.0)
-            - damping: 阻尼系数 (0.0-1.0)
-            - wet_level: 湿信号电平 (0.0-1.0)
-            - dry_level: 干信号电平 (0.0-1.0)
+            - room_size: Reverb room size (0.0-1.0)
+            - damping: Damping factor (0.0-1.0)
+            - wet_level: Wet signal level (0.0-1.0)
+            - dry_level: Dry signal level (0.0-1.0)
         """
-        try:
-            room_size = params.get('room_size', 0.5)
-            damping = params.get('damping', 0.5)
-            wet_level = params.get('wet_level', 0.3)
-            dry_level = params.get('dry_level', 0.7)
-            
-            # 使用pydub的reverb效果
-            return pydub.effects.reverb(audio, room_size=room_size, damping=damping, 
-                         wet_level=wet_level, dry_level=dry_level)
-        except Exception as e:
-            logger.error(f"应用混响效果失败: {str(e)}")
-            return audio
+        logger.warning("Reverb effect is currently not supported. Consider using a more specialized audio processing library.")
+        return audio # Return original audio, skip reverb
 
     def apply_echo(self, audio: AudioSegment, params: Dict[str, Any]) -> AudioSegment:
         """
-        应用回声效果
+        Apply echo effect
         params:
-            - delay: 延迟时间(毫秒)
-            - decay: 衰减系数 (0.0-1.0)
-            - repeats: 重复次数
+            - delay: Delay time (milliseconds)
+            - decay: Decay factor (0.0-1.0)
+            - repeats: Number of repeats
         """
         try:
             delay = params.get('delay', 300)
             decay = params.get('decay', 0.5)
             repeats = params.get('repeats', 3)
             
-            # 使用pydub的echo效果
+            # Use pydub's echo effect
             return pydub.effects.echo(audio, delay=delay, decay=decay, repeats=repeats)
         except Exception as e:
-            logger.error(f"应用回声效果失败: {str(e)}")
+            logger.error(f"Failed to apply echo effect: {str(e)}")
             return audio
 
     def apply_fade(self, audio: AudioSegment, params: Dict[str, Any]) -> AudioSegment:
         """
-        应用淡入淡出效果
+        Apply fade in/out effect
         params:
-            - fade_in: 淡入时长(毫秒)
-            - fade_out: 淡出时长(毫秒)
+            - fade_in: Fade-in duration (milliseconds)
+            - fade_out: Fade-out duration (milliseconds)
         """
         try:
             fade_in = params.get('fade_in', 1000)
             fade_out = params.get('fade_out', 1000)
             
-            # 应用淡入淡出
+            # Apply fade in/out
             return audio.fade_in(fade_in).fade_out(fade_out)
         except Exception as e:
-            logger.error(f"应用淡入淡出效果失败: {str(e)}")
+            logger.error(f"Failed to apply fade effect: {str(e)}")
             return audio
 
     def adjust_volume(self, audio: AudioSegment, params: Dict[str, Any]) -> AudioSegment:
         """
-        调整音量
+        Adjust volume
         params:
-            - volume_db: 音量调整值(dB)
+            - volume_db: Volume adjustment in dB
         """
         try:
             volume_db = params.get('volume_db', 0)
             return audio + volume_db
         except Exception as e:
-            logger.error(f"调整音量失败: {str(e)}")
+            logger.error(f"Failed to adjust volume: {str(e)}")
             return audio
 
     def process_audio(self, audio: AudioSegment, effects_config: Dict[str, Dict[str, Any]]) -> AudioSegment:
         """
-        处理音频，应用多个效果
+        Process audio, applying multiple effects
         effects_config: {
             'effect_name': {
                 'param1': value1,
@@ -105,5 +95,5 @@ class AudioEffectsService:
                     
             return processed_audio
         except Exception as e:
-            logger.error(f"音频处理失败: {str(e)}")
+            logger.error(f"Audio processing failed: {str(e)}")
             return audio 

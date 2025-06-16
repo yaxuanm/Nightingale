@@ -12,127 +12,174 @@ class AudioGenerationService:
     def __init__(self):
         self.model = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {self.device}")
-        # 初始化 Gemini
+        # Initialize Gemini
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.gemini_model = genai.GenerativeModel('gemini-pro')
-        # 初始化音频效果服务
+        self.gemini_model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # Initialize audio effects service
         self.effects_service = AudioEffectsService()
-        # 设置输出目录
+        # Set output directory
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.output_dir = os.path.join(self.base_dir, "audio_output")
         os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Mode-specific configurations
+        self.mode_prompts = {
+            "focus": """A quiet workspace with {description}. The sounds are clear and consistent, with gentle background elements that don't distract.""",
+            
+            "relax": """A peaceful environment with {description}. The sounds are soft and natural, creating a calming atmosphere with gentle transitions.""",
+            
+            "story": """An immersive scene with {description}. The sounds create a rich environment with distinct elements that tell a story through audio.""",
+            
+            "music": """A musical atmosphere with {description}. The sounds blend together in a harmonious way, creating a melodic and rhythmic experience."""
+        }
+        
+        self.mode_effects = {
+            "focus": {
+                "volume": {"volume_db": -3},  # Slightly lower volume
+                "fade": {"fade_in": 2000, "fade_out": 2000}  # Longer fade
+            },
+            "relax": {
+                "reverb": {"room_size": 0.7, "damping": 0.5},  # More reverb
+                "fade": {"fade_in": 3000, "fade_out": 3000}  # Longer fade
+            },
+            "story": {
+                "echo": {"delay": 200, "decay": 0.3},  # Slight echo
+                "volume": {"volume_db": 0}  # Original volume
+            },
+            "music": {
+                "reverb": {"room_size": 0.5, "damping": 0.7},  # Moderate reverb
+                "echo": {"delay": 150, "decay": 0.2}  # Slight echo
+            }
+        }
 
     def load_model(self):
         if self.model is None:
             try:
-                print("正在加载 AudioGen 模型...")
+                print("Loading AudioGen model...")
                 self.model = AudioGen.get_pretrained('facebook/audiogen-medium')
-                self.model.to(self.device)
-                print("AudioGen 模型加载成功！")
+                print("AudioGen model loaded successfully!")
             except Exception as e:
-                print(f"模型加载失败: {str(e)}")
+                print(f"Model loading failed: {str(e)}")
                 raise
         return self.model
 
     def convert_to_scene_description(self, text: str) -> Optional[str]:
-        """使用 Gemini 将诗句或文学描述转换为场景描述"""
+        """Use Gemini to convert poetic or literary descriptions into scene descriptions"""
         try:
-            prompt = """你是一个专业的音频场景描述专家。
-            你的任务是将诗句或文学描述转换为具体的场景描述，包含声音元素。
-            例如：
-            - 输入："小楼一夜听春雨"
-            - 输出："轻柔的春雨声，滴落在木质屋檐上，远处偶尔传来几声鸟鸣，营造出宁静的夜晚氛围"
+            prompt = """You are an expert in audio scene description.
+            Your task is to convert poetic or literary descriptions into concrete scene descriptions, including sound elements.
+            For example:
+            - Input: "小楼一夜听春雨"
+            - Output: "Soft spring rain drops on a wooden roof, with occasional distant bird chirps, creating a peaceful night ambiance."
             
-            请确保输出包含具体的环境声音描述，而不是抽象的诗意表达。
+            Please ensure the output contains concrete environmental sound descriptions, not abstract poetic expressions.
+            Keep the description concise and focused on sound elements, ideally under 50 words.
             
-            现在，请将以下文本转换为场景描述：
+            Now, please convert the following text into a scene description:
             """
             
-            response = self.gemini_model.generate_content(prompt + text)
+            generation_config = {
+                "max_output_tokens": 100, # Limit output length to around 50 words
+            }
+            
+            response = self.gemini_model.generate_content(prompt + text, generation_config=generation_config)
             return response.text
         except Exception as e:
-            print(f"Gemini 转换失败: {e}")
+            print(f"Gemini conversion failed: {e}")
             return None
 
-    async def generate_audio(self, description: str, duration: int = 5, is_poem: bool = False, 
-                      effects_config: Optional[Dict[str, Dict[str, Any]]] = None) -> Optional[str]:
+    async def generate_audio(self, description: str, duration: int = 15, is_poem: bool = False, 
+                      effects_config: Optional[Dict[str, Dict[str, Any]]] = None,
+                      mode: str = "default") -> Optional[str]:
         """
-        生成音频并应用效果
+        Generate audio and apply effects
         effects_config: {
             'reverb': {'room_size': 0.5, 'damping': 0.5},
             'echo': {'delay': 300, 'decay': 0.5},
             'fade': {'fade_in': 1000, 'fade_out': 1000},
             'volume': {'volume_db': 0}
         }
+        mode: One of "focus", "relax", "story", "music", or "default"
         """
         try:
+            if duration > 15:
+                print(f"Warning: Generating {duration} seconds of audio. Quality may vary with longer durations.")
+            
             model = self.load_model()
             
-            # 如果是诗句，先转换为场景描述
+            # If it's a poem, first convert to a scene description
             if is_poem:
                 scene_description = self.convert_to_scene_description(description)
                 if scene_description:
                     description = scene_description
-                    print(f"转换后的场景描述: {description}")
+                    print(f"Converted scene description: {description}")
                 else:
-                    print("使用原始描述继续生成")
-
-            # 设置生成参数
-            model.set_generation_params(duration=duration)
+                    print("Using original description for generation.")
             
-            # 生成音频
-            print(f"正在生成音频: {description}")
+            # Apply mode-specific prompt if mode is specified
+            if mode in self.mode_prompts:
+                description = self.mode_prompts[mode].format(description=description)
+                print(f"Applied {mode} mode prompt")
+            
+            # Set generation parameters
+            model.set_generation_params(duration=duration)
+            # Generate audio
+            print(f"Generating audio for: {description}")
             wav = model.generate([description], progress=True)
             
-            # 保存原始音频
+            # Save original audio to temporary path
             temp_path = os.path.join(self.output_dir, f"temp_{hash(description)}.wav")
             audio_write(
                 temp_path.replace('.wav', ''),
-                wav.cpu(),
+                wav[0].cpu(),
                 model.sample_rate,
                 strategy="loudness",
                 loudness_compressor=True
             )
             
+            local_final_path = temp_path
+
             try:
-                # 加载音频并应用效果
+                # Load audio and apply effects
+                audio = AudioSegment.from_wav(temp_path)
+                
+                # Apply mode-specific effects if mode is specified and no custom effects_config is provided
+                if mode in self.mode_effects and not effects_config:
+                    effects_config = self.mode_effects[mode]
+                    print(f"Applied {mode} mode effects")
+                
                 if effects_config:
-                    audio = AudioSegment.from_wav(temp_path)
                     processed_audio = self.effects_service.process_audio(audio, effects_config)
                     
-                    # 保存处理后的音频
-                    output_path = os.path.join(self.output_dir, f"processed_{hash(description)}.wav")
-                    processed_audio.export(output_path, format="wav")
+                    # Save processed audio
+                    processed_output_path = os.path.join(self.output_dir, f"processed_{hash(description)}.wav")
+                    processed_audio.export(processed_output_path, format="wav")
+                    local_final_path = processed_output_path # Update final local path to processed path
                     
-                    # 删除临时文件
+                    # Delete original temporary file
                     os.remove(temp_path)
-                    
-                    # 上传到 Supabase
-                    cloud_url = await storage_service.upload_audio(output_path, description)
-                    
-                    # 删除本地文件
-                    os.remove(output_path)
-                    
+
+                # Attempt to upload to Supabase
+                cloud_url = await storage_service.upload_audio(local_final_path, description)
+                
+                if cloud_url:
+                    # If upload successful, delete local file and return cloud URL
+                    os.remove(local_final_path)
                     return cloud_url
-                
-                # 如果没有效果配置，直接上传原始文件
-                cloud_url = await storage_service.upload_audio(temp_path, description)
-                
-                # 删除本地文件
-                os.remove(temp_path)
-                
-                return cloud_url
+                else:
+                    # If upload fails, return local file path
+                    print(f"Supabase upload failed, returning local file: {local_final_path}")
+                    return local_final_path
                 
             except Exception as e:
-                print(f"音频处理或上传失败: {e}")
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                raise
+                print(f"Audio processing or upload failed: {e}")
+                # If an error occurs, return local file path, do not delete
+                print(f"Returning local file due to error: {local_final_path}")
+                return local_final_path
                 
         except Exception as e:
-            print(f"音频生成失败: {e}")
+            print(f"Audio generation failed: {e}")
             return None
 
-# 创建单例实例
+# Create singleton instance
 audio_service = AudioGenerationService() 

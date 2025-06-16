@@ -24,7 +24,7 @@ interface Message {
   text: string;
 }
 
-type ChatStage = 'intro' | 'atmosphere' | 'mood' | 'elements' | 'confirm' | 'free_chat';
+type ChatStage = 'intro' | 'atmosphere' | 'mood' | 'elements' | 'confirm' | 'free_chat' | 'complete';
 
 const ChatContainer = styled(Box)(({ theme }) => ({
   width: '100%',
@@ -70,6 +70,7 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState<ChatStage>('intro');
   const [selectedChoices, setSelectedChoices] = useState<{
     atmosphere?: string;
@@ -163,42 +164,63 @@ const ChatScreen = () => {
   };
 
   const handleGenerateAudio = async () => {
-    setIsLoading(true);
-    const finalDescription = `Atmosphere: ${selectedChoices.atmosphere || 'N/A'}, Mood: ${selectedChoices.mood || 'N/A'}, Elements: ${selectedChoices.elements.join(', ')}.`;
-    
-    // Append any current input text if available, then clear it.
-    let fullDescription = finalDescription;
-    if (inputText.trim() !== '') {
-      fullDescription += ` Additional input: ${inputText.trim()}.`;
-      setInputText(''); // Clear input after appending
-    }
-
     try {
-      setMessages((prevMessages) => [...prevMessages, { sender: 'ai' as Message['sender'], text: 'Generating your soundscape...' }]);
-      const audioGenerationResponse = await fetch('http://localhost:8000/api/generate-audio', {
+      setIsLoading(true);
+      setError(null);
+      
+      // Combine all selected choices, initial input, and additional input
+      const fullDescription = `Initial idea: ${initialInput}. Atmosphere: ${selectedChoices.atmosphere}, Mood: ${selectedChoices.mood}, Elements: ${selectedChoices.elements.join(', ')}. ${inputText}`;
+      
+      // First, generate scene
+      const sceneResponse = await fetch('/api/generate-scene', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ description: fullDescription, effects_config: {} }),
+        body: JSON.stringify({
+          prompt: fullDescription,
+          mode: mode,
+          chat_history: messages.filter(m => m.sender === 'user').map(m => m.text)
+        }),
       });
 
-      if (!audioGenerationResponse.ok) {
-        throw new Error(`Error from audio generation API: ${audioGenerationResponse.statusText}`);
+      if (!sceneResponse.ok) {
+        throw new Error('Failed to generate scene');
       }
 
-      const audioData = await audioGenerationResponse.json();
-      if (audioData.audio_url) {
-        navigate('/player', { state: { audioUrl: audioData.audio_url } });
-      } else {
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai' as Message['sender'], text: 'Sorry, could not generate audio. Please try again or provide more details.' }]);
+      const sceneData = await sceneResponse.json();
+      
+      // Then, generate audio
+      const audioResponse = await fetch('/api/generate-audio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: sceneData.scene_description,
+          duration: 15,
+          mode: mode,
+          is_poem: false
+        }),
+      });
+
+      if (!audioResponse.ok) {
+        throw new Error('Failed to generate audio');
       }
-    } catch (error) {
-      console.error('Error during audio generation API call:', error);
+
+      const audioData = await audioResponse.json();
+      
+      // Add AI response to chat
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: 'ai' as Message['sender'], text: `Sorry, I encountered an issue generating audio: ${error instanceof Error ? error.message : String(error)}. Please try again.` },
+        { sender: 'ai' as Message['sender'], text: sceneData.ai_response },
+        { sender: 'ai' as Message['sender'], text: 'Generating your soundscape...' },
+        { sender: 'ai' as Message['sender'], text: 'Your soundscape is ready!', audioUrl: audioData.audio_url }
       ]);
+      
+      setCurrentStage('complete');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -256,6 +278,17 @@ const ChatScreen = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleReturnToGuidedMode = () => {
+    setCurrentStage('atmosphere');
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { 
+        sender: 'ai' as Message['sender'], 
+        text: '让我们回到引导模式。首先，您想要什么样的氛围？' 
+      }
+    ]);
   };
 
   return (
@@ -348,6 +381,21 @@ const ChatScreen = () => {
         }}
       >
         <Box sx={{ display: 'flex', gap: 1 }}>
+          {currentStage === 'free_chat' && (
+            <Button
+              variant="outlined"
+              onClick={handleReturnToGuidedMode}
+              sx={{
+                color: 'white',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                '&:hover': {
+                  borderColor: '#2d9c93',
+                },
+              }}
+            >
+              返回引导模式
+            </Button>
+          )}
           <TextField
             fullWidth
             variant="outlined"

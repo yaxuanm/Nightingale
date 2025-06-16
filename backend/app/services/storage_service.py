@@ -2,6 +2,7 @@ import os
 from typing import Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import json
 
 class SupabaseStorageService:
     def __init__(self):
@@ -10,16 +11,19 @@ class SupabaseStorageService:
         # 从环境变量获取 Supabase 配置
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_KEY")
-        
         if not supabase_url or not supabase_key:
             raise ValueError("Missing Supabase configuration. Please set SUPABASE_URL and SUPABASE_KEY environment variables.")
         
         try:
             self.supabase: Client = create_client(supabase_url, supabase_key)
             self.bucket_name = "audio-files"
-            print("Supabase client initialized successfully.")
+            # 检查存储桶是否存在
+            try:
+                self.supabase.storage.get_bucket(self.bucket_name)
+            except Exception as e:
+                raise
+                
         except Exception as e:
-            print(f"Failed to initialize Supabase client: {e}")
             raise
 
     async def upload_audio(self, file_path: str, description: str) -> Optional[str]:
@@ -45,18 +49,38 @@ class SupabaseStorageService:
             with open(file_path, 'rb') as f:
                 file_data = f.read()
             
+            print(f"Attempting to upload file: {file_name}")
+            
             # 上传到 Supabase Storage
-            result = self.supabase.storage.from_(self.bucket_name).upload(
-                file_name,
-                file_data,
-                {"content-type": "audio/wav"}
-            )
+            try:
+                result = self.supabase.storage.from_(self.bucket_name).upload(
+                    file_name,
+                    file_data,
+                    {"content-type": "audio/wav"}
+                )
+                print(f"Upload successful: {file_name}") # 简单的成功信息
+            except Exception as upload_error:
+                print(f"Upload error details: {str(upload_error)}")
+                if "RLS" in str(upload_error):
+                    print("\nRLS Policy Error: Please check your Supabase storage bucket policies.")
+                    print("You may need to add a policy like:")
+                    print("""
+                    CREATE POLICY \"Allow public uploads\"
+                    ON storage.objects
+                    FOR INSERT
+                    TO public
+                    WITH CHECK (bucket_id = 'audio-files');
+                    """)
+                raise
             
             # 获取公共访问 URL
-            url = self.supabase.storage.from_(self.bucket_name).get_public_url(file_name)
-            print(f"File uploaded successfully: {url}")
-            
-            return url
+            try:
+                url = self.supabase.storage.from_(self.bucket_name).get_public_url(file_name)
+                print(f"File uploaded successfully: {url}")
+                return url
+            except Exception as url_error:
+                print(f"Error getting public URL: {url_error}")
+                return None
             
         except Exception as e:
             print(f"Error uploading to Supabase: {e}")
