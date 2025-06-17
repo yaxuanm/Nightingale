@@ -7,13 +7,28 @@ from dotenv import load_dotenv
 from .services.audio_service import audio_service
 from fastapi.staticfiles import StaticFiles
 from .services.ai_service import ai_service
+from .services.image_service import image_service
 
 # Get the path to the current file's directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+print(f"DEBUG: BASE_DIR is {BASE_DIR}")
+
+# Ensure output directories exist at the very beginning
+AUDIO_SAMPLES_DIR = os.path.join(BASE_DIR, "audio_samples")
+AUDIO_OUTPUT_DIR = os.path.join(BASE_DIR, "audio_output")
+IMAGE_OUTPUT_DIR = os.path.join(BASE_DIR, "image_output")
+
+print(f"DEBUG: Ensuring AUDIO_SAMPLES_DIR {AUDIO_SAMPLES_DIR} exists.")
+os.makedirs(AUDIO_SAMPLES_DIR, exist_ok=True)
+print(f"DEBUG: Ensuring AUDIO_OUTPUT_DIR {AUDIO_OUTPUT_DIR} exists.")
+os.makedirs(AUDIO_OUTPUT_DIR, exist_ok=True)
+print(f"DEBUG: Ensuring IMAGE_OUTPUT_DIR {IMAGE_OUTPUT_DIR} exists.")
+os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
+
 load_dotenv()
 
-app = FastAPI(title="Ambiance Weaver API",
+app = FastAPI(title="Nightingale API",
              description="AI-powered ambient sound generation API",
              version="1.0.0")
 
@@ -26,15 +41,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure directories exist
-os.makedirs(os.path.join(BASE_DIR, "audio_samples"), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, "audio_output"), exist_ok=True)
-
 # Mount audio_samples directory as a static file service (for input samples)
 app.mount("/static/audio", StaticFiles(directory=os.path.join(BASE_DIR, "audio_samples")), name="audio")
 
 # Mount audio_output directory as a static file service
 app.mount("/static/generated_audio", StaticFiles(directory=os.path.join(BASE_DIR, "audio_output")), name="generated_audio")
+
+# Mount image_output directory as a static file service
+app.mount("/static/generated_images", StaticFiles(directory=os.path.join(BASE_DIR, "image_output")), name="generated_images")
 
 # Create audio generation service instance (ensure this is the correct singleton pattern)
 # audio_service = AudioGenerationService() # This line should be commented out or removed if audio_service is imported as an already initialized instance
@@ -62,17 +76,24 @@ class SceneResponse(BaseModel):
 
 class AudioGenerationRequest(BaseModel):
     description: str
-    duration: int = 10
+    duration: int = 15
     is_poem: bool = False
     mode: str = "default"
-    effects_config: Optional[dict] = None
+    effects_config: Optional[Dict[str, Dict[str, Any]]] = None
 
 class AudioGenerationResponse(BaseModel):
     audio_url: str
 
+class MusicGenerationRequest(BaseModel):
+    description: str
+    duration: int = 30
+
+class ImageGenerationRequest(BaseModel):
+    description: str
+
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Ambiance Weaver API"}
+    return {"message": "Welcome to Nightingale API"}
 
 @app.post("/api/generate-scene")
 async def generate_scene(request: SceneRequest):
@@ -118,9 +139,38 @@ async def generate_audio(request: AudioGenerationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/generate-music")
+async def generate_music(request: MusicGenerationRequest):
+    try:
+        music_url = await audio_service.generate_music(
+            description=request.description,
+            duration=request.duration
+        )
+        
+        if not music_url:
+            raise HTTPException(status_code=500, detail="Failed to generate music")
+            
+        return {"music_url": music_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-background")
+async def generate_background(request: ImageGenerationRequest):
+    try:
+        image_url = await image_service.generate_background(
+            description=request.description
+        )
+        
+        if not image_url:
+            raise HTTPException(status_code=500, detail="Failed to generate background image")
+            
+        return {"image_url": image_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.on_event("startup")
 async def startup_event():
     try:
-        audio_service.load_model()
+        audio_service.load_audio_model()
     except Exception as e:
         raise 

@@ -19,7 +19,7 @@ const OnboardingScreen = () => {
         </View>
 
         <Text variant="headlineMedium" style={styles.title}>
-          Ambiance Weaver
+          Nightingale
         </Text>
 
         <Text variant="bodyLarge" style={styles.subtitle}>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, Grid } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, Paper, Grid, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -8,33 +8,34 @@ import {
   AutoStories as StoryIcon,
   MusicNote as MusicIcon,
 } from '@mui/icons-material';
+import { useAiName } from '../utils/AiNameContext';
 
 const modes = [
   {
     id: 'focus',
-    title: '专注模式',
-    description: '为学习和工作创造专注的环境',
+    title: 'Focus Mode',
+    description: 'Create a focused environment for study and work',
     icon: WorkIcon,
     color: '#2d9c93'
   },
   {
     id: 'relax',
-    title: '放松模式',
-    description: '帮助缓解压力和焦虑',
+    title: 'Relax Mode',
+    description: 'Help relieve stress and anxiety',
     icon: SpaIcon,
     color: '#9c2d8f'
   },
   {
     id: 'story',
-    title: '故事模式',
-    description: '将文字转化为沉浸式音景',
+    title: 'Story Mode',
+    description: 'Transform text into immersive soundscapes',
     icon: StoryIcon,
     color: '#2d8f9c'
   },
   {
     id: 'music',
-    title: '音乐模式',
-    description: '创作独特的背景音乐',
+    title: 'Music Mode',
+    description: 'Create unique background music',
     icon: MusicIcon,
     color: '#8f9c2d'
   }
@@ -43,6 +44,15 @@ const modes = [
 const Onboarding = () => {
   const navigate = useNavigate();
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const { aiName, setAiName } = useAiName();
+
+  // New: Local state for the input field, which will be cleared on mount
+  const [localAiNameInput, setLocalAiNameInput] = useState('');
+
+  // New: Clear local input on component mount
+  useEffect(() => {
+    setLocalAiNameInput('');
+  }, []); // Run once on mount
 
   const handleModeSelect = (modeId: string) => {
     setSelectedMode(modeId);
@@ -50,6 +60,8 @@ const Onboarding = () => {
 
   const handleStart = () => {
     if (selectedMode) {
+      // Update aiName in context (and localStorage) with the local input field's value
+      setAiName(localAiNameInput);
       navigate('/main', { state: { mode: selectedMode } });
     }
   };
@@ -62,14 +74,27 @@ const Onboarding = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1a2332 0%, #0f1419 100%)',
-        p: 3
+        background: `url(${process.env.PUBLIC_URL}/cover.png) no-repeat center center fixed`,
+        backgroundSize: 'cover',
+        position: 'relative',
+        p: 3,
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(to bottom, rgba(12, 26, 26, 0.8), rgba(12, 26, 26, 0.5), rgba(12, 26, 26, 0.8))',
+          zIndex: 1,
+        },
       }}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', justifyContent: 'center' }}
       >
         <Paper
           elevation={3}
@@ -83,7 +108,8 @@ const Onboarding = () => {
             width: '100%',
             background: 'rgba(255, 255, 255, 0.05)',
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '16px',
           }}
         >
           <Box
@@ -95,15 +121,38 @@ const Onboarding = () => {
               alignItems: 'center',
               justifyContent: 'center',
               background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
-              mb: 2
+              mb: 2,
+              overflow: 'hidden',
             }}
           >
-            <img src="/logo.svg" alt="App Logo" style={{ width: 100, height: 100, borderRadius: 28 }} />
+            <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="App Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </Box>
 
           <Typography variant="h4" sx={{ color: 'white', fontWeight: 700, textAlign: 'center' }}>
-            Ambiance Weaver
+            Nightingale
           </Typography>
+
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Give your Nightingale a name"
+            value={localAiNameInput} // Bind to local state
+            onChange={(e) => setLocalAiNameInput(e.target.value)} // Update local state
+            autoComplete="off"
+            sx={{
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                color: 'white',
+                fieldset: { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                '&:hover fieldset': { borderColor: '#2d9c93' },
+                '&.Mui-focused fieldset': { borderColor: '#2d9c93' },
+              },
+              '& .MuiInputBase-input::placeholder': {
+                color: 'rgba(255, 255, 255, 0.7)',
+                opacity: 1,
+              },
+            }}
+          />
 
           <Typography
             variant="body1"
@@ -113,7 +162,7 @@ const Onboarding = () => {
               mb: 4
             }}
           >
-            选择一种模式，开始你的音景创作之旅
+            Select a mode to begin your soundscape creation journey
           </Typography>
 
           <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -124,6 +173,10 @@ const Onboarding = () => {
                   sx={{
                     p: 3,
                     cursor: 'pointer',
+                    height: '180px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
                     background: selectedMode === mode.id 
                       ? `linear-gradient(135deg, ${mode.color} 0%, ${mode.color}80 100%)`
                       : 'rgba(255, 255, 255, 0.05)',
@@ -137,7 +190,7 @@ const Onboarding = () => {
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <mode.icon sx={{ color: mode.color, fontSize: 32 }} />
+                    <mode.icon sx={{ color: 'white', fontSize: 32 }} />
                     <Typography variant="h6" sx={{ color: 'white' }}>
                       {mode.title}
                     </Typography>
@@ -152,27 +205,24 @@ const Onboarding = () => {
 
           <Button
             variant="contained"
+            fullWidth
             size="large"
             onClick={handleStart}
-            disabled={!selectedMode}
+            disabled={!selectedMode} // Disable until a mode is selected
             sx={{
-              width: '100%',
+              mt: 2,
               height: 50,
-              background: selectedMode 
-                ? 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)'
-                : 'rgba(255, 255, 255, 0.1)',
+              background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
               borderRadius: 25,
               color: 'white',
               fontSize: 16,
               fontWeight: 600,
               '&:hover': {
-                background: selectedMode
-                  ? 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)'
-                  : 'rgba(255, 255, 255, 0.1)'
-              }
+                background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)',
+              },
             }}
           >
-            开始创作
+            Start Your Journey
           </Button>
         </Paper>
       </motion.div>

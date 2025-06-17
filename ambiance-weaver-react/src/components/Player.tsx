@@ -25,17 +25,39 @@ import {
   Share as ShareIcon,
   Tune as TuneIcon,
   Help as HelpIcon,
+  VolumeUp as VolumeUpIcon,
+  VolumeOff as VolumeOffIcon,
+  MusicNote as MusicNoteIcon,
+  Image as ImageIcon,
+  HelpOutline as HelpOutlineIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAiName } from '../utils/AiNameContext';
 
-const PlayerScreen = styled(Box)(({ theme }) => ({
+interface PlayerScreenProps {
+  backgroundImageUrl?: string;
+}
+
+const PlayerScreen = styled(Box)<PlayerScreenProps>(({ theme, backgroundImageUrl }) => ({
   height: '100vh',
   display: 'flex',
   flexDirection: 'column',
-  background: 'linear-gradient(135deg, #1a2332 0%, #0f1419 100%)',
   position: 'relative',
   overflow: 'visible',
   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+  background: `url(${backgroundImageUrl || `${process.env.PUBLIC_URL}/cover.png`}) no-repeat center center fixed`,
+  backgroundSize: 'cover',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(to bottom, rgba(12, 26, 26, 0.8), rgba(12, 26, 26, 0.5), rgba(12, 26, 26, 0.8))',
+    zIndex: 1,
+  },
 }));
 
 const BackgroundOverlay = styled(Box)({
@@ -44,7 +66,6 @@ const BackgroundOverlay = styled(Box)({
   left: 0,
   right: 0,
   bottom: 0,
-  background: 'linear-gradient(180deg, rgba(18, 18, 18, 0.3) 0%, rgba(18, 18, 18, 0.8) 100%)',
   zIndex: 1,
 });
 
@@ -55,8 +76,14 @@ const PlayerContent = styled(Box)(({ theme }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
+  justifyContent: 'space-between',
+  background: 'rgba(255, 255, 255, 0.05)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  maxWidth: '90%',
+  width: '100%',
+  margin: '0 auto',
 }));
 
 const ControlButton = styled(IconButton)(({ theme }) => ({
@@ -99,23 +126,9 @@ const ActionButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-const VisualizerCanvas = styled('canvas')({
-  width: '100%',
-  height: '100px',
-  background: 'rgba(255, 255, 255, 0.05)',
-  borderRadius: '16px',
-  marginBottom: '20px',
-  border: '1px solid rgba(45, 156, 147, 0.2)',
-  backdropFilter: 'blur(10px)',
-});
-
-const EffectsPanel = styled(Paper)(({ theme }) => ({
+const EffectsPanel = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
-  background: 'rgba(255, 255, 255, 0.05)',
-  backdropFilter: 'blur(10px)',
-  borderRadius: '16px',
   marginBottom: theme.spacing(3),
-  border: '1px solid rgba(45, 156, 147, 0.2)',
 }));
 
 const EffectControl = styled(Box)(({ theme }) => ({
@@ -140,14 +153,34 @@ interface AudioEffect {
   };
 }
 
-const Player = () => {
+interface PlayerProps {
+  audioUrl: string;
+  description: string;
+  onGenerateMusic?: () => void;
+  onGenerateBackground?: () => void;
+  backgroundImageUrl?: string;
+  musicUrl?: string;
+}
+
+const Player: React.FC<PlayerProps> = ({
+  audioUrl,
+  description,
+  onGenerateMusic,
+  onGenerateBackground,
+  backgroundImageUrl,
+  musicUrl
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { audioUrl: initialAudioUrl } = (location.state as { audioUrl: string | null } | null) || { audioUrl: null };
+  const { audioUrl: stateAudioUrl, backgroundImageUrl: stateBackgroundImageUrl } = location.state || {};
+  
+  const currentAudioUrl = audioUrl || stateAudioUrl;
+  const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl;
+
+  const { aiName } = useAiName();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(initialAudioUrl);
   const [showEffects, setShowEffects] = useState(false);
   const [effects, setEffects] = useState<AudioEffect[]>([
     {
@@ -192,84 +225,69 @@ const Player = () => {
     coffeeMachine: 50,
     footsteps: 50,
   });
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | undefined>(undefined);
   const [showHelp, setShowHelp] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  
+  const musicRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.onended = () => setIsPlaying(false);
     }
-    // Ensure audioUrl is set if provided from location.state
-    if (initialAudioUrl && audioUrl !== initialAudioUrl) {
-      setAudioUrl(initialAudioUrl);
-    }
-  }, [initialAudioUrl, audioUrl]);
-
-  useEffect(() => {
-    let audioContext: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let source: MediaElementAudioSourceNode | null = null;
-
-    if (audioRef.current) {
-      try {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        
-        source = audioContext.createMediaElementSource(audioRef.current);
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-
-        audioContextRef.current = audioContext;
-        analyserRef.current = analyser;
-      } catch (error) {
-        console.error('Error setting up audio context:', error);
-      }
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      
-      try {
-        if (source) {
-          source.disconnect();
-        }
-        if (analyser) {
-          analyser.disconnect();
-        }
-        if (audioContext && audioContext.state !== 'closed') {
-          audioContext.close();
-        }
-      } catch (error) {
-        console.error('Error cleaning up audio resources:', error);
-      }
-    };
   }, []);
 
   useEffect(() => {
-    if (audioUrl && audioRef.current) {
-      audioRef.current.src = audioUrl;
+    if (audioRef.current && currentAudioUrl) {
+      if (audioRef.current.src !== currentAudioUrl) {
+        audioRef.current.src = currentAudioUrl;
+        audioRef.current.load();
+      }
+
       if (isPlaying) {
-        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
       }
     }
-  }, [audioUrl, isPlaying]);
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [currentAudioUrl, isPlaying]);
+
+  useEffect(() => {
+    if (musicRef.current) {
+      musicRef.current.src = musicUrl || '';
+      if (isMusicPlaying) {
+        musicRef.current.play();
+      } else {
+        musicRef.current.pause();
+      }
+    }
+    return () => {
+      if (musicRef.current) {
+        musicRef.current.pause();
+      }
+    };
+  }, [musicUrl, isMusicPlaying]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+    if (musicRef.current) {
+      musicRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
 
   const handlePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-      }
-      setIsPlaying(!isPlaying);
-    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleFavorite = () => {
@@ -277,75 +295,27 @@ const Player = () => {
   };
 
   const handleSliderChange = (name: keyof SoundscapeState) => (event: Event, value: number | number[]) => {
-    setSoundscape({ ...soundscape, [name]: value as number });
+    setSoundscape((prev) => ({ ...prev, [name]: value as number }));
   };
-
-  const drawVisualizer = () => {
-    if (!canvasRef.current || !analyserRef.current) return;
-
-    const canvas = canvasRef.current;
-    const canvasCtx = canvas.getContext('2d');
-    if (!canvasCtx) return;
-
-    const WIDTH = canvas.width;
-    const HEIGHT = canvas.height;
-
-    const draw = () => {
-      animationFrameRef.current = requestAnimationFrame(draw);
-
-      const bufferLength = analyserRef.current!.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyserRef.current!.getByteFrequencyData(dataArray);
-
-      canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
-
-      const barWidth = (WIDTH / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = dataArray[i] / 2;
-
-        const gradient = canvasCtx.createLinearGradient(0, HEIGHT, 0, 0);
-        gradient.addColorStop(0, '#2d9c93');
-        gradient.addColorStop(1, '#1a5f5a');
-        
-        canvasCtx.fillStyle = gradient;
-        canvasCtx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
-      }
-    };
-
-    draw();
-  };
-
-  useEffect(() => {
-    if (isPlaying) {
-      drawVisualizer();
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-  }, [isPlaying]);
 
   const handleEffectToggle = (index: number) => {
-    const newEffects = [...effects];
-    newEffects[index].enabled = !newEffects[index].enabled;
-    setEffects(newEffects);
+    setEffects((prev) =>
+      prev.map((effect, i) => (i === index ? { ...effect, enabled: !effect.enabled } : effect))
+    );
   };
 
   const handleEffectParamChange = (effectIndex: number, paramName: string, value: number) => {
-    const newEffects = [...effects];
-    newEffects[effectIndex].params[paramName] = value;
-    setEffects(newEffects);
+    setEffects((prev) =>
+      prev.map((effect, i) =>
+        i === effectIndex
+          ? { ...effect, params: { ...effect.params, [paramName]: value } }
+          : effect
+      )
+    );
   };
 
   const renderEffectControls = () => (
     <EffectsPanel>
-      <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-        音频效果
-      </Typography>
       {effects.map((effect, index) => (
         <EffectControl key={effect.type}>
           <FormControlLabel
@@ -353,249 +323,275 @@ const Player = () => {
               <Switch
                 checked={effect.enabled}
                 onChange={() => handleEffectToggle(index)}
-                color="primary"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: '#2d9c93',
+                    '&:hover': {
+                      backgroundColor: 'rgba(45, 156, 147, 0.08)',
+                    },
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: '#2d9c93',
+                  },
+                }}
               />
             }
-            label={
-              <Typography sx={{ color: 'white' }}>
-                {effect.type === 'reverb' && '混响'}
-                {effect.type === 'echo' && '回声'}
-                {effect.type === 'fade' && '淡入淡出'}
-                {effect.type === 'volume' && '音量'}
-              </Typography>
-            }
+            label={<Typography sx={{ color: '#ffffff' }}>{effect.type}</Typography>}
           />
-          {effect.enabled && (
-            <Box sx={{ pl: 4 }}>
-              {Object.entries(effect.params).map(([param, value]) => (
-                <Box key={param} sx={{ mb: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'white' }}>
-                    {param === 'roomSize' && '房间大小'}
-                    {param === 'damping' && '阻尼'}
-                    {param === 'wetLevel' && '湿信号'}
-                    {param === 'dryLevel' && '干信号'}
-                    {param === 'delay' && '延迟'}
-                    {param === 'decay' && '衰减'}
-                    {param === 'repeats' && '重复次数'}
-                    {param === 'fadeIn' && '淡入时间'}
-                    {param === 'fadeOut' && '淡出时间'}
-                    {param === 'volumeDb' && '音量'}
-                  </Typography>
+          <Collapse in={effect.enabled}>
+            <Box sx={{ pl: 4, pt: 1 }}>
+              {Object.entries(effect.params).map(([paramName, paramValue]) => (
+                <EffectControl key={paramName}>
+                  <Typography sx={{ color: '#ffffff', fontSize: 12 }}>{paramName}: {paramValue}</Typography>
                   <Slider
-                    value={value}
-                    onChange={(_, newValue) => handleEffectParamChange(index, param, newValue as number)}
+                    value={paramValue}
+                    onChange={(e, v) => handleEffectParamChange(index, paramName, v as number)}
                     min={0}
                     max={1}
-                    step={0.01}
-                    sx={{ color: 'gold' }}
+                    step={0.1}
+                    sx={{
+                      color: '#2d9c93',
+                      '& .MuiSlider-thumb': {
+                        width: 16,
+                        height: 16,
+                        backgroundColor: '#ffffff',
+                        border: '2px solid currentColor',
+                        '&:focus, &:hover, &.Mui-active': {
+                          boxShadow: 'inherit',
+                        },
+                      },
+                      '& .MuiSlider-rail': {
+                        opacity: 0.5,
+                        backgroundColor: '#bfbfbf',
+                      },
+                    }}
                   />
-                </Box>
+                </EffectControl>
               ))}
             </Box>
-          )}
+          </Collapse>
         </EffectControl>
       ))}
     </EffectsPanel>
   );
 
+  const handleMusicPlayPause = () => {
+    setIsMusicPlaying(!isMusicPlaying);
+  };
+
+  const handleVolumeChange = (event: Event, newValue: number | number[]) => {
+    setVolume(newValue as number);
+  };
+
+  const handleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleSeek = (event: Event, newValue: number | number[]) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = newValue as number;
+      setCurrentTime(newValue as number);
+    }
+  };
+
   return (
-    <PlayerScreen>
+    <PlayerScreen backgroundImageUrl={currentBackgroundImageUrl}>
       <BackgroundOverlay />
-      <PlayerContent>
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 20, 
-          left: 20, 
-          display: 'flex', 
-          gap: 2 
-        }}>
-          <IconButton
-            onClick={() => navigate(-1)}
-            sx={{ 
-              color: 'white',
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.1)',
-              },
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <IconButton
-            onClick={() => setShowHelp(true)}
-            sx={{ 
-              color: 'white',
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.1)',
-              },
-            }}
-          >
-            <HelpIcon />
-          </IconButton>
-        </Box>
-
-        <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              color: 'white', 
-              fontWeight: 700, 
-              mb: 1,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            场景氛围师
-          </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '14px',
-              lineHeight: 1.4,
-            }}
-          >
-            将你的意境转化为沉浸式音景
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 5 }}>
-          <ControlButton>
-            <PreviousIcon />
-          </ControlButton>
-          <PlayPauseButton onClick={handlePlayPause}>
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-          </PlayPauseButton>
-          <ControlButton>
-            <NextIcon />
-          </ControlButton>
-        </Box>
-
-        <Box sx={{ width: '100%', mb: 4 }}>
-          <VisualizerCanvas ref={canvasRef} width={800} height={100} />
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <Button
-              startIcon={<TuneIcon />}
-              onClick={() => setShowEffects(!showEffects)}
-              sx={{
-                color: 'white',
-                borderColor: 'rgba(45, 156, 147, 0.2)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '22px',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderColor: 'rgba(45, 156, 147, 0.3)',
-                },
-              }}
-              variant="outlined"
-            >
-              {showEffects ? '隐藏效果' : '显示效果'}
-            </Button>
-          </Box>
-          
-          <Collapse in={showEffects}>
-            {renderEffectControls()}
-          </Collapse>
-          
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: 'white' }}>Rain Intensity</Typography>
-              <Typography variant="body2" sx={{ color: 'gold' }}>{soundscape.rainIntensity}%</Typography>
-            </Box>
-            <Slider
-              value={soundscape.rainIntensity}
-              onChange={handleSliderChange('rainIntensity')}
-              sx={{ color: 'gold' }}
-            />
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: 'white' }}>Café Chatter</Typography>
-              <Typography variant="body2" sx={{ color: 'gold' }}>{soundscape.cafeChatter}%</Typography>
-            </Box>
-            <Slider
-              value={soundscape.cafeChatter}
-              onChange={handleSliderChange('cafeChatter')}
-              sx={{ color: 'gold' }}
-            />
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: 'white' }}>Coffee Machine</Typography>
-              <Typography variant="body2" sx={{ color: 'gold' }}>{soundscape.coffeeMachine}%</Typography>
-            </Box>
-            <Slider
-              value={soundscape.coffeeMachine}
-              onChange={handleSliderChange('coffeeMachine')}
-              sx={{ color: 'gold' }}
-            />
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ color: 'white' }}>Footsteps</Typography>
-              <Typography variant="body2" sx={{ color: 'gold' }}>{soundscape.footsteps}%</Typography>
-            </Box>
-            <Slider
-              value={soundscape.footsteps}
-              onChange={handleSliderChange('footsteps')}
-              sx={{ color: 'gold' }}
-            />
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
-          <ActionButton startIcon={<FavoriteIcon />}>
-            Save to Favorites
-          </ActionButton>
-          <ActionButton startIcon={<ShareIcon />}>
-            Share
-          </ActionButton>
-        </Box>
-
-        <Dialog
-          open={showHelp}
-          onClose={() => setShowHelp(false)}
-          PaperProps={{
-            sx: {
-              background: 'rgba(18, 18, 18, 0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              border: '1px solid rgba(45, 156, 147, 0.2)',
-            },
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 3,
+          width: '100%',
+        }}
+      >
+        {/* Main Content Card */}
+        <PlayerContent
+          sx={{
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            maxWidth: 600,
+            width: '100%',
+            p: 4,
           }}
         >
-          <DialogTitle sx={{ color: 'white' }}>使用帮助</DialogTitle>
-          <DialogContent>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
-              在这里你可以：
+          {/* Header - Moved inside PlayerContent */}
+          <Box
+            sx={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <IconButton onClick={() => navigate(-1)} sx={{ color: '#ffffff' }}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 600 }}>
+              Now Playing
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
-              1. 播放/暂停音景
+            <IconButton sx={{ color: '#ffffff' }}>
+              <ShareIcon />
+            </IconButton>
+          </Box>
+
+          {/* Middle Content Wrapper */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            flexGrow: 1,
+            justifyContent: 'center', // Vertically center content within this wrapper
+          }}>
+            <motion.img
+              src={`${process.env.PUBLIC_URL}/logo.png`} // Changed to logo.png
+              alt="Nightingale Logo" // Changed to Nightingale Logo
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              style={{ width: 150, height: 150, borderRadius: '50%', marginBottom: 20 }} // Made logo circular and larger
+            />
+            <Typography variant="h5" sx={{ color: '#ffffff', fontWeight: 700, mt: 2 }}>
+              Your personalized soundscape
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
-              2. 调整各个音效的音量
+            <Typography variant="body2" sx={{ color: '#c0c0c0', mb: 3 }}>
+              Generated by {aiName}
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1 }}>
-              3. 添加音频效果（混响、回声等）
+
+            {/* Playback Controls */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <PlayPauseButton onClick={handlePlayPause}>
+                {isPlaying ? <PauseIcon sx={{ fontSize: 40 }} /> : <PlayIcon sx={{ fontSize: 40 }} />}
+              </PlayPauseButton>
+            </Box>
+
+            {/* Progress Bar and Time */}
+            <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <Typography sx={{ color: '#ffffff', fontSize: 12 }}>{formatTime(currentTime)}</Typography>
+              <Slider
+                aria-label="time-slider"
+                value={currentTime}
+                min={0}
+                max={duration}
+                onChange={handleSeek}
+                sx={{
+                  color: '#2d9c93',
+                  height: 4,
+                  '& .MuiSlider-thumb': {
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 0 0 4px rgba(45, 156, 147, 0.3)',
+                    '&:hover, &.Mui-focusVisible': {
+                      boxShadow: '0 0 0 6px rgba(45, 156, 147, 0.4)',
+                    },
+                  },
+                  '& .MuiSlider-rail': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                }}
+              />
+              <Typography sx={{ color: '#ffffff', fontSize: 12 }}>{formatTime(duration)}</Typography>
+              <IconButton onClick={() => setShowHelp(true)} sx={{ color: '#ffffff', ml: 1, p: '4px' }}>
+                <HelpOutlineIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Action Buttons (Favorite and Effects) - Moved inside PlayerContent */}
+          <Box sx={{
+            width: '100%',
+            display: 'flex',
+            gap: 2,
+          }}>
+            <ActionButton onClick={handleFavorite} startIcon={<FavoriteIcon />}>
+              Favorite
+            </ActionButton>
+            <ActionButton onClick={() => setShowEffects(true)} startIcon={<TuneIcon />}>
+              Effects
+            </ActionButton>
+          </Box>
+
+        </PlayerContent>
+
+        {/* Effects Dialog */}
+        <Dialog open={showEffects} onClose={() => setShowEffects(false)} PaperProps={{
+          sx: {
+            background: 'rgba(12, 26, 26, 0.9)',
+            backdropFilter: 'blur(15px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(45, 156, 147, 0.3)',
+            color: '#ffffff',
+          }
+        }}>
+          <DialogTitle sx={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>Audio Effects</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            {renderEffectControls()}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowEffects(false)} sx={{ color: '#2d9c93' }}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Help Dialog */}
+        <Dialog open={showHelp} onClose={() => setShowHelp(false)} PaperProps={{
+          sx: {
+            background: 'rgba(12, 26, 26, 0.9)',
+            backdropFilter: 'blur(15px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(45, 156, 147, 0.3)',
+            color: '#ffffff',
+          }
+        }}>
+          <DialogTitle sx={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>Help</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Typography sx={{ color: '#ffffff', mb: 2 }}>
+              This is the Ambiance AI Player. You can play generated soundscapes, adjust effects, and manage your favorites.
             </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              4. 保存或分享你的音景
+            <Typography sx={{ color: '#ffffff', mb: 2 }}>
+              Use the playback controls to play, pause, and skip tracks.
+            </Typography>
+            <Typography sx={{ color: '#ffffff', mb: 2 }}>
+              The "Effects" button allows you to apply various audio effects to your soundscape.
+            </Typography>
+            <Typography sx={{ color: '#ffffff', mb: 2 }}>
+              Click "Favorite" to save your current soundscape for quick access later.
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button
-              onClick={() => setShowHelp(false)}
-              sx={{ color: '#2d9c93' }}
-            >
-              知道了
-            </Button>
+            <Button onClick={() => setShowHelp(false)} sx={{ color: '#2d9c93' }}>Got It</Button>
           </DialogActions>
         </Dialog>
-      </PlayerContent>
+
+        <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
+        <audio ref={musicRef} loop />
+      </Box>
     </PlayerScreen>
   );
 };

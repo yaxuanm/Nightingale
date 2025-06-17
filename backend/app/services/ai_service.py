@@ -2,11 +2,12 @@ import google.generativeai as genai
 import os
 from typing import List, Dict
 import json
+import re # Import the re module
 
 class AIService:
     def __init__(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
     
     async def parse_scene(self, description: str) -> List[Dict]:
         """解析场景描述，提取音频元素"""
@@ -40,10 +41,28 @@ class AIService:
         try:
             response = self.model.generate_content(prompt)
             
-            # 解析返回的JSON字符串
-            elements = json.loads(response.text)
+            raw_response_text = response.text
+            print(f"DEBUG: Raw Gemini response for parse_scene: {raw_response_text}")
+
+            # Use regex to find the JSON part, handling markdown code blocks
+            json_match = re.search(r'```json\n([\s\S]*?)\n```', raw_response_text)
+            if json_match:
+                json_string = json_match.group(1).strip()
+            else:
+                # Try to extract between first [ and last ]
+                start = raw_response_text.find('[')
+                end = raw_response_text.rfind(']')
+                if start != -1 and end != -1 and end > start:
+                    json_string = raw_response_text[start:end+1].strip()
+                else:
+                    json_string = raw_response_text.strip()
+            print(f"DEBUG: Cleaned JSON string for parsing: >>>{json_string}<<< (length={len(json_string)})")
+            elements = json.loads(json_string)
             return elements
-            
         except Exception as e:
             print(f"Error in parse_scene: {str(e)}")
-            raise 
+            print(f"ORIGINAL RAW: >>>{raw_response_text}<<<")
+            raise
+
+# Create singleton instance
+ai_service = AIService() 

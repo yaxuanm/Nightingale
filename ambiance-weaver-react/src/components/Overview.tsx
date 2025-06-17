@@ -26,20 +26,42 @@ const Overview = () => {
       description: 'Soundscape player with controls',
       path: '/player'
     },
-    {
-      title: 'Lock Screen',
-      description: 'Lock screen music player',
-      path: '/lockscreen'
-    }
   ];
 
   return (
-    <Box sx={{ p: 4, maxWidth: 1200, margin: '0 auto' }}>
-      <Typography variant="h3" sx={{ mb: 4, textAlign: 'center' }}>
-        Ambiance Weaver - Screen Overview
-      </Typography>
-      
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
+    <Box
+      sx={{
+        p: 4,
+        maxWidth: '100vw', // Full width
+        minHeight: '100vh', // Full height
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: `url(${process.env.PUBLIC_URL}/cover.png) no-repeat center center fixed`, // Set background image using PUBLIC_URL
+        backgroundSize: 'cover',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(to bottom, rgba(12, 26, 26, 0.8), rgba(12, 26, 26, 0.5), rgba(12, 26, 26, 0.8))', // Greenish overlay
+          zIndex: 1,
+        },
+      }}
+    >
+      <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center', mb: 4 }}>
+        <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Nightingale Logo" style={{ width: '150px', height: 'auto', marginBottom: '20px' }} />
+        <Typography variant="h3" sx={{ mb: 4, textAlign: 'center', color: 'white' }}>
+          Nightingale - Screen Overview
+        </Typography>
+      </Box>
+
+      <Box sx={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3, maxWidth: 800 }}>
         {screens.map((screen, index) => (
           <Paper
             key={index}

@@ -9,8 +9,8 @@ export const theme = createTheme({
       dark: '#1a5f5a',
     },
     background: {
-      default: '#0a0a0a',
-      paper: '#121212',
+      default: '#0c1a1a',
+      paper: '#142525',
     },
     text: {
       primary: '#ffffff',
@@ -38,16 +38,26 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: '25px',
+          borderRadius: '30px',
           textTransform: 'none',
           fontWeight: 600,
+          padding: '12px 24px',
         },
         contained: {
-          background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
-          boxShadow: '0 8px 24px rgba(45, 156, 147, 0.3)',
+          background: 'linear-gradient(135deg, #388e3c 0%, #1a5f5a 100%)',
+          boxShadow: '0 10px 30px rgba(56, 142, 60, 0.4)',
           '&:hover': {
-            background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)',
-            boxShadow: '0 12px 32px rgba(45, 156, 147, 0.4)',
+            background: 'linear-gradient(135deg, #1a5f5a 0%, #388e3c 100%)',
+            boxShadow: '0 15px 40px rgba(56, 142, 60, 0.5)',
+          },
+        },
+        outlined: {
+          borderRadius: '30px',
+          borderColor: 'rgba(56, 142, 60, 0.5)',
+          color: '#ffffff',
+          '&:hover': {
+            borderColor: '#388e3c',
+            backgroundColor: 'rgba(56, 142, 60, 0.1)',
           },
         },
       },
@@ -56,11 +66,18 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: '16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '30px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            '&:hover fieldset': {
+              borderColor: '#388e3c',
             },
+            '&.Mui-focused fieldset': {
+              borderColor: '#388e3c',
+            },
+          },
+          '& .MuiInputBase-input::placeholder': {
+            color: 'rgba(255, 255, 255, 0.6)',
+            opacity: 1,
           },
         },
       },

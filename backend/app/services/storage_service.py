@@ -104,5 +104,19 @@ class SupabaseStorageService:
             print(f"Error deleting from Supabase: {e}")
             return False
 
+    async def upload_image(self, file_path: str, description: str) -> Optional[str]:
+        try:
+            with open(file_path, 'rb') as f:
+                file_name = f"image_{hash(description)}.png"
+                self.supabase.storage.from_('images').upload(
+                    file_name,
+                    f.read(),
+                    {"content-type": "image/png"}
+                )
+                return self.supabase.storage.from_('images').get_public_url(file_name)
+        except Exception as e:
+            print(f"Failed to upload image: {e}")
+            return None
+
 # 创建单例实例
 storage_service = SupabaseStorageService() 
