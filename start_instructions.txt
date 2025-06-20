@@ -1,0 +1,43 @@
+# Nightingale 项目启动命令
+
+## 1. 启动后端（FastAPI）
+
+在项目根目录下依次执行：
+
+```
+cd backend
+..\venv\Scripts\activate  # 激活虚拟环境（Windows）
+```
+
+激活后，运行：
+
+```
+..\venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+> 如果你在 Nightingale 根目录，也可以用：
+> ```
+> venv\Scripts\python.exe -m uvicorn app.main:app --reload --app-dir backend
+> ```
+
+---
+
+## 2. 启动前端（React）
+
+另开一个命令行窗口，执行：
+
+```
+cd ambiance-weaver-react
+npm start
+```
+
+---
+
+## 3. 访问
+
+- 前端地址: http://localhost:3000
+- 后端 API: http://localhost:8000
+
+---
+
+如遇到环境/依赖问题，建议先删除并重建 venv，再 `pip install -r backend/requirements.txt`。 

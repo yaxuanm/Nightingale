@@ -100,7 +100,7 @@ class AudioGenerationService:
             print(f"Gemini conversion failed: {e}")
             return None
 
-    async def generate_audio(self, description: str, duration: int = 15, is_poem: bool = False, 
+    async def generate_audio(self, description: str, duration: int = 10, is_poem: bool = False, 
                       effects_config: Optional[Dict[str, Dict[str, Any]]] = None,
                       mode: str = "default") -> Optional[str]:
         """

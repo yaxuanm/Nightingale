@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
@@ -6,8 +6,9 @@ import os
 from dotenv import load_dotenv
 from .services.audio_service import audio_service
 from fastapi.staticfiles import StaticFiles
-from .services.ai_service import ai_service
+from .services.ai_service import ai_service, get_instruments_from_ai, build_musicgen_prompt, build_audiogen_prompt
 from .services.image_service import image_service
+from fastapi import APIRouter
 
 # Get the path to the current file's directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -76,7 +77,7 @@ class SceneResponse(BaseModel):
 
 class AudioGenerationRequest(BaseModel):
     description: str
-    duration: int = 15
+    duration: int = 10
     is_poem: bool = False
     mode: str = "default"
     effects_config: Optional[Dict[str, Dict[str, Any]]] = None
@@ -90,6 +91,23 @@ class MusicGenerationRequest(BaseModel):
 
 class ImageGenerationRequest(BaseModel):
     description: str
+
+class OptionGenerationRequest(BaseModel):
+    mode: str
+    input: str
+    stage: str  # 'atmosphere' | 'mood' | 'elements'
+
+class OptionGenerationResponse(BaseModel):
+    options: list[str]
+
+class MusicGenOptionRequest(BaseModel):
+    stage: str  # 'genre' | 'instruments' | 'tempo' | 'usage'
+    user_input: str = ""
+
+class MusicGenOptionResponse(BaseModel):
+    options: list[str]
+
+router = APIRouter()
 
 @app.get("/")
 async def root():
@@ -121,38 +139,60 @@ async def generate_scene(request: SceneRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/generate-audio")
-async def generate_audio(request: AudioGenerationRequest):
-    try:
-        audio_url = await audio_service.generate_audio(
-            description=request.description,
-            duration=request.duration,
-            is_poem=request.is_poem,
-            mode=request.mode,
-            effects_config=request.effects_config
-        )
-        
-        if not audio_url:
-            raise HTTPException(status_code=500, detail="Failed to generate audio")
-            
-        return {"audio_url": audio_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post('/api/generate-audio')
+async def generate_audio(request: Request):
+    data = await request.json()
+    description = data.get('userInput') or data.get('description', '')
+    duration = data.get('duration', 10)
+    is_poem = data.get('is_poem', False)
+    mode = data.get('mode', 'default')
+    effects_config = data.get('effects_config')
 
-@app.post("/api/generate-music")
-async def generate_music(request: MusicGenerationRequest):
-    try:
-        music_url = await audio_service.generate_music(
-            description=request.description,
-            duration=request.duration
-        )
-        
-        if not music_url:
-            raise HTTPException(status_code=500, detail="Failed to generate music")
-            
-        return {"music_url": music_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    audio_url = await audio_service.generate_audio(
+        description=description,
+        duration=duration,
+        is_poem=is_poem,
+        effects_config=effects_config,
+        mode=mode
+    )
+
+    return {
+        'audio_url': audio_url,
+        'prompt': description
+    }
+
+@router.post('/api/generate-music')
+async def generate_music(request: Request):
+    data = await request.json()
+    atmosphere = data.get('atmosphere')
+    mood = data.get('mood')
+    elements = data.get('elements', [])
+    user_input = data.get('userInput')
+    reference_era = data.get('referenceEra')
+    tempo = data.get('tempo')
+    duration = data.get('duration', 30)
+
+    # 1. AI 补全乐器
+    instruments = get_instruments_from_ai(
+        atmosphere, mood, elements, user_input, reference_era
+    )
+
+    # 2. 拼接结构化 prompt
+    prompt = build_musicgen_prompt(
+        atmosphere, mood, elements, user_input, instruments, tempo, reference_era
+    )
+
+    # 3. 调用 MusicGen 真实推理逻辑
+    music_url = await audio_service.generate_music(
+        description=prompt,
+        duration=duration
+    )
+
+    return {
+        'music_url': music_url,
+        'prompt': prompt,
+        'instruments': instruments
+    }
 
 @app.post("/api/generate-background")
 async def generate_background(request: ImageGenerationRequest):
@@ -168,9 +208,69 @@ async def generate_background(request: ImageGenerationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/generate-options")
+async def generate_options(request: OptionGenerationRequest):
+    """
+    根据 mode、input、stage 生成 atmosphere/mood/elements 选项，AI 失败时返回默认。
+    """
+    # 默认选项
+    default_options = {
+        'atmosphere': [
+            "Cozy and intimate",
+            "Spacious and airy",
+            "Lively and energetic",
+            "Calm and serene",
+            "Mysterious and intriguing",
+        ],
+        'mood': [
+            "Relaxed",
+            "Focused",
+            "Inspired",
+            "Dreamy",
+            "Uplifting",
+            "Melancholic",
+        ],
+        'elements': [
+            "Rain", "Wind", "Birds chirping", "Ocean waves", "Fire crackling",
+            "Coffee machine sounds", "Distant chatter", "Footsteps", "Gentle music",
+            "Thunderstorm", "Night crickets", "City hum", "Train passing",
+        ],
+    }
+    try:
+        # 这里假设有 ai_service.generate_options 方法，实际可用 openai/gemini/其他大模型
+        ai_options = await ai_service.generate_options(
+            mode=request.mode,
+            user_input=request.input,
+            stage=request.stage
+        )
+        if ai_options and isinstance(ai_options, list) and all(isinstance(opt, str) for opt in ai_options):
+            return {"options": ai_options}
+    except Exception as e:
+        print(f"AI option generation failed: {e}")
+    # fallback
+    return {"options": default_options.get(request.stage, [])}
+
+@app.post("/api/generate-musicgen-options", response_model=MusicGenOptionResponse)
+async def generate_musicgen_options(request: MusicGenOptionRequest):
+    """
+    动态生成 MusicGen 分支多级选项，支持中英文输入，输出英文选项。
+    """
+    try:
+        options = await ai_service.generate_musicgen_options(
+            stage=request.stage,
+            user_input=request.user_input or ""
+        )
+        if not options:
+            raise HTTPException(status_code=500, detail="AI failed to generate options")
+        return {"options": options}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.on_event("startup")
 async def startup_event():
     try:
         audio_service.load_audio_model()
     except Exception as e:
         raise 
+
+app.include_router(router) 

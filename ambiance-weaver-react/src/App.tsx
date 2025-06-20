@@ -4,10 +4,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { theme } from './theme';
 import MainScreen from './components/MainScreen';
 import Overview from './components/Overview';
+import DemoOverview from './components/DemoOverview';
 import Onboarding from './components/Onboarding';
 import Player from './components/Player';
 import Lockscreen from './components/Lockscreen';
 import ChatScreen from './components/ChatScreen';
+import AllScreensShowcase from './components/AllScreensShowcase';
 
 function App() {
   return (
@@ -16,11 +18,13 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Overview />} />
+          <Route path="/demo" element={<DemoOverview />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/main" element={<MainScreen />} />
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/player" element={<Player audioUrl={''} description={''} />} />
           {/* <Route path="/lockscreen" element={<Lockscreen />} /> */}
+          <Route path="/showcase" element={<AllScreensShowcase />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
