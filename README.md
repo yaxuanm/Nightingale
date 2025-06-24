@@ -1,6 +1,6 @@
 # Nightingale
 
-Nightingale is a modern, cross-platform audio processing and mixing toolkit, featuring a web frontend and a Python FastAPI backend. The project is designed for real-time audio playback, visualization, mixing, and AI-powered features. (Note: Native mobile app is not yet developed.)
+Nightingale is a modern, cross-platform audio processing and mixing toolkit, featuring a web frontend and a Python FastAPI backend. The project is designed for real-time audio playback, visualization, mixing, and advanced AI-powered features. **At its core, Nightingale leverages Meta's AudioCraft to enable state-of-the-art AI audio generation from text prompts.** (Note: Native mobile app is not yet developed.)
 
 ## Features
 - Audio playback and control
@@ -8,6 +8,7 @@ Nightingale is a modern, cross-platform audio processing and mixing toolkit, fea
 - Multi-track audio mixing
 - Audio effects (reverb, delay, filters, etc.)
 - Audio recording and file management
+- **AI audio generation using Meta AudioCraft**
 - AI-powered chat and audio features
 - Export and share audio files
 - Web frontend and backend API
@@ -19,6 +20,38 @@ Nightingale is a modern, cross-platform audio processing and mixing toolkit, fea
 - Web Audio API
 - CSS Grid & Flexbox
 - Modern responsive design
+
+## Key Dependencies
+
+### Web Frontend (ambiance-weaver-react)
+- **react, react-dom**: Core UI library for building user interfaces.
+- **@mui/material, @mui/icons-material**: Material UI component library and icons for modern, accessible design.
+- **@emotion/react, @emotion/styled**: CSS-in-JS styling for React components.
+- **framer-motion**: Animation and gesture library for React.
+- **react-router-dom**: Declarative routing for React web apps.
+- **typescript**: Type safety and modern JavaScript tooling.
+- **@testing-library/react, @testing-library/jest-dom, @testing-library/user-event**: Testing utilities for React components.
+- **web-vitals**: Measuring and reporting web performance metrics.
+
+### Backend (backend/requirements.txt)
+- **fastapi**: High-performance Python web framework for building APIs.
+- **uvicorn**: ASGI server for running FastAPI applications.
+- **google-generativeai**: Google Generative AI API client for advanced AI features.
+- **pydub**: Audio manipulation and processing library.
+- **python-multipart**: Parsing multipart/form-data (file uploads).
+- **python-dotenv**: Loading environment variables from .env files.
+- **pytest**: Testing framework for Python.
+- **requests, httpx**: HTTP clients for making API requests.
+- **numpy**: Numerical computing and array operations.
+- **soundfile**: Reading and writing sound files.
+- **audiocraft**: **Meta's state-of-the-art AI audio generation library, powering Nightingale's core sound synthesis features.**
+- **accelerate**: Utilities for fast and distributed training (HuggingFace).
+- **torch, torchaudio**: PyTorch and audio processing for deep learning.
+- **transformers**: State-of-the-art machine learning models (HuggingFace Transformers).
+- **protobuf**: Protocol Buffers for efficient data serialization.
+- **supabase**: Python client for Supabase backend services.
+
+> Note: Some dependencies are for development or testing only. See `package.json` and `requirements.txt` for the full list and version details.
 
 ## Project Structure
 ```

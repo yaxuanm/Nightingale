@@ -87,7 +87,7 @@ class AudioGenerationResponse(BaseModel):
 
 class MusicGenerationRequest(BaseModel):
     description: str
-    duration: int = 30
+    duration: int = 15
 
 class ImageGenerationRequest(BaseModel):
     description: str
@@ -164,34 +164,50 @@ async def generate_audio(request: Request):
 @router.post('/api/generate-music')
 async def generate_music(request: Request):
     data = await request.json()
-    atmosphere = data.get('atmosphere')
-    mood = data.get('mood')
-    elements = data.get('elements', [])
-    user_input = data.get('userInput')
-    reference_era = data.get('referenceEra')
-    tempo = data.get('tempo')
+    # 优先使用 userInput 字段作为原始描述
+    user_text = data.get('userInput') or data.get('description', '')
     duration = data.get('duration', 30)
-
-    # 1. AI 补全乐器
-    instruments = get_instruments_from_ai(
-        atmosphere, mood, elements, user_input, reference_era
+    # 收集结构化字段
+    extra_fields = {
+        'genre': data.get('genre'),
+        'instruments': data.get('instruments'),
+        'tempo': data.get('tempo'),
+        'usage': data.get('usage'),
+    }
+    # 1. LLM 分层分析，优先合并结构化字段
+    layers = ai_service.analyze_music_prompt_layers(user_text, extra_fields)
+    # 2. 构建高保真分层 prompt
+    prompt = ai_service.build_high_fidelity_musicgen_prompt(
+        genre=layers.get('genre'),
+        style=layers.get('style'),
+        mood=layers.get('mood'),
+        feeling=layers.get('feeling'),
+        instrumentation=layers.get('instrumentation'),
+        tempo=layers.get('tempo'),
+        bpm=layers.get('bpm'),
+        production_quality=layers.get('production_quality'),
+        artist_style=layers.get('artist_style')
     )
-
-    # 2. 拼接结构化 prompt
-    prompt = build_musicgen_prompt(
-        atmosphere, mood, elements, user_input, instruments, tempo, reference_era
-    )
-
-    # 3. 调用 MusicGen 真实推理逻辑
+    # 3. 生成音乐
     music_url = await audio_service.generate_music(
         description=prompt,
         duration=duration
     )
+    
+    # 4. 生成背景图片
+    try:
+        # 构建图片生成的 prompt
+        image_prompt = f"Abstract visualization of {prompt}. Artistic, atmospheric, minimal design."
+        background_url = await image_service.generate_background(description=image_prompt)
+    except Exception as e:
+        print(f"Background generation failed: {e}")
+        background_url = None
 
     return {
         'music_url': music_url,
         'prompt': prompt,
-        'instruments': instruments
+        'layers': layers,
+        'background_url': background_url
     }
 
 @app.post("/api/generate-background")

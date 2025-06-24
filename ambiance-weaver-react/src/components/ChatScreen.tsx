@@ -180,6 +180,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [musicTempoOptions, setMusicTempoOptions] = useState<string[]>([]);
   const [musicUsageOptions, setMusicUsageOptions] = useState<string[]>([]);
 
+  // Add a state to store the final prompt
+  const [finalPrompt, setFinalPrompt] = useState<string>('');
+
   const fetchOptions = async (stage: 'audio_atmosphere' | 'audio_mood' | 'audio_elements') => {
     try {
       const res = await fetch('http://localhost:8000/api/generate-options', {
@@ -353,6 +356,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
       const allSubjects = [...subjects, ...extraInputs];
       prompt = buildAudioGenPrompt({ subjects: allSubjects, actions, scenes });
+      setFinalPrompt(prompt);
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Generating your soundscape...', isUser: false },
@@ -418,7 +422,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       state: {
         audioUrl: isMusic ? currentMusicUrl : currentAudioUrl,
         backgroundImageUrl: currentBackgroundImageUrl,
-        selectedChoices: selectedType === 'music' ? musicChoices : audioChoices
+        selectedChoices: selectedType === 'music' ? musicChoices : audioChoices,
+        description: finalPrompt
       }
     });
   };
@@ -604,10 +609,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       setIsLoading(true);
       setError(null);
       abortControllerRef.current = new AbortController();
+      // Compose a music prompt string for display
+      const musicPrompt = `Genre: ${musicChoices.genre || ''}, Instruments: ${musicChoices.instruments.join(', ')}, Tempo: ${musicChoices.tempo || ''}, Usage: ${musicChoices.usage || ''}, Input: ${initialInput || ''}`;
+      setFinalPrompt(musicPrompt);
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Generating your music...', isUser: false },
-        { sender: 'ai', text: `Genre: ${musicChoices.genre}, Instruments: ${musicChoices.instruments.join(', ')}, Tempo: ${musicChoices.tempo}, Usage: ${musicChoices.usage}`, isUser: false },
+        { sender: 'ai', text: musicPrompt, isUser: false },
       ]);
       const res = await fetch('http://localhost:8000/api/generate-music', {
         method: 'POST',
@@ -628,6 +636,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       }
       const data = await res.json();
       setCurrentMusicUrl(data.music_url);
+      // Use the prompt from backend response
+      const finalMusicPrompt = data.prompt || musicPrompt;
+      setFinalPrompt(finalMusicPrompt);
+      // Set background image if available
+      if (data.background_url) {
+        setCurrentBackgroundImageUrl(data.background_url);
+      }
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Your personalized music is ready! What would you like to do?', isUser: false },
@@ -870,10 +885,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         </Box>
       )}
       {showPlaybackButtons && (
-        <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center' }}>
+        <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Button
             variant="contained"
-            onClick={handlePlayback}
+            onClick={() => navigate('/player', {
+              state: {
+                audioUrl: currentMusicUrl || currentAudioUrl,
+                backgroundImageUrl: currentBackgroundImageUrl,
+                description: finalPrompt,
+              },
+            })}
             sx={{
               backgroundColor: 'rgba(45, 156, 147, 0.8)',
               '&:hover': {

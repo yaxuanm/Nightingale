@@ -539,7 +539,7 @@ const Overview = () => {
         <Button
           variant="outlined"
           size="large"
-          onClick={() => navigate('/onboarding')}
+          onClick={() => navigate('/video-intro')}
           sx={{
             borderColor: '#2d9c93 !important',
             color: '#2d9c93 !important',

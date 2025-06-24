@@ -106,14 +106,25 @@ class SupabaseStorageService:
 
     async def upload_image(self, file_path: str, description: str) -> Optional[str]:
         try:
+            file_name = f"image_{hash(description)}.png"
             with open(file_path, 'rb') as f:
-                file_name = f"image_{hash(description)}.png"
-                self.supabase.storage.from_('images').upload(
-                    file_name,
-                    f.read(),
-                    {"content-type": "image/png"}
-                )
-                return self.supabase.storage.from_('images').get_public_url(file_name)
+                try:
+                    # Try to upload the file
+                    self.supabase.storage.from_('images').upload(
+                        file_name,
+                        f.read(),
+                        {"content-type": "image/png"}
+                    )
+                except Exception as upload_error:
+                    # If error is due to duplicate file, that's fine
+                    if "Duplicate" in str(upload_error):
+                        print(f"Image already exists: {file_name}")
+                    else:
+                        print(f"Failed to upload image: {upload_error}")
+                        raise
+            
+            # Get the public URL regardless of whether upload succeeded or file already existed
+            return self.supabase.storage.from_('images').get_public_url(file_name)
         except Exception as e:
             print(f"Failed to upload image: {e}")
             return None
