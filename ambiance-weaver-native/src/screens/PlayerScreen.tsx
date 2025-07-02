@@ -10,6 +10,9 @@ import {
   getProgress,
   seekTo,
   setVolume,
+  setLoopSettings,
+  resetLoopCount,
+  getLoopStatus,
 } from '../services/AudioService';
 
 const formatTime = (seconds) => {
@@ -24,19 +27,33 @@ const PlayerScreen = () => {
   const [volume, setVolumeState] = useState(50);
   const [progress, setProgressState] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [loopStatus, setLoopStatus] = useState({ loopCount: 0, totalLoops: 3 });
 
   useEffect(() => {
     setupPlayer();
+    // 设置循环播放
+    setLoopSettings(3, () => {
+      setIsPlaying(false);
+    });
+    
     const interval = setInterval(async () => {
       const { position, duration } = await getProgress();
       setProgressState(position);
       setDuration(duration);
+      
+      // 更新循环状态
+      const status = getLoopStatus();
+      setLoopStatus(status);
     }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
   const handlePlayPause = async () => {
+    if (!isPlaying) {
+      // 开始播放时重置循环计数
+      resetLoopCount();
+    }
     await togglePlayback();
     setIsPlaying(!isPlaying);
   };
@@ -76,6 +93,15 @@ const PlayerScreen = () => {
             <Text variant="bodySmall">{formatTime(duration)}</Text>
           </View>
         </View>
+
+        {/* Loop Status */}
+        {isPlaying && (
+          <View style={styles.loopContainer}>
+            <Text variant="bodySmall" style={styles.loopText}>
+              Loop {loopStatus.loopCount + 1} of {loopStatus.totalLoops}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.controls}>
           <IconButton
@@ -180,6 +206,14 @@ const styles = StyleSheet.create({
   volumeSlider: {
     flex: 1,
     marginLeft: 8,
+  },
+  loopContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  loopText: {
+    color: '#2d9c93',
+    fontWeight: '500',
   },
 });
 

@@ -1,6 +1,9 @@
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 
 let isSetup = false;
+let loopCount = 0;
+let totalLoops = 3;
+let onLoopComplete = null;
 
 export const setupPlayer = async () => {
   if (isSetup) return;
@@ -19,10 +22,43 @@ export const setupPlayer = async () => {
         TrackPlayer.CAPABILITY_PAUSE,
       ],
     });
+    
+    // 设置播放结束事件监听
+    TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
+      if (event.nextTrack === null && loopCount < totalLoops - 1) {
+        // 继续循环播放
+        loopCount++;
+        const currentTrack = await TrackPlayer.getCurrentTrack();
+        if (currentTrack !== null) {
+          await TrackPlayer.seekTo(0);
+          await TrackPlayer.play();
+        }
+      } else if (event.nextTrack === null && loopCount >= totalLoops - 1) {
+        // 播放完成
+        loopCount = 0;
+        if (onLoopComplete) {
+          onLoopComplete();
+        }
+      }
+    });
+    
     isSetup = true;
   } catch (error) {
     console.error('Error setting up player:', error);
   }
+};
+
+export const setLoopSettings = (loops: number, onComplete?: () => void) => {
+  totalLoops = loops;
+  onLoopComplete = onComplete;
+};
+
+export const resetLoopCount = () => {
+  loopCount = 0;
+};
+
+export const getLoopStatus = () => {
+  return { loopCount, totalLoops };
 };
 
 export const addTrack = async (track) => {

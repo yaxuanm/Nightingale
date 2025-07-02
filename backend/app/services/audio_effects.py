@@ -12,7 +12,7 @@ class AudioEffectsService:
             'reverb': self.apply_reverb,
             'echo': self.apply_echo,
             'fade': self.apply_fade,
-            'volume': self.adjust_volume
+            'volume': self.adjust_volume,
         }
 
     def apply_reverb(self, audio: AudioSegment, params: Dict[str, Any]) -> AudioSegment:
@@ -88,11 +88,9 @@ class AudioEffectsService:
         """
         try:
             processed_audio = audio
-            
             for effect_name, params in effects_config.items():
                 if effect_name in self.effects:
                     processed_audio = self.effects[effect_name](processed_audio, params)
-                    
             return processed_audio
         except Exception as e:
             logger.error(f"Audio processing failed: {str(e)}")

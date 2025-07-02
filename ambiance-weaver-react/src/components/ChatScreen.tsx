@@ -570,10 +570,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
     if (currentStage === 'audio_elements') {
       fetchOptions('audio_elements').then((options) => {
-        setElementOptions(options.length > 0 ? options : defaultOptions.audio_elements);
+        // 去重逻辑：过滤掉与 atmosphere（audio_atmosphere）、灵感种子（initialInput）重复的元素
+        let keywords: string[] = [];
+        if (audioChoices.audio_atmosphere) {
+          keywords = keywords.concat(audioChoices.audio_atmosphere.split(/,|，|\s+| and |、|。|\.|\n/).map(s => s.trim()).filter(Boolean));
+        }
+        if (initialInput) {
+          keywords = keywords.concat(initialInput.split(/,|，|\s+| and |、|。|\.|\n/).map(s => s.trim()).filter(Boolean));
+        }
+        // 只保留未在 keywords 中出现的元素
+        const filtered = options.filter((opt: string) => !keywords.some(kw => kw && opt.toLowerCase().includes(kw.toLowerCase())));
+        setElementOptions(filtered.length > 0 ? filtered : options);
       });
     }
-  }, [currentStage, mode, initialInput]);
+  }, [currentStage, mode, initialInput, audioChoices.audio_atmosphere]);
 
   useEffect(() => {
     if (currentStage === 'music_genre') {

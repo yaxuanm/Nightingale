@@ -175,8 +175,6 @@ const Player: React.FC<PlayerProps> = ({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const musicRef = useRef<HTMLAudioElement>(null);
@@ -196,11 +194,28 @@ const Player: React.FC<PlayerProps> = ({
     }
   }, [musicUrl]);
 
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+  };
+
   const handlePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
+        audioRef.current.currentTime = 0;
         audioRef.current.play();
       }
       setIsPlaying(!isPlaying);
@@ -299,24 +314,6 @@ const Player: React.FC<PlayerProps> = ({
     </EffectsPanel>
   );
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
-
   const handleSeek = (event: Event, newValue: number | number[]) => {
     if (audioRef.current) {
       audioRef.current.currentTime = newValue as number;
@@ -408,7 +405,7 @@ const Player: React.FC<PlayerProps> = ({
 
         {/* Progress Bar and Time */}
         <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(currentTime)}</Typography>
+          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{Math.floor(currentTime)}</Typography>
           <Slider
             aria-label="time-slider"
             value={currentTime}
@@ -432,7 +429,7 @@ const Player: React.FC<PlayerProps> = ({
               },
             }}
           />
-          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(duration)}</Typography>
+          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{Math.floor(duration)}</Typography>
           <IconButton onClick={() => setShowHelp(true)} sx={{ color: '#ffffff', ml: 1, p: '4px' }}>
             <HelpOutlineIcon sx={{ fontSize: 18 }} />
           </IconButton>
@@ -505,7 +502,7 @@ const Player: React.FC<PlayerProps> = ({
         </Dialog>
       </Box>
 
-      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
+      <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} />
       <audio ref={musicRef} loop />
 
       <Snackbar

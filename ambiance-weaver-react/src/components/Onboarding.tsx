@@ -127,6 +127,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
       </Typography>
 
       {/* Name Input */}
+      {/**
       <TextField
         fullWidth
         variant="outlined"
@@ -148,6 +149,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
           },
         }}
       />
+      */}
 
       {/* Description */}
       <Typography
@@ -167,7 +169,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
         {modes.map((mode) => (
           <Grid item xs={12} sm={6} key={mode.id}>
             <Box
-              onClick={() => handleModeSelect(mode.id)}
+              onClick={() => {
+                setSelectedMode(mode.id);
+                navigate('/main', { state: { mode: mode.id } });
+              }}
               sx={{
                 p: uiSystem.spacing.large,
                 cursor: 'pointer',
@@ -215,6 +220,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
       </Grid>
 
       {/* Start Button */}
+      {/**
       <Button
         variant="contained"
         size="large"
@@ -224,6 +230,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
       >
         Start Creating
       </Button>
+      */}
     </>
   );
 
