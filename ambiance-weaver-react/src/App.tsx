@@ -25,7 +25,6 @@ function App() {
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/player" element={<Player audioUrl={''} description={''} />} />
           <Route path="/video-intro" element={<VideoIntro />} />
-          {/* <Route path="/lockscreen" element={<Lockscreen />} /> */}
           <Route path="/showcase" element={<AllScreensShowcase />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

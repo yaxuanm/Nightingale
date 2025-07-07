@@ -18,7 +18,6 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAiName } from '../utils/AiNameContext';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 
@@ -32,7 +31,6 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = (location.state as { mode: string } | null) || { mode: 'default' };
-  const { aiName } = useAiName();
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 

@@ -1,18 +1,17 @@
-from audiocraft.models import AudioGen, MusicGen
-from audiocraft.data.audio import audio_write
 import os
-import torch
 import google.generativeai as genai
 from typing import Optional, Dict, Any
 from pydub import AudioSegment
+import subprocess
 from .audio_effects import AudioEffectsService
 from .storage_service import storage_service
+from .freesound_concat_demo import generate_freesound_mix
 
 class AudioGenerationService:
     def __init__(self):
         self.audio_model = None
         self.music_model = None
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"  # Audio generation is now handled by worker script
         # Initialize Gemini
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         self.gemini_model = genai.GenerativeModel('gemini-1.5-flash-latest')
@@ -54,26 +53,12 @@ class AudioGenerationService:
         }
 
     def load_audio_model(self):
-        if self.audio_model is None:
-            try:
-                print("Loading AudioGen model...")
-                self.audio_model = AudioGen.get_pretrained('facebook/audiogen-medium')
-                print("AudioGen model loaded successfully!")
-            except Exception as e:
-                print(f"AudioGen model loading failed: {str(e)}")
-                raise
-        return self.audio_model
+        # AudioGen model loading is now handled by the worker script
+        return "audiogen"
 
     def load_music_model(self):
-        if self.music_model is None:
-            try:
-                print("Loading MusicGen model...")
-                self.music_model = MusicGen.get_pretrained('facebook/musicgen-small')
-                print("MusicGen model loaded successfully!")
-            except Exception as e:
-                print(f"MusicGen model loading failed: {str(e)}")
-                raise
-        return self.music_model
+        # MusicGen model loading is now handled by the worker script
+        return "musicgen"
 
     def convert_to_scene_description(self, text: str) -> Optional[str]:
         """Use Gemini to convert poetic or literary descriptions into scene descriptions"""
@@ -100,141 +85,87 @@ class AudioGenerationService:
             print(f"Gemini conversion failed: {e}")
             return None
 
-    async def generate_audio(self, description: str, duration: int = 10, is_poem: bool = False, 
-                      effects_config: Optional[Dict[str, Dict[str, Any]]] = None,
-                      mode: str = "default") -> Optional[str]:
-        """
-        Generate ambient audio and apply effects, upload to Supabase, and save locally.
-        """
+    async def generate_audio(self, description, duration=20, output_path=None, model_type="audiogen"):
+        print("[INFO] Using Freesound混音方案作为主音频生成逻辑")
+        audio_path = await generate_freesound_mix(description)
+        # 上传到 Supabase
         try:
-            if duration > 15:
-                print(f"Warning: Generating {duration} seconds of audio. Quality may vary with longer durations.")
-            
-            model = self.load_audio_model()
-            
-            # If it's a poem, first convert to a scene description
-            if is_poem:
-                scene_description = self.convert_to_scene_description(description)
-                if scene_description:
-                    description = scene_description
-                    print(f"Converted scene description: {description}")
-                else:
-                    print("Using original description for generation.")
-            
-            # Apply mode-specific prompt if mode is specified
-            if mode in self.mode_prompts:
-                description = self.mode_prompts[mode].format(description=description)
-                print(f"Applied {mode} mode prompt")
-            
-            # Set generation parameters
-            model.set_generation_params(duration=duration)
-            # Generate audio
-            print(f"Generating audio for: {description}")
-            wav = model.generate([description], progress=True)
-            
-            # Save original audio to temporary path for processing/upload and local copy
-            file_name = f"audio_{abs(hash(description))}.wav"
-            local_file_path = os.path.join(self.output_dir, file_name)
-            audio_write(
-                local_file_path.replace('.wav', ''),
-                wav[0].cpu(),
-                model.sample_rate,
-                strategy="loudness",
-                loudness_compressor=True
-            )
-            
-            processed_audio_path = local_file_path # Default to this path if no effects or processing
-
-            try:
-                # Load audio and apply effects
-                audio = AudioSegment.from_wav(local_file_path)
-                
-                # Apply mode-specific effects if mode is specified and no custom effects_config is provided
-                if mode in self.mode_effects and not effects_config:
-                    effects_config = self.mode_effects[mode]
-                    print(f"Applied {mode} mode effects")
-                
-                if effects_config:
-                    processed_audio = self.effects_service.process_audio(audio, effects_config)
-                    
-                    # Save processed audio to a new path (still within output_dir)
-                    processed_file_name = f"processed_audio_{abs(hash(description))}.wav"
-                    processed_audio_path = os.path.join(self.output_dir, processed_file_name)
-                    processed_audio.export(processed_audio_path, format="wav")
-                    print(f"Processed audio saved locally: {processed_audio_path}")
-                    # No need to delete original local_file_path if we want to keep it too
-
-                # Attempt to upload to Supabase
-                cloud_url = await storage_service.upload_audio(processed_audio_path, description)
-                
-                if cloud_url:
-                    # If upload successful, keep local file and return cloud URL
-                    print(f"Audio uploaded to Supabase: {cloud_url}")
-                    return cloud_url
-                else:
-                    # If upload fails, return local file path
-                    print(f"Supabase upload failed, returning local file: {processed_audio_path}")
-                    return f"/static/generated_audio/{os.path.basename(processed_audio_path)}"
-                
-            except Exception as e:
-                print(f"Audio processing or upload failed: {e}")
-                # If an error occurs, return local file path (either original or processed, if exists)
-                print(f"Returning local file due to error: {processed_audio_path}")
-                return f"/static/generated_audio/{os.path.basename(processed_audio_path)}"
-                
+            cloud_url = await storage_service.upload_audio(audio_path, f"freesound_{abs(hash(description))}")
+            if cloud_url:
+                print(f"[SUCCESS] Uploaded to Supabase: {cloud_url}")
+                return cloud_url
+            else:
+                print("[WARNING] Supabase upload failed, using local static path")
+                return f"/static/generated_audio/{os.path.basename(audio_path)}"
         except Exception as e:
-            print(f"Audio generation failed: {e}")
-            return None
+            print(f"[ERROR] Supabase upload exception: {e}")
+            return f"/static/generated_audio/{os.path.basename(audio_path)}"
 
     async def generate_music(self, description: str, duration: int = 30) -> Optional[str]:
         """
         Generate gentle music using MusicGen model, upload to Supabase, and save locally.
         """
         try:
-            model = self.load_music_model()
+            print(f"[MUSIC] Starting music generation process...")
             
             # Enhance the prompt for better music generation
             enhanced_prompt = f"Gentle, peaceful background music for meditation and relaxation. {description}. Soft melodies, ambient sounds, calming atmosphere."
+            print(f"[PROMPT] Enhanced prompt: {enhanced_prompt[:100]}...")
             
-            # Set generation parameters
-            model.set_generation_params(
-                duration=duration,
-                temperature=0.7,
-                top_k=250,
-                top_p=0.95,
-                cfg_coef=3.0
-            )
-            
-            # Generate music
-            print(f"Generating music for: {enhanced_prompt}")
-            wav = model.generate([enhanced_prompt], progress=True)
-            
-            # Save music to temporary path for processing/upload and local copy
+            # Generate music using worker script
             file_name = f"music_{abs(hash(description))}.wav"
             local_file_path = os.path.join(self.output_dir, file_name)
-            audio_write(
-                local_file_path.replace('.wav', ''),
-                wav[0].cpu(),
-                model.sample_rate,
-                strategy="loudness",
-                loudness_compressor=True
+            print(f"[PATH] Local file path: {local_file_path}")
+            
+            # Call the worker script
+            worker_script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "audio_generate_worker.py")
+            # Use the audio virtual environment Python interpreter
+            audio_venv_python = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "venv_audio", "Scripts", "python.exe")
+            cmd = [
+                audio_venv_python, worker_script_path,
+                "--desc", enhanced_prompt,
+                "--duration", str(duration),
+                "--out", local_file_path,
+                "--model", "musicgen"
+            ]
+            
+            # Set working directory to backend folder to ensure proper path resolution
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            
+            print(f"[MODEL] Starting MusicGen model generation (expected {duration} seconds)...")
+            print(f"[WORKDIR] Working directory: {backend_dir}")
+            
+            # 使用实时输出，确保进度条能显示
+            result = subprocess.run(
+                cmd, 
+                capture_output=False,  # 不使用capture_output，让输出实时显示
+                text=True, 
+                cwd=backend_dir,
+                bufsize=1,  # 行缓冲
+                env=dict(os.environ, PYTHONUNBUFFERED="1")  # 确保Python输出不被缓冲
             )
             
-            print(f"Music temporarily saved locally for upload: {local_file_path}")
+            # 由于不使用capture_output，我们需要手动检查返回码
+            if result.returncode != 0:
+                print(f"[FAILED] Music generation failed, return code: {result.returncode}")
+                return None
+            
+            print(f"[SUCCESS] Music generation completed! Temporarily saved to: {local_file_path}")
 
             # Upload to cloud storage
+            print("[UPLOAD] Starting music upload to cloud storage...")
             cloud_url = await storage_service.upload_audio(local_file_path, f"music_{description}")
             
             if cloud_url:
-                print(f"Music uploaded to Supabase: {cloud_url}")
+                print(f"[SUCCESS] Music uploaded to Supabase successfully: {cloud_url}")
                 # Keep local copy after successful upload
                 return cloud_url
             else:
-                print("Supabase upload failed, returning local file path.")
+                print("[WARNING] Supabase upload failed, returning local file path")
                 return f"/static/generated_audio/{file_name}"
             
         except Exception as e:
-            print(f"Music generation failed: {e}")
+            print(f"[ERROR] Music generation failed: {e}")
             return None
 
 # Create singleton instance

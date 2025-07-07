@@ -237,7 +237,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   }, [currentStage]);
 
   useEffect(() => {
-    let introMessage = `Welcome to ${aiName || 'Nightingale'}!`;
+    let introMessage = `Welcome to Nightingale!`;
     if (initialInput) {
       introMessage += ` And you've started with the idea: "${initialInput}".`;
     }
@@ -684,7 +684,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h6" sx={{ color: uiSystem.colors.white, ...uiSystem.typography.h3 }}>
-          Chat with {aiName && aiName.trim() ? aiName : 'Nightingale'}
+          Chat with Nightingale
         </Typography>
       </Box>
       <Stack spacing={2} sx={{ flex: 1, width: '100%', overflow: 'auto', p: uiSystem.spacing.large }} ref={chatContainerRef}>

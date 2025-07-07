@@ -8,7 +8,6 @@ import {
   AutoStories as StoryIcon,
   MusicNote as MusicIcon,
 } from '@mui/icons-material';
-import { useAiName } from '../utils/AiNameContext';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 
@@ -49,27 +48,9 @@ interface OnboardingProps {
 
 const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
   const navigate = useNavigate();
-  const [selectedMode, setSelectedMode] = useState<string | null>(null);
-  const { aiName, setAiName } = useAiName();
-
-  // New: Local state for the input field, which will be cleared on mount
-  const [localAiNameInput, setLocalAiNameInput] = useState('');
-
-  // New: Clear local input on component mount
-  useEffect(() => {
-    setLocalAiNameInput('');
-  }, []); // Run once on mount
 
   const handleModeSelect = (modeId: string) => {
-    setSelectedMode(modeId);
-  };
-
-  const handleStart = () => {
-    if (selectedMode) {
-      // Update aiName in context (and localStorage) with the local input field's value
-      setAiName(localAiNameInput);
-      navigate('/main', { state: { mode: selectedMode } });
-    }
+    navigate('/main', { state: { mode: modeId } });
   };
 
   const content = (
@@ -126,29 +107,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
         Nightingale
       </Typography>
 
-      {/* Name Input */}
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Give your Nightingale a name"
-        value={localAiNameInput}
-        onChange={(e) => setLocalAiNameInput(e.target.value)}
-        autoComplete="off"
-        sx={{
-          mb: uiSystem.spacing.large,
-          '& .MuiOutlinedInput-root': {
-            color: uiSystem.colors.white,
-            fieldset: { borderColor: uiSystem.colors.white20 },
-            '&:hover fieldset': { borderColor: uiSystem.colors.primary },
-            '&.Mui-focused fieldset': { borderColor: uiSystem.colors.primary },
-          },
-          '& .MuiInputBase-input::placeholder': {
-            color: uiSystem.colors.white70,
-            opacity: 1,
-          },
-        }}
-      />
-
       {/* Description */}
       <Typography
         variant="body1"
@@ -175,11 +133,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                background: selectedMode === mode.id 
-                  ? `linear-gradient(135deg, ${mode.color} 0%, ${mode.color}80 100%)`
-                  : uiSystem.colors.white05,
+                background: uiSystem.colors.white05,
                 border: '1px solid',
-                borderColor: selectedMode === mode.id ? mode.color : uiSystem.colors.white20,
+                borderColor: uiSystem.colors.white20,
                 borderRadius: uiSystem.borderRadius.medium,
                 transition: 'all 0.3s ease',
                 '&:hover': {
@@ -213,17 +169,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
           </Grid>
         ))}
       </Grid>
-
-      {/* Start Button */}
-      <Button
-        variant="contained"
-        size="large"
-        disabled={!selectedMode}
-        onClick={handleStart}
-        sx={uiSystem.buttons.primary}
-      >
-        Start Creating
-      </Button>
     </>
   );
 

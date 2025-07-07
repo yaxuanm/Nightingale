@@ -1,14 +1,25 @@
+import os
+from dotenv import load_dotenv
+# 指定 .env 路径，始终加载 backend/.env
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+# 只在 .env 文件存在时加载
+if os.path.exists(env_path):
+    load_dotenv(dotenv_path=env_path)
+else:
+    print(f"Warning: .env file not found at {env_path}")
+
 from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
-import os
-from dotenv import load_dotenv
-from .services.audio_service import audio_service
+from .services.storage_service import SupabaseStorageService
+from .services.audio_service import audio_service, AudioGenerationService
 from fastapi.staticfiles import StaticFiles
 from .services.ai_service import ai_service, get_instruments_from_ai, build_musicgen_prompt, build_audiogen_prompt
-from .services.image_service import image_service
+from .services.image_service import ImageGenerationService
+from .services.stable_audio_service import stable_audio_service
 from fastapi import APIRouter
+import subprocess
 
 # Get the path to the current file's directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +38,10 @@ os.makedirs(AUDIO_OUTPUT_DIR, exist_ok=True)
 print(f"DEBUG: Ensuring IMAGE_OUTPUT_DIR {IMAGE_OUTPUT_DIR} exists.")
 os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
 
-load_dotenv()
+print("DEBUG: SUPABASE_URL =", os.environ.get("SUPABASE_URL"))
+print("DEBUG: SUPABASE_KEY =", os.environ.get("SUPABASE_KEY"))
+
+storage_service = SupabaseStorageService()
 
 app = FastAPI(title="Nightingale API",
              description="AI-powered ambient sound generation API",
@@ -52,7 +66,15 @@ app.mount("/static/generated_audio", StaticFiles(directory=os.path.join(BASE_DIR
 app.mount("/static/generated_images", StaticFiles(directory=os.path.join(BASE_DIR, "image_output")), name="generated_images")
 
 # Create audio generation service instance (ensure this is the correct singleton pattern)
-# audio_service = AudioGenerationService() # This line should be commented out or removed if audio_service is imported as an already initialized instance
+audio_service = AudioGenerationService()
+
+# 在 load_dotenv 之后实例化 image_service
+image_service = None
+try:
+    image_service = ImageGenerationService()
+except ValueError as e:
+    print(f"Failed to initialize ImageGenerationService: {e}")
+    image_service = None
 
 class SceneRequest(BaseModel):
     prompt: str
@@ -107,6 +129,19 @@ class MusicGenOptionRequest(BaseModel):
 class MusicGenOptionResponse(BaseModel):
     options: list[str]
 
+class StableAudioGenerationRequest(BaseModel):
+    prompt: str
+    duration: float = 11.0
+    steps: int = 8
+    cfg_scale: float = 1.0
+    sampler_type: str = "pingpong"
+
+class StableAudioGenerationResponse(BaseModel):
+    audio_url: str
+    generation_time: float
+    file_size: int
+    model_info: Dict[str, Any]
+
 router = APIRouter()
 
 @app.get("/")
@@ -143,19 +178,8 @@ async def generate_scene(request: SceneRequest):
 async def generate_audio(request: Request):
     data = await request.json()
     description = data.get('userInput') or data.get('description', '')
-    duration = data.get('duration', 10)
-    is_poem = data.get('is_poem', False)
-    mode = data.get('mode', 'default')
-    effects_config = data.get('effects_config')
-
-    audio_url = await audio_service.generate_audio(
-        description=description,
-        duration=duration,
-        is_poem=is_poem,
-        effects_config=effects_config,
-        mode=mode
-    )
-
+    print(f"[AUDIO] [FREESOUND] Starting Freesound混音音频生成 - Description: {description[:50]}...")
+    audio_url = await audio_service.generate_audio(description)
     return {
         'audio_url': audio_url,
         'prompt': description
@@ -174,40 +198,62 @@ async def generate_music(request: Request):
         'tempo': data.get('tempo'),
         'usage': data.get('usage'),
     }
+    
+    print(f"[MUSIC] Starting music generation - Description: {user_text[:50]}...")
+    print(f"[PARAMS] Structured parameters: {extra_fields}")
+    
     # 1. LLM 分层分析，优先合并结构化字段
+    print("[AI] Starting AI layered analysis of music prompt...")
     layers = ai_service.analyze_music_prompt_layers(user_text, extra_fields)
+    print(f"[SUCCESS] AI analysis completed, extracted layers: {list(layers.keys())}")
+    
     # 2. 构建高保真分层 prompt
+    print("[BUILD] Building high-fidelity music generation prompt...")
     prompt = ai_service.build_high_fidelity_musicgen_prompt(
-        genre=layers.get('genre'),
-        style=layers.get('style'),
-        mood=layers.get('mood'),
-        feeling=layers.get('feeling'),
-        instrumentation=layers.get('instrumentation'),
-        tempo=layers.get('tempo'),
-        bpm=layers.get('bpm'),
-        production_quality=layers.get('production_quality'),
-        artist_style=layers.get('artist_style')
+        genre=layers.get('genre', ''),
+        style=layers.get('style', ''),
+        mood=layers.get('mood', ''),
+        feeling=layers.get('feeling', ''),
+        instrumentation=layers.get('instrumentation', []),
+        tempo=layers.get('tempo', ''),
+        bpm=layers.get('bpm', 0),
+        production_quality=layers.get('production_quality', ''),
+        artist_style=layers.get('artist_style', '')
     )
+    print(f"[PROMPT] Final prompt: {prompt[:100]}...")
+    
     # 3. 生成音乐
+    print(f"[MODEL] Starting music generation (expected {duration} seconds)...")
     music_url = await audio_service.generate_music(
         description=prompt,
         duration=duration
     )
     
+    if music_url:
+        print(f"[SUCCESS] Music generation completed: {music_url}")
+    else:
+        print("[FAILED] Music generation failed")
+    
     # 4. 生成背景图片
+    print("[IMAGE] Starting background image generation...")
+    background_url = None
     try:
         # 构建图片生成的 prompt
         image_prompt = f"Abstract visualization of {prompt}. Artistic, atmospheric, minimal design."
         background_url = await image_service.generate_background(description=image_prompt)
+        if background_url:
+            print(f"[SUCCESS] Background image generation completed: {background_url}")
+        else:
+            print("[WARNING] Background image generation failed - this is optional")
     except Exception as e:
-        print(f"Background generation failed: {e}")
-        background_url = None
+        print(f"[ERROR] Background image generation failed: {e} - this is optional")
 
+    print("[COMPLETE] Music generation process completed!")
     return {
         'music_url': music_url,
         'prompt': prompt,
         'layers': layers,
-        'background_url': background_url
+        'background_url': background_url  # 可能为 None，前端需要处理
     }
 
 @app.post("/api/generate-background")
@@ -282,11 +328,86 @@ async def generate_musicgen_options(request: MusicGenOptionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/generate-stable-audio", response_model=StableAudioGenerationResponse)
+async def generate_stable_audio(request: StableAudioGenerationRequest):
+    """使用 Stable Audio Open Small 模型生成音频"""
+    try:
+        import time
+        
+        print(f"[STABLE_AUDIO] 开始生成音频 - 提示词: {request.prompt[:50]}...")
+        print(f"[PARAMS] 时长: {request.duration}s, 步数: {request.steps}, CFG: {request.cfg_scale}")
+        
+        start_time = time.time()
+        
+        # 生成音频
+        audio_path = stable_audio_service.generate_audio(
+            prompt=request.prompt,
+            duration=request.duration,
+            steps=request.steps,
+            cfg_scale=request.cfg_scale,
+            sampler_type=request.sampler_type
+        )
+        
+        generation_time = time.time() - start_time
+        
+        # 获取文件信息
+        file_size = os.path.getsize(audio_path) if os.path.exists(audio_path) else 0
+        
+        # 构建音频URL
+        audio_filename = os.path.basename(audio_path)
+        audio_url = f"/static/generated_audio/{audio_filename}"
+        
+        # 获取模型信息
+        model_info = stable_audio_service.get_model_info()
+        
+        print(f"[SUCCESS] Stable Audio 生成完成 - 耗时: {generation_time:.2f}秒, 大小: {file_size} bytes")
+        
+        return StableAudioGenerationResponse(
+            audio_url=audio_url,
+            generation_time=generation_time,
+            file_size=file_size,
+            model_info=model_info
+        )
+        
+    except Exception as e:
+        print(f"[ERROR] Stable Audio 生成失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"音频生成失败: {str(e)}")
+
+@app.get("/api/stable-audio-info")
+async def get_stable_audio_info():
+    """获取 Stable Audio Open Small 模型信息"""
+    try:
+        info = stable_audio_service.get_model_info()
+        return {
+            "model_info": info,
+            "status": "ready" if info["is_loaded"] else "not_loaded"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取模型信息失败: {str(e)}")
+
 @app.on_event("startup")
 async def startup_event():
     try:
-        audio_service.load_audio_model()
+        print("=== Nightingale Backend Startup ===")
+        print("✅ FastAPI server started successfully")
+        print("✅ Audio generation service ready (using worker script)")
+        print("✅ Supabase storage service configured")
+        print("✅ Gemini AI service configured")
+        if os.environ.get("STABILITY_API_KEY"):
+            print("✅ Image generation service: STABILITY_API_KEY is set")
+        else:
+            print("⚠️  Image generation service: STABILITY_API_KEY not set (optional)")
+        # 检查ffmpeg
+        import shutil
+        if shutil.which("ffmpeg"):
+            print("✅ Audio processing: ffmpeg found")
+        else:
+            print("⚠️  Audio processing: ffmpeg not found (optional)")
+        print("🚀 Server ready at http://localhost:8000")
+        print("📚 API docs at http://localhost:8000/docs")
+        print("=====================================")
     except Exception as e:
+        print(f"❌ Startup error: {e}")
         raise 
 
 app.include_router(router) 

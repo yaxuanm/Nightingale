@@ -2,22 +2,23 @@
 
 ## 1. 启动后端（FastAPI）
 
+### 方法一：手动启动
 在项目根目录下依次执行：
 
+cd backend
+venv_api\Scripts\activate
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+
+### 方法二：使用PowerShell脚本（推荐）
 ```
 cd backend
-..\venv\Scripts\activate  # 激活虚拟环境（Windows）
-```
-
-激活后，运行：
-
-```
-..\venv\Scripts\python.exe -m uvicorn app.main:app --reload
+.\start_backend.ps1
 ```
 
 > 如果你在 Nightingale 根目录，也可以用：
 > ```
-> venv\Scripts\python.exe -m uvicorn app.main:app --reload --app-dir backend
+> backend\venv_api\Scripts\python.exe -m uvicorn app.main:app --reload --app-dir backend
 > ```
 
 ---
@@ -40,4 +41,4 @@ npm start
 
 ---
 
-如遇到环境/依赖问题，建议先删除并重建 venv，再 `pip install -r backend/requirements.txt`。 
+如遇到环境/依赖问题，建议先删除并重建 venv311，再 `pip install -r backend/requirements.txt`。 
