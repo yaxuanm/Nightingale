@@ -1,55 +1,60 @@
-import google.generativeai as genai
+from google import genai
 import os
-from typing import List, Dict, Optional
 import json
-import re # Import the re module
+import re
+import time
+import random
+from typing import List, Dict, Optional
 
 class AIService:
     def __init__(self):
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    
+        self.client = genai.Client()
+        # 多个备选模型，按配额可用性排序（基于测试结果）
+        self.models = [
+            "gemini-2.5-flash-lite-preview-06-17",  # 最具成本效益且支持高吞吐量 ⭐
+            "gemini-2.5-flash",                      # 适应性思维，成本效益 ⭐
+            "gemini-1.5-flash",                      # 快速而多样的性能 ⭐
+            "gemini-2.0-flash-lite",                 # 成本效益和低延迟（备用）
+            "gemini-1.5-pro",                        # 复杂推理任务（最后备用，配额限制）
+        ]
+        self.current_model_index = 0
+
+    def _get_current_model(self):
+        """获取当前模型"""
+        return self.models[self.current_model_index]
+
+    def _switch_to_next_model(self):
+        """切换到下一个模型"""
+        self.current_model_index = (self.current_model_index + 1) % len(self.models)
+        print(f"🔄 切换到模型: {self._get_current_model()}")
+        return self._get_current_model()
+
     async def parse_scene(self, description: str) -> List[Dict]:
-        """解析场景描述，提取音频元素"""
         prompt = f"""
         分析以下场景描述，提取所有可能的声音元素：
         {description}
-        
         请以JSON格式返回，包含以下字段：
         - name: 声音元素名称
         - volume: 音量大小(0-1)
         - position: 位置("foreground"或"background")
         - duration: 持续时间(秒)
-        
         示例输出格式：
         [
-            {{
-                "name": "rain",
-                "volume": 0.7,
-                "position": "background",
-                "duration": 180.0
-            }},
-            {{
-                "name": "cafe_chatter",
-                "volume": 0.5,
-                "position": "foreground",
-                "duration": 180.0
-            }}
+            {{"name": "rain", "volume": 0.7, "position": "background", "duration": 180.0}},
+            {{"name": "cafe_chatter", "volume": 0.5, "position": "foreground", "duration": 180.0}}
         ]
         """
-        
         try:
-            response = self.model.generate_content(prompt)
-            
-            raw_response_text = response.text
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw_response_text = response.text or ""
             print(f"DEBUG: Raw Gemini response for parse_scene: {raw_response_text}")
-
-            # Use regex to find the JSON part, handling markdown code blocks
             json_match = re.search(r'```json\n([\s\S]*?)\n```', raw_response_text)
             if json_match:
                 json_string = json_match.group(1).strip()
             else:
-                # Try to extract between first [ and last ]
                 start = raw_response_text.find('[')
                 end = raw_response_text.rfind(']')
                 if start != -1 and end != -1 and end > start:
@@ -61,103 +66,289 @@ class AIService:
             return elements
         except Exception as e:
             print(f"Error in parse_scene: {str(e)}")
-            print(f"ORIGINAL RAW: >>>{raw_response_text}<<<")
+            print(f"ORIGINAL RAW: >>>{raw_response_text if 'raw_response_text' in locals() else ''}<<<")
             raise
 
     async def generate_options(self, mode: str, user_input: str, stage: str) -> List[str]:
-        """
-        根据 mode、user_input、stage 用 Gemini 生成 atmosphere/mood/elements 选项。
-        优化：支持中英文输入，LLM 必须输出高质量英文选项，必要时自动翻译。每个选项不超过 10 个英文单词。
-        mood 阶段强制只输出通用短选项。
-        """
-        # For mood, always return a fixed set of generic moods
+        # 合并后的 soundscape description prompt
+        fallback_options = {
+            'audio_atmosphere': ["In a large empty warehouse", "Deep in a lush rainforest", "Urban street corner at night", "Inside a cozy cafe", "On a snowy mountain peak"],
+            'audio_elements': ["Rain", "Footsteps", "Birds chirping", "Thunder", "Wind blowing"],
+            'audio_style': ["Natural", "Synthetic", "Mixed", "Organic", "Electronic"],
+            'music_genre': ["Ambient", "Classical", "Jazz", "Electronic", "Folk"],
+            'music_instruments': ["Piano", "Strings", "Synth", "Guitar", "Drums"],
+            'music_tempo': ["Slow", "Medium", "Fast", "Variable", "Steady"],
+            'music_usage': ["Background", "Focus", "Relaxation", "Study", "Sleep"]
+        }
         if stage in ['mood', 'audio_mood']:
-            return [
-                "Calm",
-                "Focused",
-                "Relaxed",
-                "Uplifting",
-                "Dreamy",
-                "Inspired",
-                "Peaceful",
-                "Energetic",
-                "Melancholic",
-                "Motivated"
-            ]
-        # Otherwise, use LLM as before
-        prompt = f"""
-        You are an expert in soundscape and music design. The user may input in Chinese or English. Your task is:
-        1. Understand the user's intent and context from the following mode and input.
-        2. For the stage: {stage}, generate a list of 5 concise, relevant, diverse, and high-quality options in ENGLISH only (even if the user input is in Chinese).
-        3. Each option should be a short phrase, no more than 10 English words.
-        4. If the user input is in Chinese, you must first understand it, then output the options in English, not Chinese.
-        5. Only return a JSON array of strings, e.g. [\"option1\", \"option2\", ...]. No extra text.
-        - mode: {mode}
-        - user input: {user_input}
-        """
-        try:
-            response = self.model.generate_content(prompt)
-            raw_response_text = response.text
-            print(f"DEBUG: Raw Gemini response for generate_options: {raw_response_text}")
-            # Use regex to find the JSON part, handling markdown code blocks
-            json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
-            if json_match:
-                json_string = json_match.group(1).strip()
-            else:
-                # Try to extract between first [ and last ]
-                start = raw_response_text.find('[')
-                end = raw_response_text.rfind(']')
-                if start != -1 and end != -1 and end > start:
-                    json_string = raw_response_text[start:end+1].strip()
-                else:
-                    json_string = raw_response_text.strip()
-            print(f"DEBUG: Cleaned JSON string for options: >>>{json_string}<<< (length={len(json_string)})")
-            options = json.loads(json_string)
-            if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
-                return options
-            return None
-        except Exception as e:
-            print(f"Error in generate_options: {str(e)}")
-            print(f"ORIGINAL RAW: >>>{raw_response_text if 'raw_response_text' in locals() else ''}<<<")
-            return None
+            prompt = f"""
+List 5 moods for a soundscape. Each should be a single English word or a short phrase (max 2 words), e.g. "Calm", "Mysterious", "Uplifting", "Bittersweet", "Suspenseful". Do not include any scene, sound, or environment words.
+Examples: ["Calm", "Dreamy", "Energetic", "Peaceful", "Tense"]
+Only return a JSON array of strings.
+- mode: {mode}
+- user input: {user_input}
+"""
+        elif stage in ['audio_atmosphere']:
+            prompt = f"""
+Based on the user's input and mode, generate 5 atmosphere options. The first option should be a concise, standardized version of the user's idea. The remaining options should be closely related variations, each with a slight change or added detail. Do not simply repeat the original input. Do not include any specific sound elements (like rain, footsteps, birds, etc.), only describe the overall scene or environment.
+
+User input: "A cozy cafe on a rainy afternoon"
+Examples: [
+  "Cozy cafe, rainy afternoon",
+  "Warm cafe, rain on windows",
+  "Cafe, soft jazz, rainy day",
+  "Cafe, fresh coffee aroma, rain",
+  "Quiet cafe, foggy windows"
+]
+
+Now, for the following user input, generate 5 atmosphere options as above.
+User input: {user_input}
+Only return a JSON array of strings.
+- mode: {mode}
+"""
+        elif stage in ['audio_elements']:
+            prompt = f"""
+Based on the user's input and mode, generate 5 sound element options that are closely related to the user's idea, each with a slight variation or added detail. Do not suggest unrelated sounds or events. Do not simply repeat the original input. Do not include any scene or environment words already mentioned in the atmosphere (such as cafe, rain, afternoon, etc.). Only describe specific sounds or events, not the overall scene or mood.
+
+User input: "A cozy cafe on a rainy afternoon"
+Atmosphere: ["Cozy cafe, rainy afternoon", "Warm cafe, rain on windows", "Cafe, soft jazz, rainy day", "Cafe, fresh coffee aroma, rain", "Quiet cafe, foggy windows"]
+Examples: [
+  "Coffee machine steaming",
+  "Pages turning",
+  "Barista grinding beans",
+  "Distant thunder",
+  "Muffled conversation"
+]
+
+Now, for the following user input, generate 5 similar sound element options as above.
+User input: {user_input}
+Only return a JSON array of strings.
+- mode: {mode}
+"""
+        else:
+            prompt = f"""
+You are an expert in soundscape and music design. The user may input in Chinese or English. Your task is:
+1. Understand the user's intent and context from the following mode and input.
+2. For the stage: {stage}, generate a list of 5 concise, relevant, diverse, and high-quality options in ENGLISH only (even if the user input is in Chinese).
+3. Each option should be a short phrase, no more than 10 English words.
+4. If the user input is in Chinese, you must first understand it, then output the options in English, not Chinese.
+5. Only return a JSON array of strings, e.g. ["option1", "option2", ...]. No extra text.
+- mode: {mode}
+- user input: {user_input}
+"""
+        
+        # 尝试所有可用模型
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"🔧 尝试模型: {current_model}")
+            
+            max_retries = 2  # 每个模型最多重试2次
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    print(f"DEBUG: Raw Gemini response for generate_options: {raw_response_text}")
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    print(f"DEBUG: Cleaned JSON string for options: >>>{json_string}<<< (length={len(json_string)})")
+                    options = json.loads(json_string)
+                    if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
+                        return options
+                    return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+                except Exception as e:
+                    print(f"Error in generate_options (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        print(f"⚠️  API 配额限制，尝试下一个模型...")
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            print(f"⏳ 等待 {wait_time:.1f} 秒后重试...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            # 切换到下一个模型
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        print(f"❌ 其他错误，使用 fallback 选项")
+                        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+            # 如果当前模型失败，继续尝试下一个模型
+            if model_attempt < len(self.models) - 1:
+                continue
+        # 所有模型都失败了，返回 fallback
+        print(f"❌ 所有模型都失败，使用 fallback 选项")
+        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
 
     async def generate_musicgen_options(self, stage: str, user_input: str = "") -> List[str]:
+        # 为 MusicGen 提供 fallback 选项
+        fallback_options = {
+            'genre': ["Ambient", "Classical", "Jazz", "Electronic", "Folk"],
+            'instruments': ["Piano", "Strings", "Synth", "Guitar", "Drums"],
+            'tempo': ["Slow", "Medium", "Fast", "Variable", "Steady"],
+            'usage': ["Background", "Focus", "Relaxation", "Study", "Sleep"]
+        }
+        
+        prompt = f"""
+You are an expert in music generation. Generate 5 diverse and creative options for the {stage} stage of music generation.
+Each option should be a single English word or short phrase (max 3 words).
+Only return a JSON array of strings, e.g. ["option1", "option2", ...].
+User input: {user_input}
+"""
+        
+        # 尝试所有可用模型
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"🔧 尝试模型: {current_model}")
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    options = json.loads(json_string)
+                    if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
+                        return options
+                    return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+                except Exception as e:
+                    print(f"Error in generate_musicgen_options (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+            if model_attempt < len(self.models) - 1:
+                continue
+        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+
+    async def generate_inspiration_chips(self, mode: str, user_input: str = "") -> List[str]:
         """
-        动态生成 MusicGen 分支的多级选项（genre, instruments, tempo, usage），支持中英文输入，输出高质量英文选项。
+        生成随机的inspiration chips，用于MainScreen的提示选项
         """
         prompt = f"""
-        You are an expert in music composition and production. The user may input in Chinese or English. Your task is:
-        1. Understand the user's intent and context from the following input.
-        2. For the stage: {stage} (one of 'genre', 'instruments', 'tempo', 'usage'), generate a list of 5 concise, relevant, diverse, and high-quality options in ENGLISH only (even if the user input is in Chinese).
-        3. If the user input is in Chinese, you must first understand it, then output the options in English, not Chinese.
-        4. Only return a JSON array of strings, e.g. ["option1", "option2", ...]. No extra text.
-        - user input: {user_input}
-        """
-        try:
-            response = self.model.generate_content(prompt)
-            raw_response_text = response.text
-            print(f"DEBUG: Raw Gemini response for generate_musicgen_options: {raw_response_text}")
-            # Use regex to find the JSON part, handling markdown code blocks
-            json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
-            if json_match:
-                json_string = json_match.group(1).strip()
-            else:
-                # Try to extract between first [ and last ]
-                start = raw_response_text.find('[')
-                end = raw_response_text.rfind(']')
-                if start != -1 and end != -1 and end > start:
-                    json_string = raw_response_text[start:end+1].strip()
-                else:
-                    json_string = raw_response_text.strip()
-            print(f"DEBUG: Cleaned JSON string for musicgen options: >>>{json_string}<<< (length={len(json_string)})")
-            options = json.loads(json_string)
-            if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
-                return options
-            return None
-        except Exception as e:
-            print(f"Error in generate_musicgen_options: {str(e)}")
-            print(f"ORIGINAL RAW: >>>{raw_response_text if 'raw_response_text' in locals() else ''}<<<")
-            return None
+You are an expert in creating atmospheric and emotional soundscapes. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. These should be a mix of different types of inspiration:
+
+**Types of inspiration to include:**
+1. **Poetic verses** - Short, evocative lines from poetry or literature that capture a mood
+2. **Memory fragments** - Personal, nostalgic moments that evoke specific atmospheres
+3. **Atmospheric descriptions** - Rich, sensory descriptions of environments
+4. **Emotional states** - Abstract feelings and moods
+5. **Imaginary scenes** - Creative, fantastical settings
+6. **Sensory experiences** - Multi-sensory descriptions
+
+**Requirements:**
+- Mix different styles: some poetic, some descriptive, some abstract
+- Each prompt should be 5-20 words long
+- Make them creative, inspiring, and diverse
+- Consider the mode: {mode} (focus, relax, story, music, etc.)
+- If user_input is provided, make some prompts related to it
+- Avoid generic phrases, be specific and evocative
+
+**Examples of good prompts:**
+- "The rain falls like silver threads on cobblestone streets" (poetic)
+- "Grandma's kitchen on Sunday morning, cinnamon in the air" (memory)
+- "A library where time stands still, dust motes dance in sunbeams" (atmospheric)
+- "The quiet before dawn, when the world holds its breath" (emotional)
+- "A steampunk workshop where brass gears whisper secrets" (imaginary)
+- "Fresh snow crunching underfoot, breath visible in cold air" (sensory)
+
+**Mode-specific considerations:**
+- For 'focus': Include concentration, productivity, clarity themes
+- For 'relax': Include peace, calm, soothing themes  
+- For 'story': Include narrative, dramatic, cinematic themes
+- For 'music': Include rhythmic, melodic, harmonic themes
+
+User input: {user_input}
+
+Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
+"""
+        
+        # 尝试所有可用模型
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"🔧 尝试模型: {current_model}")
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    print(f"DEBUG: Raw Gemini response for generate_inspiration_chips: {raw_response_text}")
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    print(f"DEBUG: Cleaned JSON string for inspiration chips: >>>{json_string}<<< (length={len(json_string)})")
+                    chips = json.loads(json_string)
+                    if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
+                        return chips
+                    return self._get_fallback_inspiration_chips()
+                except Exception as e:
+                    print(f"Error in generate_inspiration_chips (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        print(f"⚠️  API 配额限制，尝试下一个模型...")
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            print(f"⏳ 等待 {wait_time:.1f} 秒后重试...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        print(f"❌ 其他错误，使用 fallback 选项")
+                        return self._get_fallback_inspiration_chips()
+            if model_attempt < len(self.models) - 1:
+                continue
+        print(f"❌ 所有模型都失败，使用 fallback 选项")
+        return self._get_fallback_inspiration_chips()
+
+    def _get_fallback_inspiration_chips(self) -> List[str]:
+        """获取fallback的inspiration chips"""
+        return [
+            "The rain falls like silver threads on cobblestone streets",
+            "Grandma's kitchen on Sunday morning, cinnamon in the air",
+            "A library where time stands still, dust motes dance in sunbeams",
+            "The quiet before dawn, when the world holds its breath",
+            "A steampunk workshop where brass gears whisper secrets",
+            "Fresh snow crunching underfoot, breath visible in cold air",
+        ]
 
     def analyze_music_prompt_layers(self, user_text: str = '', extra_fields: dict = None) -> dict:
         """
@@ -193,8 +384,11 @@ class AIService:
 只返回JSON，无需解释。
 文本：''' + full_text
         try:
-            response = self.model.generate_content(prompt)
-            raw = response.text
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw = response.text or ""
             # 尝试提取JSON
             json_match = re.search(r'```json\n([\s\S]*?)\n```', raw)
             if json_match:
@@ -252,7 +446,7 @@ class AIService:
             parts.append(artist_style)
         # 结尾补充
         parts.append("high-quality, rich, layered, immersive music")
-        return ", ".join([str(p) for p in parts if p])
+        return ", ".join([str(p) for p in parts if p is not None])
 
     def analyze_audiogen_prompt_layers(self, user_text: str = '', extra_fields: dict = None) -> dict:
         """
@@ -283,8 +477,11 @@ class AIService:
 只返回JSON，无需解释。
 文本：''' + full_text
         try:
-            response = self.model.generate_content(prompt)
-            raw = response.text
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw = response.text or ""
             json_match = re.search(r'```json\n([\s\S]*?)\n```', raw)
             if json_match:
                 json_string = json_match.group(1).strip()
