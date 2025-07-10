@@ -362,7 +362,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         { sender: 'ai', text: 'Generating your soundscape...', isUser: false },
         { sender: 'ai', text: `Prompt: ${prompt}`, isUser: false },
       ]);
-      const audioResponse = await fetch('http://localhost:8000/api/generate-audio', {
+      const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

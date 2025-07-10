@@ -33,11 +33,34 @@ class StableAudioService:
             print("Loading Stable Audio Open Small model...")
             start_time = time.time()
             
+            # === 修复：在模型加载前设置随机种子 ===
+            import numpy as np
+            import random
+            
+            # 设置固定的随机种子，避免 int32 溢出
+            np.random.seed(42)
+            random.seed(42)
+            torch.manual_seed(42)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed(42)
+            
+            print("[INFO] 模型加载前已设置随机种子")
+            # === END ===
+            
             # 下载并加载模型
             self.model, self.model_config = get_pretrained_model("stabilityai/stable-audio-open-small")
             self.sample_rate = self.model_config["sample_rate"]
             self.sample_size = self.model_config["sample_size"]
-            
+
+            # === 关键修复：强制float32，避免CPU卡死 ===
+            try:
+                self.model.pretransform.model_half = False
+                self.model = self.model.to(torch.float32)
+                print("[INFO] 强制模型为float32 (CPU友好)")
+            except Exception as e:
+                print("[WARN] 设置float32失败:", e)
+            # === END ===
+
             # 将模型移动到指定设备
             self.model = self.model.to(self.device)
             
@@ -81,6 +104,20 @@ class StableAudioService:
             print(f"Generating audio with prompt: '{prompt}' (duration: {duration}s)")
             start_time = time.time()
             
+            # === 修复：设置 numpy 随机数生成器 ===
+            import numpy as np
+            import random
+            
+            # 设置固定的随机种子，避免 int32 溢出
+            np.random.seed(42)
+            random.seed(42)
+            torch.manual_seed(42)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed(42)
+            
+            print("[INFO] 已设置随机种子，避免 int32 溢出错误")
+            # === END ===
+            
             # 设置文本和时间条件
             conditioning = [{
                 "prompt": prompt,
@@ -88,33 +125,84 @@ class StableAudioService:
             }]
             
             # 生成立体声音频
-            output = generate_diffusion_cond(
-                self.model,
-                steps=steps,
-                cfg_scale=cfg_scale,
-                conditioning=conditioning,
-                sample_size=self.sample_size,
-                sampler_type=sampler_type,
-                device=self.device
-            )
+            try:
+                output = generate_diffusion_cond(
+                    self.model,
+                    steps=steps,
+                    cfg_scale=cfg_scale,
+                    conditioning=conditioning,
+                    sample_size=self.sample_size,
+                    sampler_type=sampler_type,
+                    device=self.device
+                )
+                print("✅ 音频生成成功")
+            except Exception as e:
+                if "high is out of bounds for int32" in str(e):
+                    print("⚠️  检测到 int32 溢出错误，尝试修复...")
+                    # 重新设置随机种子
+                    np.random.seed(123)
+                    random.seed(123)
+                    torch.manual_seed(123)
+                    if torch.cuda.is_available():
+                        torch.cuda.manual_seed(123)
+                    
+                    # 重试生成
+                    output = generate_diffusion_cond(
+                        self.model,
+                        steps=steps,
+                        cfg_scale=cfg_scale,
+                        conditioning=conditioning,
+                        sample_size=self.sample_size,
+                        sampler_type=sampler_type,
+                        device=self.device
+                    )
+                    print("✅ 修复后音频生成成功")
+                else:
+                    raise e
             
             # 重新排列音频批次为单个序列
             output = rearrange(output, "b d n -> d (b n)")
             
             # 峰值归一化、裁剪、转换为int16并保存到文件
-            output = (output.to(torch.float32)
-                     .div(torch.max(torch.abs(output)))
-                     .clamp(-1, 1)
-                     .mul(32767)
-                     .to(torch.int16)
-                     .cpu())
-            
-            # 生成唯一文件名
-            filename = f"stable_audio_{uuid.uuid4().hex[:8]}.wav"
-            filepath = os.path.join(self.output_dir, filename)
-            
-            # 保存音频文件
-            torchaudio.save(filepath, output, self.sample_rate)
+            try:
+                print(f"Output shape before processing: {output.shape}")
+                print(f"Output dtype: {output.dtype}")
+                print(f"Output device: {output.device}")
+                print(f"Output min: {output.min()}, max: {output.max()}")
+                
+                output = (output.to(torch.float32)
+                         .div(torch.max(torch.abs(output)))
+                         .clamp(-1, 1)
+                         .mul(32767)
+                         .to(torch.int16)
+                         .cpu())
+                
+                print(f"Output shape after processing: {output.shape}")
+                print(f"Output dtype after processing: {output.dtype}")
+                print(f"Output device after processing: {output.device}")
+                print(f"Output min after: {output.min()}, max after: {output.max()}")
+                print(f"Output has NaN: {torch.isnan(output).any().item()}, has inf: {torch.isinf(output).any().item()}")
+                print(f"Output first 10 samples: {output.flatten()[:10]}")
+                
+                # 生成唯一文件名
+                filename = f"stable_audio_{uuid.uuid4().hex[:8]}.wav"
+                filepath = os.path.join(self.output_dir, filename)
+                
+                # 确保sample_rate是整数
+                sample_rate = int(self.sample_rate)
+                print(f"Sample rate: {sample_rate}")
+                print(f"即将保存: path={filepath}, shape={output.shape}, dtype={output.dtype}, min={output.min()}, max={output.max()}")
+                
+                # 保存音频文件
+                torchaudio.save(filepath, output, sample_rate)
+                print(f"Audio saved successfully: {filepath}")
+                
+            except Exception as e:
+                print(f"Error in audio processing/saving: {e}")
+                print(f"Output tensor info - shape: {output.shape}, dtype: {output.dtype}, device: {output.device}, min: {output.min()}, max: {output.max()}")
+                import traceback
+                traceback.print_exc()
+                raise
             
             generation_time = time.time() - start_time
             print(f"Audio generated successfully in {generation_time:.2f} seconds")
@@ -170,3 +258,6 @@ class StableAudioService:
 
 # 创建单例实例
 stable_audio_service = StableAudioService() 
+
+# 可选：主流程默认测试prompt
+DEFAULT_TEST_PROMPT = "Children's laughter echoing softly and Cicada chorus with distant birdsong and Grandma's humming, a quiet melody. Relaxed warm summer breeze, cicadas chirping. For focus." 

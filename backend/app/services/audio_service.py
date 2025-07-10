@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+from google import genai
 from typing import Optional, Dict, Any
 from pydub import AudioSegment
 import subprocess
@@ -12,9 +12,9 @@ class AudioGenerationService:
         self.audio_model = None
         self.music_model = None
         self.device = "cpu"  # Audio generation is now handled by worker script
-        # Initialize Gemini
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.gemini_model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # Initialize GenAI
+        self.client = genai.Client()
+        self.gemini_model = "gemini-1.5-flash-latest"
         # Initialize audio effects service
         self.effects_service = AudioEffectsService()
         # Set output directory for audio (for local copies)
@@ -61,28 +61,20 @@ class AudioGenerationService:
         return "musicgen"
 
     def convert_to_scene_description(self, text: str) -> Optional[str]:
-        """Use Gemini to convert poetic or literary descriptions into scene descriptions"""
+        """Use GenAI to convert poetic or literary descriptions into scene descriptions"""
         try:
-            prompt = """You are an expert in audio scene description.
-            Your task is to convert poetic or literary descriptions into concrete scene descriptions, including sound elements.
-            For example:
-            - Input: "小楼一夜听春雨"
-            - Output: "Soft spring rain drops on a wooden roof, with occasional distant bird chirps, creating a peaceful night ambiance."
-            
-            Please ensure the output contains concrete environmental sound descriptions, not abstract poetic expressions.
-            Keep the description concise and focused on sound elements, ideally under 50 words.
-            
-            Now, please convert the following text into a scene description:
-            """
-            
+            prompt = """You are an expert in audio scene description.\nYour task is to convert poetic or literary descriptions into concrete scene descriptions, including sound elements.\nFor example:\n- Input: "小楼一夜听春雨"\n- Output: "Soft spring rain drops on a wooden roof, with occasional distant bird chirps, creating a peaceful night ambiance."\n\nPlease ensure the output contains concrete environmental sound descriptions, not abstract poetic expressions.\nKeep the description concise and focused on sound elements, ideally under 50 words.\n\nNow, please convert the following text into a scene description:\n"""
             generation_config = {
                 "max_output_tokens": 100, # Limit output length to around 50 words
             }
-            
-            response = self.gemini_model.generate_content(prompt + text, generation_config=generation_config)
+            response = self.client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt + text,
+                generationConfig=generation_config
+            )
             return response.text
         except Exception as e:
-            print(f"Gemini conversion failed: {e}")
+            print(f"GenAI conversion failed: {e}")
             return None
 
     async def generate_audio(self, description, duration=20, output_path=None, model_type="audiogen"):
