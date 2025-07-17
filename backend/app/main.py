@@ -14,25 +14,55 @@ from typing import List, Dict, Optional, Any
 from fastapi.staticfiles import StaticFiles
 from .services.ai_service import ai_service, get_instruments_from_ai, build_musicgen_prompt, build_audiogen_prompt
 from .services.image_service import ImageGenerationService
+from .services.audio_service import tts_to_audio
 from fastapi import APIRouter
 import subprocess
+import uuid
+from fastapi import UploadFile
+import uuid
+from pydub import AudioSegment
+from .services.freesound_concat_demo import generate_freesound_mix, generate_freesound_mix_with_duration
+# from .services.stable_audio_service import stable_audio_service
+import tempfile
+
+def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segment_duration: float = 10.0, crossfade_ms: int = 1000) -> str:
+    """
+    多段 Stable Audio worker 生成音频，拼接并做淡入淡出混合，导出总时长音频
+    """
+    import uuid, os, subprocess
+    segments = []
+    remaining = total_duration
+    segment_idx = 0
+    with tempfile.TemporaryDirectory() as tmpdir:
+        while remaining > 0:
+            seg_dur = min(segment_duration, remaining, 11.0)
+            seg_path = os.path.join(tmpdir, f"seg_{segment_idx}.wav")
+            worker_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "../scripts/run_stable_audio_worker.py"))
+            # 修正虚拟环境路径，指向 backend/venv_stableaudio/Scripts/python.exe（回退到上一级目录）
+            venv_python = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv_stableaudio", "Scripts", "python.exe"))
+            cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
+            print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
+                raise Exception("Stable Audio worker failed")
+            print(f"[LONG_AUDIO] Segment {segment_idx} generated: {seg_path}")
+            segments.append(AudioSegment.from_file(seg_path))
+            remaining -= seg_dur
+            segment_idx += 1
+        # 拼接并做淡入淡出混合
+        final_audio = segments[0]
+        for seg in segments[1:]:
+            final_audio = final_audio.append(seg, crossfade=crossfade_ms)
+        # 截断到总时长
+        final_audio = final_audio[:int(total_duration * 1000)]
+        out_path = os.path.join("audio_output", f"stable_long_{uuid.uuid4().hex}.wav")
+        final_audio.export(out_path, format="wav")
+        print(f"[LONG_AUDIO] Final audio saved: {out_path}")
+        return out_path
 
 # Get the path to the current file's directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-print(f"DEBUG: BASE_DIR is {BASE_DIR}")
-
-# Ensure output directories exist at the very beginning
-AUDIO_SAMPLES_DIR = os.path.join(BASE_DIR, "audio_samples")
-IMAGE_OUTPUT_DIR = os.path.join(BASE_DIR, "image_output")
-
-print(f"DEBUG: Ensuring AUDIO_SAMPLES_DIR {AUDIO_SAMPLES_DIR} exists.")
-os.makedirs(AUDIO_SAMPLES_DIR, exist_ok=True)
-print(f"DEBUG: Ensuring IMAGE_OUTPUT_DIR {IMAGE_OUTPUT_DIR} exists.")
-os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
-
-print("DEBUG: SUPABASE_URL =", os.environ.get("SUPABASE_URL"))
-print("DEBUG: SUPABASE_KEY =", os.environ.get("SUPABASE_KEY"))
 
 # 在 load_dotenv 之后实例化 image_service
 image_service = None
@@ -41,6 +71,12 @@ try:
 except ValueError as e:
     print(f"Failed to initialize ImageGenerationService: {e}")
     image_service = None
+
+# Ensure output directories exist at the very beginning
+AUDIO_SAMPLES_DIR = os.path.join(BASE_DIR, "audio_samples")
+IMAGE_OUTPUT_DIR = os.path.join(BASE_DIR, "image_output")
+os.makedirs(AUDIO_SAMPLES_DIR, exist_ok=True)
+os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
 
 app = FastAPI(title="Nightingale API",
              description="AI-powered ambient sound generation API",
@@ -102,10 +138,33 @@ async def root():
 
 @app.post("/api/generate-scene")
 async def generate_scene(request: SceneRequest):
+    print("[DEBUG] 收到/generate-scene请求", request.dict())
     try:
         # Analyze the scene with AI
+        print("[DEBUG] 调用parse_scene前")
         scene_elements = await ai_service.parse_scene(request.prompt)
-        
+        print("[DEBUG] parse_scene后，scene_elements:", scene_elements)
+        narrative_script = None
+        if request.mode == "story":
+            print("[DEBUG] 进入story mode，准备生成narrative script")
+            story_prompt = f"""
+You are a masterful storyteller. Based on the following user memory, story, or scene description, write a short, immersive, and vivid narrative script in English (3-5 sentences). Use sensory details and emotional language to help the listener feel present in the moment. Do not include sound design instructions, just the story. Make it suitable for being read aloud as an audio introduction.
+
+User description: {request.prompt}
+
+Narrative script:"""
+            try:
+                print("[DEBUG] 调用Gemini generate_content前")
+                response = ai_service.client.models.generate_content(
+                    model=ai_service._get_current_model(),
+                    contents=story_prompt
+                )
+                print("[DEBUG] Gemini返回response")
+                narrative_script = response.text.strip() if response and response.text else None
+                print("[DEBUG] narrative_script:", narrative_script)
+            except Exception as e:
+                print(f"[ERROR] Failed to generate narrative script: {e}")
+                narrative_script = None
         # Generate AI response based on mode
         if request.mode == "focus":
             ai_response = "I'll create a focused soundscape that helps you concentrate. The sounds will be clear and non-distracting."
@@ -117,13 +176,15 @@ async def generate_scene(request: SceneRequest):
             ai_response = "I'll create a musical soundscape with melodic elements and rhythmic patterns."
         else:
             ai_response = "I'll create a soundscape based on your description."
-        
+        print("[DEBUG] 返回数据")
         return {
             "scene_description": request.prompt,
             "scene_elements": scene_elements,
-            "ai_response": ai_response
+            "ai_response": ai_response,
+            "narrative_script": narrative_script
         }
     except Exception as e:
+        print(f"[ERROR] /api/generate-scene异常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-background")
@@ -223,6 +284,121 @@ async def generate_inspiration_chips(request: InspirationChipsRequest):
         "Lively city street during rush hour",
     ]
     return {"chips": fallback_chips}
+
+@app.post("/api/tts")
+async def tts_endpoint(request: dict):
+    text = request.get('text')
+    if not text or not isinstance(text, str):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'text' parameter")
+    filename = f"tts_{uuid.uuid4().hex}.mp3"
+    output_path = os.path.join("audio_output", filename)
+    os.makedirs("audio_output", exist_ok=True)
+    # 使用更柔和的 JennyNeural
+    await tts_to_audio(text, output_path, voice="en-US-JennyNeural")
+    # 上传到 Supabase
+    from .services.storage_service import storage_service
+    cloud_url = await storage_service.upload_audio(output_path, filename)
+    return {"audio_url": cloud_url}
+
+@app.post("/api/generate-audio")
+async def generate_audio(request: dict):
+    description = request.get("description") or request.get("userInput")
+    duration = float(request.get("duration", 20))
+    if not description:
+        raise HTTPException(status_code=400, detail="Missing 'description' parameter")
+    try:
+        out_path = generate_long_stable_audio(description, total_duration=duration)
+        from .services.storage_service import storage_service
+        cloud_url = await storage_service.upload_audio(out_path, f"stable_{abs(hash(description))}")
+        return {"audio_url": cloud_url, "duration": duration}
+    except Exception as e:
+        print(f"[ERROR] /api/generate-audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-music")
+async def generate_music(request: dict):
+    description = request.get("description") or request.get("userInput")
+    duration = float(request.get("duration", 20))
+    if not description:
+        raise HTTPException(status_code=400, detail="Missing 'description' parameter")
+    try:
+        out_path = generate_long_stable_audio(description, total_duration=duration)
+        from .services.storage_service import storage_service
+        cloud_url = await storage_service.upload_audio(out_path, f"stable_music_{abs(hash(description))}")
+        return {"audio_url": cloud_url, "duration": duration}
+    except Exception as e:
+        print(f"[ERROR] /api/generate-music: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/create-story")
+async def create_story(request: dict):
+    """
+    一步生成旁白脚本、TTS音频、soundscape音频并混音，返回旁白文本和合成音频URL。
+    输入: { "prompt": "完整的故事描述+soundscape选择", "original_description": "原始故事描述", "duration": 20 }
+    输出: { "narrative_script": ..., "audio_url": ... }
+    """
+    prompt = request.get("prompt")
+    original_description = request.get("original_description", "")
+    duration = float(request.get("duration", 20))
+    if not prompt or not isinstance(prompt, str):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'prompt' parameter")
+    try:
+        # 1. 生成旁白脚本（使用原始故事描述）
+        story_prompt = f"""
+You are a masterful storyteller. Based on the following user memory, story, or scene description, write a short, immersive, and vivid narrative script in English. Use sensory details and emotional language to help the listener feel present in the moment. Do not include sound design instructions, just the story. Make it suitable for being read aloud as an audio introduction.
+
+User description: {original_description}
+
+Requirements:
+- The narration should be a complete story, not cut off in the middle.
+- The narration should be about what can be read aloud in about {duration} seconds (for example, 20 seconds), but do not stop abruptly—finish the story naturally.
+- 3-6 sentences is typical.
+
+Narrative script:"""
+        response = ai_service.client.models.generate_content(
+            model=ai_service._get_current_model(),
+            contents=story_prompt
+        )
+        narrative_script = response.text.strip() if response and response.text else None
+        if not narrative_script:
+            raise Exception("Failed to generate narrative script")
+        
+        # 2. TTS 生成旁白音频
+        tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
+        tts_path = os.path.join("audio_output", tts_filename)
+        await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
+        
+        # 3. 获取 TTS 音频长度
+        from pydub import AudioSegment
+        tts_audio = AudioSegment.from_file(tts_path)
+        tts_duration_ms = len(tts_audio)
+        tts_duration_seconds = tts_duration_ms / 1000
+        print(f"[STORY] TTS duration: {tts_duration_seconds:.2f} seconds (target: {duration}s)")
+        
+        # 4. 用 Stable Audio worker 生成 soundscape（总时长为 duration）
+        stable_audio_out = generate_long_stable_audio(prompt, total_duration=duration)
+        
+        # 5. 混音
+        soundscape_audio = AudioSegment.from_file(stable_audio_out)
+        # 确保 soundscape 长度与 TTS 匹配或稍长
+        if len(soundscape_audio) < tts_duration_ms:
+            repeats_needed = int(tts_duration_ms / len(soundscape_audio)) + 1
+            soundscape_audio = soundscape_audio * repeats_needed
+        soundscape_audio = soundscape_audio[:tts_duration_ms + 2000]  # 比 TTS 长 2 秒
+        tts_audio = tts_audio - 2  # 降低 TTS 音量
+        soundscape_audio = soundscape_audio - 4  # 降低 soundscape 音量
+        mixed = soundscape_audio.overlay(tts_audio)
+        mixed_filename = f"story_mix_{uuid.uuid4().hex}.mp3"
+        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed.export(mixed_path, format="mp3")
+        
+        # 6. 上传合成音频到 Supabase
+        from .services.storage_service import storage_service
+        cloud_url = await storage_service.upload_audio(mixed_path, mixed_filename)
+        return {"narrative_script": narrative_script, "audio_url": cloud_url}
+    except Exception as e:
+        print(f"[ERROR] /api/create-story: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")
 async def startup_event():

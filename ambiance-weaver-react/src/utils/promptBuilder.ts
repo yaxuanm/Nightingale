@@ -2,13 +2,20 @@
 export function buildAudioGenPrompt({
   subjects,
   actions,
-  scenes
+  scenes,
+  type = 'audio', // 新增参数，默认为 audio
 }: {
   subjects: string[]; // 必填，主体（如 rain, cafe chatter）
   actions?: string[]; // 可选，动作/变化（如 in the background, mixed with）
   scenes?: string[];  // 可选，场景/氛围（如 in a cozy cafe, at night）
+  type?: 'audio' | 'music'; // 新增类型参数
 }): string {
   let prompt = '';
+  if (type === 'music') {
+    prompt += 'Music: ';
+  } else {
+    prompt += 'Ambient soundscape: ';
+  }
   if (subjects && subjects.length > 0) {
     prompt += subjects.join(' and ');
   }

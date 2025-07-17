@@ -37,6 +37,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const recognitionRef = useRef<any>(null);
   
   // 新增状态用于动态inspiration chips
+  // inspiration chips 状态，初始为默认prompts
   const [inspirationChips, setInspirationChips] = useState<string[]>([]);
   const [isLoadingChips, setIsLoadingChips] = useState(false);
 
@@ -50,9 +51,12 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
     "Fresh snow crunching underfoot, breath visible in cold air",
   ];
 
-  // 获取随机的inspiration chips
-  const fetchInspirationChips = async () => {
-    setIsLoadingChips(true);
+  // Story Mode: custom prompt and UI
+  const isStoryMode = mode === 'story';
+
+  // 获取随机的inspiration chips，支持是否显示loading
+  const fetchInspirationChips = async (showLoading = false) => {
+    if (showLoading) setIsLoadingChips(true);
     try {
       const response = await fetch('http://localhost:8000/api/generate-inspiration-chips', {
         method: 'POST',
@@ -69,28 +73,28 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
         const data = await response.json();
         if (data.chips && Array.isArray(data.chips)) {
           setInspirationChips(data.chips);
-        } else {
-          setInspirationChips(defaultSuggestedPrompts);
         }
-      } else {
-        setInspirationChips(defaultSuggestedPrompts);
       }
     } catch (error) {
       console.error('Failed to fetch inspiration chips:', error);
-      setInspirationChips(defaultSuggestedPrompts);
     } finally {
-      setIsLoadingChips(false);
+      if (showLoading) setIsLoadingChips(false);
     }
   };
 
-  // 组件加载时获取inspiration chips
+  // 防止 inspirations 自动刷新两次
+  // 用 useRef 保证 fetchInspirationChips 只在首次加载时调用
+  const fetchedRef = useRef(false);
   useEffect(() => {
-    fetchInspirationChips();
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetchInspirationChips(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 刷新inspiration chips
+  // 刷新inspiration chips（手动刷新时才显示loading）
   const handleRefreshChips = () => {
-    fetchInspirationChips();
+    fetchInspirationChips(true);
   };
 
   const handleHelpClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -170,7 +174,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             ...uiSystem.typography.h2,
           }}
         >
-          Welcome back, Scarlett
+          {isStoryMode ? 'Story Mode' : 'Welcome back, Scarlett'}
         </Typography>
         <Typography 
           variant="body1" 
@@ -179,7 +183,9 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             ...uiSystem.typography.body1,
           }}
         >
-          Describe your perfect atmosphere or paste a poem, quote, or movie line to inspire music
+          {isStoryMode
+            ? 'Describe a memory, story, or scene you want to relive. The AI will narrate it and create a matching soundscape.'
+            : 'Describe your perfect atmosphere or paste a poem, quote, or movie line to inspire music'}
         </Typography>
       </Box>
 
@@ -202,10 +208,23 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
           <TextField
             multiline
             fullWidth
-            minRows={5}
+            minRows={isStoryMode ? 7 : 5}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={`Try: "The rain falls like silver threads on cobblestone streets"\nTry: "Grandma's kitchen on Sunday morning, cinnamon in the air"\nTry: "A library where time stands still, dust motes dance in sunbeams"\nTry: "The quiet before dawn, when the world holds its breath"\nTry: "To see a world in a grain of sand..."`}
+            placeholder={isStoryMode
+              ? 'E.g. A summer afternoon at grandma’s house, cicadas singing, watermelon in hand.\nE.g. The first snowfall you remember, quiet streets, warm lights in windows.\nE.g. The day you met your best friend, laughter echoing in a sunlit park.'
+              : `Try: "The rain falls like silver threads on cobblestone streets"\nTry: "Grandma's kitchen on Sunday morning, cinnamon in the air"\nTry: "A library where time stands still, dust motes dance in sunbeams"\nTry: "The quiet before dawn, when the world holds its breath"\nTry: "To see a world in a grain of sand..."`}
+            InputProps={isStoryMode ? {
+              sx: {
+                fontSize: 20,
+                '&::placeholder': {
+                  fontSize: 18,
+                  fontStyle: 'italic',
+                  color: uiSystem.colors.white70,
+                  opacity: 1,
+                },
+              },
+            } : {}}
             sx={{ 
               mb: uiSystem.spacing.large,
               '& .MuiOutlinedInput-root': {
@@ -213,14 +232,18 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 fieldset: { borderColor: uiSystem.colors.white20 },
                 '&:hover fieldset': { borderColor: uiSystem.colors.primary },
                 '&.Mui-focused fieldset': { borderColor: uiSystem.colors.primary },
+                fontSize: isStoryMode ? 20 : undefined,
               },
               '& .MuiInputBase-input::placeholder': {
+                fontSize: isStoryMode ? 18 : undefined,
+                fontStyle: isStoryMode ? 'italic' : undefined,
                 color: uiSystem.colors.white70,
                 opacity: 1,
               },
             }}
           />
           {/* Suggestions Section */}
+          {!isStoryMode && (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: uiSystem.spacing.small }}>
             <Typography
               variant="subtitle1" 
@@ -242,6 +265,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
               </IconButton>
             </Tooltip>
           </Box>
+          )}
+          {!isStoryMode && (
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: uiSystem.spacing.large }}>
             {isLoadingChips ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
@@ -251,27 +276,32 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 </Typography>
               </Box>
             ) : (
-              inspirationChips.map((prompt) => (
-                <Chip
-                  key={prompt}
-                  label={prompt}
-                  onClick={() => setInputValue(prompt)}
-                  sx={{
-                    bgcolor: uiSystem.colors.white05,
-                    color: uiSystem.colors.primary,
-                    border: `1px solid ${uiSystem.colors.white20}`,
-                    cursor: 'pointer',
-                    fontSize: uiSystem.typography.label.fontSize,
-                    fontWeight: uiSystem.typography.label.fontWeight,
-                    '&:hover': {
-                      bgcolor: uiSystem.colors.white10,
-                      borderColor: uiSystem.colors.primary,
-                    },
-                  }}
-                />
-              ))
+              inspirationChips.map((prompt) => {
+                // 去掉末尾括号和模式标签
+                const cleanPrompt = prompt.replace(/\s*\([^)]*\)\s*$/, '');
+                return (
+                  <Chip
+                    key={prompt}
+                    label={cleanPrompt}
+                    onClick={() => setInputValue(cleanPrompt)}
+                    sx={{
+                      bgcolor: uiSystem.colors.white05,
+                      color: uiSystem.colors.primary,
+                      border: `1px solid ${uiSystem.colors.white20}`,
+                      cursor: 'pointer',
+                      fontSize: uiSystem.typography.label.fontSize,
+                      fontWeight: uiSystem.typography.label.fontWeight,
+                      '&:hover': {
+                        bgcolor: uiSystem.colors.white10,
+                        borderColor: uiSystem.colors.primary,
+                      },
+                    }}
+                  />
+                );
+              })
             )}
           </Stack>
+          )}
         </Box>
         {/* Help Popover */}
         <Popover
@@ -287,7 +317,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             horizontal: 'right',
           }}
         >
-          <Box sx={{ p: uiSystem.spacing.medium, maxWidth: 260, bgcolor: uiSystem.colors.background }}>
+          <Box sx={{ p: uiSystem.spacing.medium, maxWidth: 320, bgcolor: uiSystem.colors.background }}>
             <Typography 
               variant="subtitle1" 
               sx={{ 
@@ -296,9 +326,19 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 ...uiSystem.typography.h4,
               }}
             >
-              What can I type?
+              {isStoryMode ? 'How to use Story Mode?' : 'What can I type?'}
             </Typography>
             <Box component="ul" sx={{ m: 0, pl: 2, color: uiSystem.colors.white70 }}>
+              {isStoryMode ? (
+                <>
+                  <li>Describe a memory, story, or scene you want to relive.</li>
+                  <li>Be as vivid or as simple as you like—details help bring your story to life!</li>
+                  <li>Example: "A summer afternoon at grandma’s house, cicadas singing, watermelon in hand."</li>
+                  <li>Example: "The first snowfall you remember, quiet streets, warm lights in windows."</li>
+                  <li>The AI will narrate your story and create a matching soundscape.</li>
+                </>
+              ) : (
+                <>
               <li>Describe your ideal soundscape</li>
               <li>Paste a poem, quote, or movie line</li>
               <li>Try: "The rain falls like silver threads on cobblestone streets"</li>
@@ -306,6 +346,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
               <li>Try: "A library where time stands still, dust motes dance in sunbeams"</li>
               <li>Try: "The quiet before dawn, when the world holds its breath"</li>
               <li>Try: "To see a world in a grain of sand..."</li>
+                </>
+              )}
             </Box>
             <Typography 
               variant="body2" 
@@ -315,7 +357,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 ...uiSystem.typography.body3,
               }}
             >
-              AI will generate a unique soundscape for you!
+              {isStoryMode ? 'Let your story come alive with sound.' : 'AI will generate a unique soundscape for you!'}
             </Typography>
           </Box>
         </Popover>

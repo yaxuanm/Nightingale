@@ -39,6 +39,14 @@ const modes = [
     description: 'Helps you fall asleep and stay asleep.',
     icon: MusicIcon,
     color: '#8f9c2d'
+  },
+  // 新增 Story Mode
+  {
+    id: 'story',
+    title: 'Relive your story',
+    description: 'Relive your story with narration and sound',
+    icon: StoryIcon,
+    color: '#e6b800' // Gold tone for storytelling
   }
 ];
 

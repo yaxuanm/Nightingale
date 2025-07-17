@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stable Audio 人工评估界面</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .test-item { background: white; margin: 10px 0; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .test-info { margin-bottom: 15px; }
+        .audio-player { margin: 10px 0; }
+        .evaluation-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .rating-group { display: flex; flex-direction: column; }
+        .rating-group label { font-weight: bold; margin-bottom: 5px; }
+        .rating-group select { padding: 8px; border: 1px solid #ddd; border-radius: 3px; }
+        .comments { width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 3px; resize: vertical; }
+        .submit-btn { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        .submit-btn:hover { background: #2980b9; }
+        .progress { background: #ecf0f1; padding: 10px; border-radius: 3px; margin: 10px 0; }
+        .category-badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 12px; color: white; margin-left: 10px; }
+        .category-user { background: #e74c3c; }
+        .category-ai { background: #3498db; }
+        .category-chinese { background: #f39c12; }
+        .category-focus { background: #27ae60; }
+        .category-relax { background: #8e44ad; }
+        .category-story { background: #e67e22; }
+        .category-music { background: #16a085; }
+        .category-edge { background: #95a5a6; }
+        .category-custom { background: #9b59b6; }
+        .url-info { background: #ecf0f1; padding: 10px; border-radius: 3px; margin: 10px 0; font-family: monospace; word-break: break-all; font-size: 12px; }
+        .download-link { color: #3498db; text-decoration: none; }
+        .download-link:hover { text-decoration: underline; }
+        .audio-error { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Stable Audio 人工评估界面</h1>
+            <p>请为每个音频样本进行质量评估。评估完成后点击"保存评估结果"。</p>
+            <p><strong>音频来源:</strong> Supabase 云存储</p>
+        </div>
+        
+        <div class="progress">
+            <span id="progress-text">评估进度: 0/1</span>
+            <div style="width: 100%; background: #ddd; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div id="progress-bar" style="width: 0%; background: #3498db; height: 100%; transition: width 0.3s;"></div>
+            </div>
+        </div>
+        
+        <form id="evaluation-form">
+
+            <div class="test-item" data-id="test_single_1">
+                <div class="test-info">
+                    <h3>测试 1: test_single_1 <span class="category-badge category-test">test_single</span></h3>
+                    <p><strong>用户输入:</strong> cozy cafe</p>
+                    <p><strong>模式:</strong> focus</p>
+                    <p><strong>最终Prompt:</strong> cozy cafe, rainy afternoon with coffee machine steaming, pages turning</p>
+                    <p><strong>技术分数:</strong> 0.0/40</p>
+                    <p><strong>内容分数:</strong> 0.0/60</p>
+                    <p><strong>综合分数:</strong> 0.0/100</p>
+                    <div class="url-info">
+                        <strong>音频URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/7699938409967635622.wav?
+                    </div>
+                </div>
+                
+                <div class="audio-player">
+                    <p><strong>音频播放:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/7699938409967635622.wav?" type="audio/wav">
+                        您的浏览器不支持音频播放。
+                    </audio>
+                    <p class="audio-error" id="audio-error-0" style="display: none;">
+                        ⚠️ 音频无法播放，请检查网络连接或URL
+                    </p>
+                    <p>
+                        <a href="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/7699938409967635622.wav?" target="_blank" class="download-link">
+                            📥 在新窗口打开音频
+                        </a>
+                    </p>
+                </div>
+                
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_0">相关性 (1-5):</label>
+                        <select name="relevance_0" id="relevance_0" required>
+                            <option value="">请选择</option>
+                            <option value="1">1 - 完全不相关</option>
+                            <option value="2">2 - 部分相关</option>
+                            <option value="3">3 - 一般相关</option>
+                            <option value="4">4 - 高度相关</option>
+                            <option value="5">5 - 完全相关</option>
+                        </select>
+                    </div>
+                    
+                    <div class="rating-group">
+                        <label for="quality_0">音频质量 (1-5):</label>
+                        <select name="quality_0" id="quality_0" required>
+                            <option value="">请选择</option>
+                            <option value="1">1 - 质量很差</option>
+                            <option value="2">2 - 质量较差</option>
+                            <option value="3">3 - 质量一般</option>
+                            <option value="4">4 - 质量较好</option>
+                            <option value="5">5 - 质量很好</option>
+                        </select>
+                    </div>
+                    
+                    <div class="rating-group">
+                        <label for="enjoyment_0">听觉享受 (1-5):</label>
+                        <select name="enjoyment_0" id="enjoyment_0" required>
+                            <option value="">请选择</option>
+                            <option value="1">1 - 很不享受</option>
+                            <option value="2">2 - 不太享受</option>
+                            <option value="3">3 - 一般享受</option>
+                            <option value="4">4 - 比较享受</option>
+                            <option value="5">5 - 非常享受</option>
+                        </select>
+                    </div>
+                    
+                    <div class="rating-group">
+                        <label for="usability_0">实用性 (1-5):</label>
+                        <select name="usability_0" id="usability_0" required>
+                            <option value="">请选择</option>
+                            <option value="1">1 - 完全不可用</option>
+                            <option value="2">2 - 基本不可用</option>
+                            <option value="3">3 - 勉强可用</option>
+                            <option value="4">4 - 比较可用</option>
+                            <option value="5">5 - 非常可用</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="comments_0">详细评论:</label>
+                    <textarea name="comments_0" id="comments_0" class="comments" placeholder="请详细描述您的感受和建议..."></textarea>
+                </div>
+            </div>
+        
+            <div style="text-align: center; margin: 20px 0;">
+                <button type="submit" class="submit-btn">💾 保存评估结果</button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // 检查音频文件是否存在
+        function checkAudioFiles() {
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach((audio, index) => {
+                audio.addEventListener('error', function() {
+                    const errorElement = document.getElementById(`audio-error-${index}`);
+                    if (errorElement) {
+                        errorElement.style.display = 'block';
+                    }
+                });
+                
+                audio.addEventListener('loadstart', function() {
+                    const errorElement = document.getElementById(`audio-error-${index}`);
+                    if (errorElement) {
+                        errorElement.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // 进度跟踪
+        function updateProgress() {
+            const form = document.getElementById('evaluation-form');
+            const selects = form.querySelectorAll('select[required]');
+            const totalRequired = selects.length;
+            let completed = 0;
+            
+            selects.forEach(select => {
+                if (select.value !== '') {
+                    completed++;
+                }
+            });
+            
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar');
+            const percentage = (completed / totalRequired) * 100;
+            
+            progressText.textContent = `评估进度: ${completed}/${totalRequired}`;
+            progressBar.style.width = percentage + '%';
+        }
+        
+        // 监听选择变化
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', updateProgress);
+        });
+        
+        // 表单提交
+        document.getElementById('evaluation-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const evaluationData = {};
+            
+            for (let i = 0; i < 1; i++) {
+                evaluationData[i] = {
+                    relevance: formData.get(`relevance_${i}`),
+                    quality: formData.get(`quality_${i}`),
+                    enjoyment: formData.get(`enjoyment_${i}`),
+                    usability: formData.get(`usability_${i}`),
+                    comments: formData.get(`comments_${i}`)
+                };
+            }
+            
+            // 创建下载链接
+            const dataStr = JSON.stringify(evaluationData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'human_evaluation_results.json';
+            link.click();
+            
+            alert('评估结果已保存！');
+        });
+        
+        // 初始化
+        updateProgress();
+        checkAudioFiles();
+    </script>
+</body>
+</html>
+        

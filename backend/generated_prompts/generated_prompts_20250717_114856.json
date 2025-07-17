@@ -1,0 +1,69 @@
+[
+  {
+    "id": "test_1",
+    "mode": "focus",
+    "user_input": "A city awakening, bathed in the soft glow of twilight.",
+    "inspiration_chip": "A city awakening, bathed in the soft glow of twilight.",
+    "atmosphere": "Twilight cityscape, gentle awakening",
+    "elements": [
+      "Street vendor's call",
+      "Car horns honking intermittently",
+      "Footsteps on pavement"
+    ],
+    "final_prompt": "Twilight cityscape, gentle awakening with Street vendor's call, Car horns honking intermittently, Footsteps on pavement",
+    "generation_time": 1752724128.0671911
+  },
+  {
+    "id": "test_2",
+    "mode": "story",
+    "user_input": "A slow, steady heartbeat echoing in an ancient, hollow forest.",
+    "inspiration_chip": "A slow, steady heartbeat echoing in an ancient, hollow forest.",
+    "atmosphere": "Hollow forest, steady cadence",
+    "elements": [
+      "Subtle, undulating vibration",
+      "Distant, muffled drumming",
+      "Low, resonant thrumming"
+    ],
+    "final_prompt": "Hollow forest, steady cadence with Subtle, undulating vibration, Distant, muffled drumming, Low, resonant thrumming",
+    "generation_time": 1752724130.1197824
+  },
+  {
+    "id": "test_3",
+    "mode": "focus",
+    "user_input": "The hum of a forgotten city waking, gears turning softly. (Story)",
+    "inspiration_chip": "The hum of a forgotten city waking, gears turning softly. (Story)",
+    "atmosphere": "Unused urban center coming alive, quiet mechanical pulse",
+    "elements": [
+      "Metallic joints creaking"
+    ],
+    "final_prompt": "Unused urban center coming alive, quiet mechanical pulse with Metallic joints creaking",
+    "generation_time": 1752724132.2953258
+  },
+  {
+    "id": "test_4",
+    "mode": "relax",
+    "user_input": "A childhood summer afternoon, sun-drenched and filled with cicada song.",
+    "inspiration_chip": "A childhood summer afternoon, sun-drenched and filled with cicada song.",
+    "atmosphere": "Languid summer afternoon, golden light",
+    "elements": [
+      "Sprinkler system hissing",
+      "Screen door slamming shut"
+    ],
+    "final_prompt": "Languid summer afternoon, golden light with Sprinkler system hissing, Screen door slamming shut",
+    "generation_time": 1752724134.526494
+  },
+  {
+    "id": "test_5",
+    "mode": "story",
+    "user_input": "The warm hum of contented solitude, tea steaming gently.",
+    "inspiration_chip": "The warm hum of contented solitude, tea steaming gently.",
+    "atmosphere": "Warm interior, personal space, soft steam",
+    "elements": [
+      "Occasional soft sigh of peace",
+      "Slow exhale of warmth",
+      "Soft rustle of fabric"
+    ],
+    "final_prompt": "Warm interior, personal space, soft steam with Occasional soft sigh of peace, Slow exhale of warmth, Soft rustle of fabric",
+    "generation_time": 1752724136.5643806
+  }
+]
