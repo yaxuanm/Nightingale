@@ -1,0 +1,23 @@
+{
+  "summary": {
+    "total_tests": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "performance": {
+    "avg_generation_time": 274.37350606918335,
+    "avg_technical_score": 0.0,
+    "avg_content_score": 0.0,
+    "avg_overall_score": 0.0
+  },
+  "category_analysis": {
+    "test_single": {
+      "count": 1,
+      "avg_technical": 0.0,
+      "avg_content": 0.0,
+      "avg_overall": 0.0
+    }
+  },
+  "failed_tests": []
+}

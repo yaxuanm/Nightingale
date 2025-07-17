@@ -35,6 +35,45 @@
 
 ---
 
+## 🎧 批量音频评测界面（Web 一键测试）
+
+> 本功能支持一键批量生成 5 个测试用例和音频，进度条实时反馈，评测界面简洁明了。
+
+### 启动方式
+```powershell
+cd backend
+python scripts/batch_test_web.py
+```
+- 启动后会自动打开浏览器访问评测界面。
+- 如未自动打开，可手动访问：http://127.0.0.1:8010/
+
+### 使用说明
+1. 打开页面后，点击“Generate 5 Test Cases”按钮。
+2. 等待进度条完成，自动进入评测界面。
+3. 每个音频显示 prompt、duration、file size。
+4. 可直接在网页上进行人工打分，并保存结果。
+
+---
+
+## 🖼️ 静态批量评测页面（Web 静态测试）
+
+> 本功能用于加载指定的测试数据和音频文件，进行静态网页批量评测，适合复现历史测试结果或自定义数据集评测。
+
+### 启动方式
+```powershell
+cd backend
+python scripts/fixed_test_web.py --data_file audio_test_output/generated_20250714_145931/web_test_data.json --audio_dir audio_test_output/generated_20250714_145931/audio_files --port 8010
+```
+- 启动后会自动打开浏览器访问静态评测界面。
+- 如未自动打开，可手动访问：http://127.0.0.1:8010/
+
+### 使用说明
+1. 页面会自动加载指定的测试数据和音频文件。
+2. 可直接在网页上进行人工打分，并保存结果。
+3. 适合复现历史批量测试或自定义数据集评测。
+
+---
+
 ## 🧪 测试
 
 ### 测试环境设置

@@ -1,0 +1,291 @@
+[
+  {
+    "id": "user_simple_1",
+    "user_input": "cozy cafe",
+    "mode": "focus",
+    "atmosphere": "cozy cafe, rainy afternoon",
+    "elements": [
+      "coffee machine steaming",
+      "pages turning"
+    ],
+    "final_prompt": "cozy cafe, rainy afternoon with coffee machine steaming, pages turning",
+    "duration": 8.0,
+    "category": "user_direct",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_75055559.wav",
+    "generation_time": 135.67414474487305,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "user_simple_2",
+    "user_input": "forest morning",
+    "mode": "relax",
+    "atmosphere": "forest morning with birds chirping",
+    "elements": [
+      "birds chirping",
+      "leaves rustling"
+    ],
+    "final_prompt": "forest morning with birds chirping, leaves rustling",
+    "duration": 10.0,
+    "category": "user_direct",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_1de34bd3.wav",
+    "generation_time": 45.702285289764404,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "ai_enhanced_1",
+    "user_input": "urban night",
+    "mode": "story",
+    "atmosphere": "urban street at night with distant traffic",
+    "elements": [
+      "distant traffic",
+      "city ambience",
+      "distant voices"
+    ],
+    "final_prompt": "urban street at night with distant traffic, city ambience, distant voices",
+    "duration": 9.0,
+    "category": "ai_enhanced",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_e29de6a7.wav",
+    "generation_time": 46.160656690597534,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "ai_enhanced_2",
+    "user_input": "ocean waves",
+    "mode": "music",
+    "atmosphere": "ocean waves crashing on rocky shore",
+    "elements": [
+      "waves crashing",
+      "water sounds",
+      "rocks"
+    ],
+    "final_prompt": "ocean waves crashing on rocky shore, waves crashing, water sounds, rocks",
+    "duration": 8.0,
+    "category": "ai_enhanced",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_730ef01b.wav",
+    "generation_time": 47.615389585494995,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "chinese_user_1",
+    "user_input": "雨天的咖啡馆",
+    "mode": "focus",
+    "atmosphere": "cozy cafe, rainy afternoon",
+    "elements": [
+      "rain on windows",
+      "coffee machine"
+    ],
+    "final_prompt": "cozy cafe, rainy afternoon with rain on windows, coffee machine",
+    "duration": 8.0,
+    "category": "chinese_input",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_a11cf5b7.wav",
+    "generation_time": 52.051137924194336,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "chinese_user_2",
+    "user_input": "森林早晨",
+    "mode": "relax",
+    "atmosphere": "forest morning with gentle breeze",
+    "elements": [
+      "morning birds",
+      "gentle breeze"
+    ],
+    "final_prompt": "forest morning with gentle breeze, morning birds, gentle breeze",
+    "duration": 10.0,
+    "category": "chinese_input",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_728ab9db.wav",
+    "generation_time": 96.35964322090149,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "focus_mode_1",
+    "user_input": "library study",
+    "mode": "focus",
+    "atmosphere": "quiet library with soft lighting",
+    "elements": [
+      "pages turning",
+      "quiet ambience"
+    ],
+    "final_prompt": "quiet library with soft lighting, pages turning, quiet ambience",
+    "duration": 8.0,
+    "category": "focus_mode",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_75614daa.wav",
+    "generation_time": 123.3510115146637,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "relax_mode_1",
+    "user_input": "mountain cabin",
+    "mode": "relax",
+    "atmosphere": "mountain cabin with fireplace",
+    "elements": [
+      "fireplace crackling",
+      "wind outside"
+    ],
+    "final_prompt": "mountain cabin with fireplace, fireplace crackling, wind outside",
+    "duration": 10.0,
+    "category": "relax_mode",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_d3f619a8.wav",
+    "generation_time": 186.88074374198914,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "story_mode_1",
+    "user_input": "jazz club",
+    "mode": "story",
+    "atmosphere": "jazz club with live music",
+    "elements": [
+      "jazz music",
+      "crowd murmuring"
+    ],
+    "final_prompt": "jazz club with live music, jazz music, crowd murmuring",
+    "duration": 9.0,
+    "category": "story_mode",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_8fbe09c9.wav",
+    "generation_time": 148.94881892204285,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "music_mode_1",
+    "user_input": "ambient meditation",
+    "mode": "music",
+    "atmosphere": "peaceful meditation space",
+    "elements": [
+      "ambient tones",
+      "gentle chimes"
+    ],
+    "final_prompt": "peaceful meditation space, ambient tones, gentle chimes",
+    "duration": 8.0,
+    "category": "music_mode",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_0e3c427c.wav",
+    "generation_time": 141.4815104007721,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "edge_case_1",
+    "user_input": "beep",
+    "mode": "music",
+    "atmosphere": "simple electronic sound",
+    "elements": [
+      "electronic beep"
+    ],
+    "final_prompt": "simple electronic sound, electronic beep",
+    "duration": 5.0,
+    "category": "edge_case",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_26d7f8f6.wav",
+    "generation_time": 119.13448786735535,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "edge_case_2",
+    "user_input": "complex orchestral piece with multiple instruments",
+    "mode": "music",
+    "atmosphere": "orchestral performance hall",
+    "elements": [
+      "orchestra",
+      "multiple instruments"
+    ],
+    "final_prompt": "orchestral performance hall, orchestra, multiple instruments",
+    "duration": 10.0,
+    "category": "edge_case",
+    "success": true,
+    "audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_cabffa69.wav",
+    "generation_time": 150.4922480583191,
+    "technical_score": 0.0,
+    "content_score": 0.0,
+    "overall_score": 0.0,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  }
+]

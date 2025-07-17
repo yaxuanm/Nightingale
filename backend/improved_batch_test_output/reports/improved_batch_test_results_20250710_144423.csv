@@ -1,0 +1,2 @@
+id,user_input,mode,category,final_prompt,success,technical_score,content_score,overall_score,generation_time,duration,file_size,cloud_url,error
+test_single_1,cozy cafe,focus,test_single,"cozy cafe, rainy afternoon with coffee machine steaming, pages turning",True,0.0,0.0,0.0,274.37350606918335,0,0,https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/7699938409967635622.wav?,
