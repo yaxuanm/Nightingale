@@ -145,6 +145,80 @@ async def generate_freesound_mix(prompt: str) -> str:
         # 返回静态文件URL
         return f"/static/generated_audio/{os.path.basename(out_path)}"
 
+async def generate_freesound_mix_with_duration(prompt: str, target_duration_seconds: float) -> str:
+    """
+    生成指定时长的 soundscape，与 TTS 旁白长度匹配
+    """
+    print(f"[STORY] Generating soundscape with target duration: {target_duration_seconds:.2f} seconds")
+    keywords = await extract_keywords(prompt)
+    audio_paths = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for kw in keywords:
+            try:
+                path = search_and_download(kw, tmpdir)
+                audio_paths.append(path)
+            except Exception as e:
+                print(f"[WARN] Failed to get audio for '{kw}': {e}")
+        if not audio_paths:
+            print("[ERROR] No audio files downloaded.")
+            return None
+        
+        # 输出到 backend/audio_output/
+        output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../audio_output"))
+        os.makedirs(output_dir, exist_ok=True)
+        out_path = os.path.join(output_dir, f"freesound_story_{abs(hash(prompt))}.mp3")
+        
+        try:
+            # 使用新的动态长度拼接函数
+            concat_audios_with_duration(audio_paths, out_path, target_duration_seconds)
+        except Exception as e:
+            print(f"[ERROR] Failed to concatenate audios: {e}")
+            return None
+        print(f"[STORY] Output: {out_path}")
+        # 返回静态文件URL
+        return f"/static/generated_audio/{os.path.basename(out_path)}"
+
+def concat_audios_with_duration(audio_paths: List[str], out_path: str, target_duration_seconds: float) -> str:
+    """
+    拼接音频到指定时长，用于 Story Mode
+    """
+    print(f"[STORY] concat_audios_with_duration called with target duration: {target_duration_seconds:.2f}s")
+    try:
+        target_duration_ms = int(target_duration_seconds * 1000)
+        segment_ms = min(8000, target_duration_ms // 3)  # 动态调整片段长度
+        
+        mix_segments = []
+        for path in audio_paths:
+            seg = AudioSegment.from_file(path)
+            seg = extract_middle(seg, segment_ms)
+            mix_segments.append(seg)
+        
+        # 创建目标时长的静音底
+        base = AudioSegment.silent(duration=target_duration_ms)
+        
+        # 错峰叠加音频片段
+        positions = []
+        for i in range(len(mix_segments)):
+            pos = i * (target_duration_ms // len(mix_segments))
+            positions.append(pos)
+        
+        for seg, pos in zip(mix_segments, positions):
+            if pos + len(seg) <= target_duration_ms:
+                base = base.overlay(seg, position=pos)
+        
+        # 添加淡入淡出效果
+        base = base.fade_in(1000).fade_out(1000)
+        
+        # 确保最终长度正确
+        base = base[:target_duration_ms]
+        
+        base.export(out_path, format="mp3")
+        print(f"[STORY] Mixed audio saved: {out_path} (duration: {len(base)/1000:.2f}s)")
+        return out_path
+    except Exception as e:
+        print(f"[ERROR] concat_audios_with_duration failed: {e}")
+        raise
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:

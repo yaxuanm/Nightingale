@@ -1,0 +1,392 @@
+[
+  {
+    "id": "test_001",
+    "prompt": "A peaceful forest at dawn with gentle bird songs and rustling leaves",
+    "user_input": "A peaceful forest at dawn with gentle bird songs and rustling leaves",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_001.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_001.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_002",
+    "prompt": "Ocean waves crashing on a sandy beach with seagulls in the distance",
+    "user_input": "Ocean waves crashing on a sandy beach with seagulls in the distance",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_002.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_002.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_003",
+    "prompt": "Rain falling softly on a tin roof with distant thunder",
+    "user_input": "Rain falling softly on a tin roof with distant thunder",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_003.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_003.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_004",
+    "prompt": "A cozy coffee shop with espresso machine sounds and soft jazz music",
+    "user_input": "A cozy coffee shop with espresso machine sounds and soft jazz music",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_004.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_004.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_005",
+    "prompt": "A mountain stream flowing over rocks with water droplets",
+    "user_input": "A mountain stream flowing over rocks with water droplets",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_005.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_005.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_006",
+    "prompt": "A crackling campfire with wood burning and embers popping",
+    "user_input": "A crackling campfire with wood burning and embers popping",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_006.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_006.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_007",
+    "prompt": "A library with pages turning and soft footsteps on carpet",
+    "user_input": "A library with pages turning and soft footsteps on carpet",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_007.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_007.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_008",
+    "prompt": "A thunderstorm with heavy rain and lightning strikes",
+    "user_input": "A thunderstorm with heavy rain and lightning strikes",
+    "mode": "story",
+    "audio_url": "/audio_files/test_008.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_008.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_009",
+    "prompt": "A zen garden with wind chimes and flowing water",
+    "user_input": "A zen garden with wind chimes and flowing water",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_009.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_009.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_010",
+    "prompt": "A busy train station with announcements and footsteps",
+    "user_input": "A busy train station with announcements and footsteps",
+    "mode": "story",
+    "audio_url": "/audio_files/test_010.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_010.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_011",
+    "prompt": "A meadow with buzzing bees and butterfly wings",
+    "user_input": "A meadow with buzzing bees and butterfly wings",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_011.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_011.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_012",
+    "prompt": "A fireplace in a cabin with wind howling outside",
+    "user_input": "A fireplace in a cabin with wind howling outside",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_012.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_012.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_013",
+    "prompt": "A waterfall cascading into a deep pool below",
+    "user_input": "A waterfall cascading into a deep pool below",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_013.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_013.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_014",
+    "prompt": "A busy kitchen with pots clanging and food sizzling",
+    "user_input": "A busy kitchen with pots clanging and food sizzling",
+    "mode": "story",
+    "audio_url": "/audio_files/test_014.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_014.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_015",
+    "prompt": "A gentle breeze through bamboo forest",
+    "user_input": "A gentle breeze through bamboo forest",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_015.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_015.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_016",
+    "prompt": "A meditation room with Tibetan singing bowls",
+    "user_input": "A meditation room with Tibetan singing bowls",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_016.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_016.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_017",
+    "prompt": "A city park with children playing and birds singing",
+    "user_input": "A city park with children playing and birds singing",
+    "mode": "story",
+    "audio_url": "/audio_files/test_017.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_017.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_018",
+    "prompt": "A snowstorm with wind blowing through trees",
+    "user_input": "A snowstorm with wind blowing through trees",
+    "mode": "story",
+    "audio_url": "/audio_files/test_018.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_018.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_019",
+    "prompt": "A vintage record player with vinyl crackling",
+    "user_input": "A vintage record player with vinyl crackling",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_019.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_019.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_020",
+    "prompt": "A tropical rainforest with exotic birds and insects",
+    "user_input": "A tropical rainforest with exotic birds and insects",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_020.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_020.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_021",
+    "prompt": "A clock tower chiming at midnight",
+    "user_input": "A clock tower chiming at midnight",
+    "mode": "story",
+    "audio_url": "/audio_files/test_021.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_021.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_022",
+    "prompt": "A gentle stream flowing through a meadow",
+    "user_input": "A gentle stream flowing through a meadow",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_022.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_022.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_023",
+    "prompt": "A busy marketplace with vendors calling out",
+    "user_input": "A busy marketplace with vendors calling out",
+    "mode": "story",
+    "audio_url": "/audio_files/test_023.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_023.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_024",
+    "prompt": "A gentle rain on a wooden deck",
+    "user_input": "A gentle rain on a wooden deck",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_024.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_024.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_025",
+    "prompt": "A cat purring by a warm radiator",
+    "user_input": "A cat purring by a warm radiator",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_025.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_025.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_026",
+    "prompt": "A distant church bell ringing on a Sunday morning",
+    "user_input": "A distant church bell ringing on a Sunday morning",
+    "mode": "story",
+    "audio_url": "/audio_files/test_026.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_026.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_027",
+    "prompt": "A gentle wind through tall grass",
+    "user_input": "A gentle wind through tall grass",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_027.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_027.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_028",
+    "prompt": "A bubbling hot spring in the mountains",
+    "user_input": "A bubbling hot spring in the mountains",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_028.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_028.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_029",
+    "prompt": "A quiet study room with pencil scratching on paper",
+    "user_input": "A quiet study room with pencil scratching on paper",
+    "mode": "focus",
+    "audio_url": "/audio_files/test_029.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_029.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  },
+  {
+    "id": "test_030",
+    "prompt": "A gentle lullaby with soft humming",
+    "user_input": "A gentle lullaby with soft humming",
+    "mode": "relax",
+    "audio_url": "/audio_files/test_030.wav",
+    "local_file": "audio_test_output\\generated_20250714_145931\\audio_files\\test_030.wav",
+    "metrics": {
+      "duration": 11.0,
+      "file_size": 2097196,
+      "format": "wav"
+    }
+  }
+]

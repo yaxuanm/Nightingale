@@ -1,0 +1,473 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stable Audio Evaluation Interface</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .test-item { background: white; margin: 10px 0; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .test-info { margin-bottom: 15px; }
+        .audio-player { margin: 10px 0; }
+        .evaluation-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+        .rating-group { display: flex; flex-direction: column; }
+        .rating-group label { font-weight: bold; margin-bottom: 5px; }
+        .rating-group select { padding: 8px; border: 1px solid #ddd; border-radius: 3px; }
+        .comments { width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 3px; resize: vertical; }
+        .submit-btn { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        .submit-btn:hover { background: #2980b9; }
+        .progress { background: #ecf0f1; padding: 10px; border-radius: 3px; margin: 10px 0; }
+        .url-info { background: #ecf0f1; padding: 10px; border-radius: 3px; margin: 10px 0; font-family: monospace; word-break: break-all; font-size: 12px; }
+        .audio-error { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Stable Audio Evaluation Interface</h1>
+            <p>Please evaluate the quality of each audio sample. Click "Save Evaluation Results" when finished.</p>
+            <p><strong>Audio Source:</strong> Supabase Cloud Storage</p>
+        </div>
+        
+        <div class="progress">
+            <span id="progress-text">Evaluation Progress: 0/5</span>
+            <div style="width: 100%; background: #ddd; height: 20px; border-radius: 10px; overflow: hidden;">
+                <div id="progress-bar" style="width: 0%; background: #3498db; height: 100%; transition: width 0.3s;"></div>
+            </div>
+        </div>
+        
+        <form id="evaluation-form">
+
+            <div class="test-item" data-id="test_1">
+                <div class="test-info">
+                    <h3>Test 1: test_1</h3>
+                    <p><strong>Duration:</strong> 11.89 seconds</p>
+                    <p><strong>File Size:</strong> 2097196 bytes</p>
+                    <div class="url-info">
+                        <strong>Audio URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/-1402871570128087743.wav?
+                    </div>
+                </div>
+                <div class="audio-player">
+                    <p><strong>Audio Player:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/-1402871570128087743.wav?" type="audio/wav">
+                        Your browser does not support audio playback.
+                    </audio>
+                    <p class="audio-error" id="audio-error-0" style="display: none;">
+                        ⚠️ Audio cannot be played, please check network connection or URL
+                    </p>
+                </div>
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_0">Relevance (1-5):</label>
+                        <select name="relevance_0" id="relevance_0" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relevant at all</option>
+                            <option value="2">2 - Slightly relevant</option>
+                            <option value="3">3 - Moderately relevant</option>
+                            <option value="4">4 - Highly relevant</option>
+                            <option value="5">5 - Perfectly relevant</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="quality_0">Audio Quality (1-5):</label>
+                        <select name="quality_0" id="quality_0" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Very poor</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="relaxation_0">Relaxation Effectiveness (1-5):</label>
+                        <select name="relaxation_0" id="relaxation_0" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relaxing at all</option>
+                            <option value="2">2 - Slightly relaxing</option>
+                            <option value="3">3 - Moderately relaxing</option>
+                            <option value="4">4 - Quite relaxing</option>
+                            <option value="5">5 - Extremely relaxing</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="immersiveness_0">Immersiveness (1-5):</label>
+                        <select name="immersiveness_0" id="immersiveness_0" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not immersive at all</option>
+                            <option value="2">2 - Slightly immersive</option>
+                            <option value="3">3 - Moderately immersive</option>
+                            <option value="4">4 - Quite immersive</option>
+                            <option value="5">5 - Extremely immersive</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments_0">General Comments/Feedback:</label>
+                    <textarea name="comments_0" id="comments_0" class="comments" placeholder="Your comments or suggestions (optional)"></textarea>
+                </div>
+            </div>
+        
+            <div class="test-item" data-id="test_2">
+                <div class="test-info">
+                    <h3>Test 2: test_2</h3>
+                    <p><strong>Duration:</strong> 11.89 seconds</p>
+                    <p><strong>File Size:</strong> 2097196 bytes</p>
+                    <div class="url-info">
+                        <strong>Audio URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/-2469292622851147305.wav?
+                    </div>
+                </div>
+                <div class="audio-player">
+                    <p><strong>Audio Player:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/-2469292622851147305.wav?" type="audio/wav">
+                        Your browser does not support audio playback.
+                    </audio>
+                    <p class="audio-error" id="audio-error-1" style="display: none;">
+                        ⚠️ Audio cannot be played, please check network connection or URL
+                    </p>
+                </div>
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_1">Relevance (1-5):</label>
+                        <select name="relevance_1" id="relevance_1" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relevant at all</option>
+                            <option value="2">2 - Slightly relevant</option>
+                            <option value="3">3 - Moderately relevant</option>
+                            <option value="4">4 - Highly relevant</option>
+                            <option value="5">5 - Perfectly relevant</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="quality_1">Audio Quality (1-5):</label>
+                        <select name="quality_1" id="quality_1" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Very poor</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="relaxation_1">Relaxation Effectiveness (1-5):</label>
+                        <select name="relaxation_1" id="relaxation_1" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relaxing at all</option>
+                            <option value="2">2 - Slightly relaxing</option>
+                            <option value="3">3 - Moderately relaxing</option>
+                            <option value="4">4 - Quite relaxing</option>
+                            <option value="5">5 - Extremely relaxing</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="immersiveness_1">Immersiveness (1-5):</label>
+                        <select name="immersiveness_1" id="immersiveness_1" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not immersive at all</option>
+                            <option value="2">2 - Slightly immersive</option>
+                            <option value="3">3 - Moderately immersive</option>
+                            <option value="4">4 - Quite immersive</option>
+                            <option value="5">5 - Extremely immersive</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments_1">General Comments/Feedback:</label>
+                    <textarea name="comments_1" id="comments_1" class="comments" placeholder="Your comments or suggestions (optional)"></textarea>
+                </div>
+            </div>
+        
+            <div class="test-item" data-id="test_3">
+                <div class="test-info">
+                    <h3>Test 3: test_3</h3>
+                    <p><strong>Duration:</strong> 11.89 seconds</p>
+                    <p><strong>File Size:</strong> 2097196 bytes</p>
+                    <div class="url-info">
+                        <strong>Audio URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/4251896976486866491.wav?
+                    </div>
+                </div>
+                <div class="audio-player">
+                    <p><strong>Audio Player:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/4251896976486866491.wav?" type="audio/wav">
+                        Your browser does not support audio playback.
+                    </audio>
+                    <p class="audio-error" id="audio-error-2" style="display: none;">
+                        ⚠️ Audio cannot be played, please check network connection or URL
+                    </p>
+                </div>
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_2">Relevance (1-5):</label>
+                        <select name="relevance_2" id="relevance_2" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relevant at all</option>
+                            <option value="2">2 - Slightly relevant</option>
+                            <option value="3">3 - Moderately relevant</option>
+                            <option value="4">4 - Highly relevant</option>
+                            <option value="5">5 - Perfectly relevant</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="quality_2">Audio Quality (1-5):</label>
+                        <select name="quality_2" id="quality_2" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Very poor</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="relaxation_2">Relaxation Effectiveness (1-5):</label>
+                        <select name="relaxation_2" id="relaxation_2" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relaxing at all</option>
+                            <option value="2">2 - Slightly relaxing</option>
+                            <option value="3">3 - Moderately relaxing</option>
+                            <option value="4">4 - Quite relaxing</option>
+                            <option value="5">5 - Extremely relaxing</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="immersiveness_2">Immersiveness (1-5):</label>
+                        <select name="immersiveness_2" id="immersiveness_2" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not immersive at all</option>
+                            <option value="2">2 - Slightly immersive</option>
+                            <option value="3">3 - Moderately immersive</option>
+                            <option value="4">4 - Quite immersive</option>
+                            <option value="5">5 - Extremely immersive</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments_2">General Comments/Feedback:</label>
+                    <textarea name="comments_2" id="comments_2" class="comments" placeholder="Your comments or suggestions (optional)"></textarea>
+                </div>
+            </div>
+        
+            <div class="test-item" data-id="test_4">
+                <div class="test-info">
+                    <h3>Test 4: test_4</h3>
+                    <p><strong>Duration:</strong> 11.89 seconds</p>
+                    <p><strong>File Size:</strong> 2097196 bytes</p>
+                    <div class="url-info">
+                        <strong>Audio URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/8995842595171318529.wav?
+                    </div>
+                </div>
+                <div class="audio-player">
+                    <p><strong>Audio Player:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/8995842595171318529.wav?" type="audio/wav">
+                        Your browser does not support audio playback.
+                    </audio>
+                    <p class="audio-error" id="audio-error-3" style="display: none;">
+                        ⚠️ Audio cannot be played, please check network connection or URL
+                    </p>
+                </div>
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_3">Relevance (1-5):</label>
+                        <select name="relevance_3" id="relevance_3" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relevant at all</option>
+                            <option value="2">2 - Slightly relevant</option>
+                            <option value="3">3 - Moderately relevant</option>
+                            <option value="4">4 - Highly relevant</option>
+                            <option value="5">5 - Perfectly relevant</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="quality_3">Audio Quality (1-5):</label>
+                        <select name="quality_3" id="quality_3" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Very poor</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="relaxation_3">Relaxation Effectiveness (1-5):</label>
+                        <select name="relaxation_3" id="relaxation_3" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relaxing at all</option>
+                            <option value="2">2 - Slightly relaxing</option>
+                            <option value="3">3 - Moderately relaxing</option>
+                            <option value="4">4 - Quite relaxing</option>
+                            <option value="5">5 - Extremely relaxing</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="immersiveness_3">Immersiveness (1-5):</label>
+                        <select name="immersiveness_3" id="immersiveness_3" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not immersive at all</option>
+                            <option value="2">2 - Slightly immersive</option>
+                            <option value="3">3 - Moderately immersive</option>
+                            <option value="4">4 - Quite immersive</option>
+                            <option value="5">5 - Extremely immersive</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments_3">General Comments/Feedback:</label>
+                    <textarea name="comments_3" id="comments_3" class="comments" placeholder="Your comments or suggestions (optional)"></textarea>
+                </div>
+            </div>
+        
+            <div class="test-item" data-id="test_5">
+                <div class="test-info">
+                    <h3>Test 5: test_5</h3>
+                    <p><strong>Duration:</strong> 11.89 seconds</p>
+                    <p><strong>File Size:</strong> 2097196 bytes</p>
+                    <div class="url-info">
+                        <strong>Audio URL:</strong><br>
+                        https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/2169317355743267036.wav?
+                    </div>
+                </div>
+                <div class="audio-player">
+                    <p><strong>Audio Player:</strong></p>
+                    <audio controls style="width: 100%;">
+                        <source src="https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/2169317355743267036.wav?" type="audio/wav">
+                        Your browser does not support audio playback.
+                    </audio>
+                    <p class="audio-error" id="audio-error-4" style="display: none;">
+                        ⚠️ Audio cannot be played, please check network connection or URL
+                    </p>
+                </div>
+                <div class="evaluation-form">
+                    <div class="rating-group">
+                        <label for="relevance_4">Relevance (1-5):</label>
+                        <select name="relevance_4" id="relevance_4" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relevant at all</option>
+                            <option value="2">2 - Slightly relevant</option>
+                            <option value="3">3 - Moderately relevant</option>
+                            <option value="4">4 - Highly relevant</option>
+                            <option value="5">5 - Perfectly relevant</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="quality_4">Audio Quality (1-5):</label>
+                        <select name="quality_4" id="quality_4" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Very poor</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="relaxation_4">Relaxation Effectiveness (1-5):</label>
+                        <select name="relaxation_4" id="relaxation_4" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not relaxing at all</option>
+                            <option value="2">2 - Slightly relaxing</option>
+                            <option value="3">3 - Moderately relaxing</option>
+                            <option value="4">4 - Quite relaxing</option>
+                            <option value="5">5 - Extremely relaxing</option>
+                        </select>
+                    </div>
+                    <div class="rating-group">
+                        <label for="immersiveness_4">Immersiveness (1-5):</label>
+                        <select name="immersiveness_4" id="immersiveness_4" required>
+                            <option value="">Please select</option>
+                            <option value="1">1 - Not immersive at all</option>
+                            <option value="2">2 - Slightly immersive</option>
+                            <option value="3">3 - Moderately immersive</option>
+                            <option value="4">4 - Quite immersive</option>
+                            <option value="5">5 - Extremely immersive</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments_4">General Comments/Feedback:</label>
+                    <textarea name="comments_4" id="comments_4" class="comments" placeholder="Your comments or suggestions (optional)"></textarea>
+                </div>
+            </div>
+        
+            <div style="text-align: center; margin: 20px 0;">
+                <button type="submit" class="submit-btn">💾 Save Evaluation Results</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        // Check if audio files exist
+        function checkAudioFiles() {
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach((audio, index) => {
+                audio.addEventListener('error', function() {
+                    const errorElement = document.getElementById(`audio-error-${index}`);
+                    if (errorElement) {
+                        errorElement.style.display = 'block';
+                    }
+                });
+                audio.addEventListener('loadstart', function() {
+                    const errorElement = document.getElementById(`audio-error-${index}`);
+                    if (errorElement) {
+                        errorElement.style.display = 'none';
+                    }
+                });
+            });
+        }
+        function updateProgress() {
+            const form = document.getElementById('evaluation-form');
+            const selects = form.querySelectorAll('select[required]');
+            const totalRequired = selects.length;
+            let completed = 0;
+            selects.forEach(select => {
+                if (select.value !== '') {
+                    completed++;
+                }
+            });
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar');
+            const percentage = (completed / totalRequired) * 100;
+            progressText.textContent = `Evaluation Progress: ${completed}/${totalRequired}`;
+            progressBar.style.width = percentage + '%';
+        }
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', updateProgress);
+        });
+        document.getElementById('evaluation-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const evaluationData = {};
+            for (let i = 0; i < 5; i++) {
+                evaluationData[i] = {
+                    relevance: formData.get(`relevance_${i}`),
+                    quality: formData.get(`quality_${i}`),
+                    relaxation: formData.get(`relaxation_${i}`),
+                    immersiveness: formData.get(`immersiveness_${i}`),
+                    comments: formData.get(`comments_${i}`)
+                };
+            }
+            const dataStr = JSON.stringify(evaluationData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'human_evaluation_results.json';
+            link.click();
+            alert('Evaluation results saved!');
+        });
+        updateProgress();
+        checkAudioFiles();
+    </script>
+</body>
+</html>
+        

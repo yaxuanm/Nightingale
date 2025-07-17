@@ -1,0 +1,93 @@
+[
+  {
+    "id": "test_1",
+    "user_input": "A gentle rain on a warm summer evening, amplifying the quiet.",
+    "mode": "focus",
+    "inspiration_chip": "A gentle rain on a warm summer evening, amplifying the quiet.",
+    "atmosphere": "Gentle rain, warm summer evening, quiet ambiance",
+    "elements": [
+      "A screen door creaking gently",
+      "A cricket's rhythmic chirping",
+      "Distant dog barking once"
+    ],
+    "final_prompt": "Gentle rain, warm summer evening, quiet ambiance with A screen door creaking gently, A cricket's rhythmic chirping, Distant dog barking once",
+    "duration": 8.0,
+    "category": "focus",
+    "success": true,
+    "local_audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_1db97b10.wav",
+    "cloud_url": "https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/3698595125191345760.wav?",
+    "generation_time": 138.23570322990417,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "test_2",
+    "user_input": "A lone traveler's echo through ancient, stone corridors",
+    "mode": "relax",
+    "inspiration_chip": "A lone traveler's echo through ancient, stone corridors",
+    "atmosphere": "Empty stone corridors, lingering echoes",
+    "elements": [
+      "Faint rustling of fabric"
+    ],
+    "final_prompt": "Empty stone corridors, lingering echoes with Faint rustling of fabric",
+    "duration": 8.0,
+    "category": "relax",
+    "success": true,
+    "local_audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_61759b0e.wav",
+    "cloud_url": "https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/5696477098198425347.wav?",
+    "generation_time": 59.15401029586792,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "test_3",
+    "user_input": "Whispers of ancient forests under a moonlit sky.",
+    "mode": "story",
+    "inspiration_chip": "Whispers of ancient forests under a moonlit sky.",
+    "atmosphere": "Moonlit ancient forest whispers",
+    "elements": [
+      "Rustling of dry leaves"
+    ],
+    "final_prompt": "Moonlit ancient forest whispers with Rustling of dry leaves",
+    "duration": 8.0,
+    "category": "story",
+    "success": true,
+    "local_audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_58a06531.wav",
+    "cloud_url": "https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/415104810067955108.wav?",
+    "generation_time": 55.945722341537476,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  },
+  {
+    "id": "test_4",
+    "user_input": "The scent of old paper and rain on a dusty attic floor.",
+    "mode": "music",
+    "inspiration_chip": "The scent of old paper and rain on a dusty attic floor.",
+    "atmosphere": "Overhead rain, antique paper scent",
+    "elements": [
+      "Haunting oboe passage",
+      "Melancholy cello notes"
+    ],
+    "final_prompt": "Overhead rain, antique paper scent with Haunting oboe passage, Melancholy cello notes",
+    "duration": 8.0,
+    "category": "music",
+    "success": true,
+    "local_audio_path": "C:\\Users\\t-yaxuanmao\\Desktop\\Nightingale\\backend\\app\\audio_output\\stable_audio_545d161f.wav",
+    "cloud_url": "https://vwxthbvslhwtrmjudvsw.supabase.co/storage/v1/object/public/audio-files/9080807758171481571.wav?",
+    "generation_time": 54.88484597206116,
+    "metrics": {
+      "error": "name 'torch' is not defined"
+    },
+    "error": null,
+    "human_evaluation": null
+  }
+]

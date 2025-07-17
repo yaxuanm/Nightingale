@@ -1,0 +1,302 @@
+[
+  {
+    "id": "test_001",
+    "prompt": "Grand ballroom, sunlight streams through, lingering laughter with The whisper of fabric against polished wood, A faint, lingering echo of a joyous shout",
+    "description": "The echo of laughter in an empty, sun-drenched ballroom.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2023745
+  },
+  {
+    "id": "test_002",
+    "prompt": "Resonant subterranean rhythm with Slow, resonant rumble",
+    "description": "The deep pulse of a sleeping giant, earth's heartbeat in the dark.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.242531
+  },
+  {
+    "id": "test_003",
+    "prompt": "Galactic hum, celestial slumber with Distant gravitational pulses, Cosmic dust accretion clicks, Whispering nebulae currents",
+    "description": "The hum of distant galaxies, a cosmic lullaby for sleeping stars.",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2478948
+  },
+  {
+    "id": "test_004",
+    "prompt": "Vibrant nebulae, slow blooming flora with Soft ethereal chimes, Faint crackling of starlight, Whispers of stellar winds",
+    "description": "Beneath swirling nebulae, the silent bloom of cosmic flora",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.253674
+  },
+  {
+    "id": "test_005",
+    "prompt": "Steampunk city, rhythmic mechanical hum with Whispering hiss of escaping steam, Distant, resonant chime of a large clock",
+    "description": "A symphony of gears and steam in a clockwork city. (music)",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2562149
+  },
+  {
+    "id": "test_006",
+    "prompt": "Seaside shore with ancient driftwood with Gentle lapping of water against driftwood, Faint rumble of a distant swell breaking on shore, Slight creak of waterlogged wood shifting with the tide",
+    "description": "The salty spray of ocean waves on weathered driftwood.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2660596
+  },
+  {
+    "id": "test_007",
+    "prompt": "Towering rainforest canopy, verdant and deep with Water droplets falling onto large leaves, Muffled exotic bird calls, Chirping of unseen insects",
+    "description": "Ancient rainforest canopy, dripping with life, hidden calls echo.",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.27259
+  },
+  {
+    "id": "test_008",
+    "prompt": "Deep woods, approaching night, rich, ancient aroma, pervasive quiet with Muted drip of water from mossy overhangs, Distant, elongated call of a night predator, Faint, intermittent rustling from dense foliage",
+    "description": "Ancient forest at dusk, the air thick with damp earth and whispering secrets.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2773404
+  },
+  {
+    "id": "test_009",
+    "prompt": "Serene bamboo forest, filtered light, soft wind with Hollow sigh of wind passing through bamboo, Papery rustle of bamboo leaves",
+    "description": "Whispering bamboo forest, a soft breeze rustling through leaves.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2894692
+  },
+  {
+    "id": "test_010",
+    "prompt": "A realm of twilight, where dreams gently drift with A fleeting, breathy resonance",
+    "description": "Soft whispers of forgotten dreams, carried on twilight's breath.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2894692
+  },
+  {
+    "id": "test_011",
+    "prompt": "Misty horizon, distant lighthouse with Subtle hum of the lighthouse beacon mechanism, Gentle lapping of waves against the rocks below the lighthouse, Distant, rhythmic tolling of a navigational buoy",
+    "description": "Mist swirling around a remote lighthouse, bells clanging in the distance.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.2978916
+  },
+  {
+    "id": "test_012",
+    "prompt": "Ancient stone ruins, soft mist drifting with Faint, solitary hoot of a distant owl",
+    "description": "Mist swirling over a silent, moss-covered stone temple ruins.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.306305
+  },
+  {
+    "id": "test_013",
+    "prompt": "Hazy coastal scenery, serene quiet with Distant, muffled buoy bell, Gentle drip of condensation from unseen rooftops, Low, drawn-out foghorn blast",
+    "description": "Fog rolls through a coastal village, muffled bells chime softly.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3098447
+  },
+  {
+    "id": "test_014",
+    "prompt": "Luminous market, vibrant nebula glow, an unspoken alien understanding with Distant chittering from unseen exotic traders",
+    "description": "Floating market on a nebula cloud, alien whispers echoing.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3142052
+  },
+  {
+    "id": "test_015",
+    "prompt": "Still river, weeping willows at dusk with Subtle current gently brushing against submerged roots, Faint chirping of crickets beginning their nightly song, Gentle lapping of water against the bank",
+    "description": "Where willows weep by the river's edge, twilight descends with a whispered sigh.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.32026
+  },
+  {
+    "id": "test_016",
+    "prompt": "Sunbeams filtering through ancient canopy, soft mossy floor with Faint, harmonious chirps from secluded avian life, Soft, whispering rustle through a towering canopy",
+    "description": "Ancient forest murmurs, sunlight filtering through leaves onto moss-covered stones.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.323638
+  },
+  {
+    "id": "test_017",
+    "prompt": "Sultry summer afternoon, faint ice cream truck chime with Faint, wavering ice cream truck melody, Chirpy, receding ice cream jingle",
+    "description": "Distant ice cream truck melody on a sun-drenched summer afternoon.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3270354
+  },
+  {
+    "id": "test_018",
+    "prompt": "Pale moonbeams, creeping shadows with Soft, deliberate footfall on distant ground, Subtle, drawn-out creak of an old beam",
+    "description": "Where shadows stretch long and the moon weeps silver light.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3318179
+  },
+  {
+    "id": "test_019",
+    "prompt": "Comforting mug, gentle steam, vast coastal expanse with Quiet thud of a ceramic mug being placed, Soft ebb and flow of the distant tide",
+    "description": "Warm ceramic mug, steam rising, the distant sound of ocean waves.",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.334079
+  },
+  {
+    "id": "test_020",
+    "prompt": "Tranquil dawn, gentle floral awakening with Subtle buzzing of bees, Gentle breeze rustling leaves",
+    "description": "The quiet breath of dawn, dew-kissed petals unfurling in slow motion.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3421369
+  },
+  {
+    "id": "test_021",
+    "prompt": "Golden meadow, hazy sunlight, bees at work with Rustling of tall grass in the breeze, Buzzing of individual bees, close and distant",
+    "description": "The hum of a thousand bees in a sun-drenched meadow (relax)",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3462174
+  },
+  {
+    "id": "test_022",
+    "prompt": "Calming clockwork beat, serene fantastical dance with Soft metallic clicks and whirs, Delicate clockwork whirring",
+    "description": "A clockwork heart beats a rhythmic pulse, driving a fantastical dance (Music)",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3489137
+  },
+  {
+    "id": "test_023",
+    "prompt": "Spacious attic, forgotten books, lingering lavender with Gentle fluttering of dust motes in a sunbeam",
+    "description": "Grandma's attic: dust motes, old books, a faint scent of lavender.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3554323
+  },
+  {
+    "id": "test_024",
+    "prompt": "Urban decay, cold metal, faint sirens in the distance with Metallic clang of a closing gate, Creak of a rusty fire escape",
+    "description": "Cold steel, distant sirens, a city held captive by night (Story)",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3572338
+  },
+  {
+    "id": "test_025",
+    "prompt": "Overgrown city ruins, hidden life with Rustling leaves in the overgrown ruins, The drip of water from moss-covered stones",
+    "description": "A forgotten city swallowed by the jungle, teeming with unseen life (Story)",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3636658
+  },
+  {
+    "id": "test_026",
+    "prompt": "Overgrown ruins, whispering rhythm with Dust motes dancing in sunbeams, Wind whistling through broken columns",
+    "description": "Music: Ancient ruins, echoing with forgotten melodies, a haunting rhythm.",
+    "category": "story",
+    "mode": "story",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.367499
+  },
+  {
+    "id": "test_027",
+    "prompt": "Forgotten melody, aged artifacts with Aged paper rustling, Faint music box winding, Dust motes dancing in a sunbeam",
+    "description": "A forgotten music box melody echoing through an antique shop (music)",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.371706
+  },
+  {
+    "id": "test_028",
+    "prompt": "Glowing coals, briny taste, sorrow with Wood popping in the dying fire",
+    "description": "Sensory: The crackle of a dying fire, the taste of salt, the taste of tears.",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3757918
+  },
+  {
+    "id": "test_029",
+    "prompt": "Clockwork mechanisms, finely tuned with Hydraulic pump cycling, Whirring of a gyroscope, Clockwork mechanism ticking",
+    "description": "Focus: The hum of a well-oiled machine, gears turning with precision.",
+    "category": "focus",
+    "mode": "focus",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.3817337
+  },
+  {
+    "id": "test_030",
+    "prompt": "Endless descent, moonlit pool with Faint, ethereal singing in the distance, Whispered, echoing breaths",
+    "description": "The sensation of falling, endless, weightless, into a pool of liquid moonlight. (Sensory)",
+    "category": "relax",
+    "mode": "relax",
+    "success": false,
+    "error": "StableAudioService.generate_audio() got an unexpected keyword argument 'output_format'",
+    "generation_time": 1752470772.390337
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "total_tests": 4,
+    "successful": 4,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "performance": {
+    "avg_generation_time": 77.05507045984268,
+    "avg_duration": 0.0,
+    "avg_file_size": 0.0
+  },
+  "failed_tests": []
+}

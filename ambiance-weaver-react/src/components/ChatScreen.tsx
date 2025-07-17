@@ -10,10 +10,15 @@ import {
   CircularProgress,
   Stack,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Send as SendIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -43,7 +48,8 @@ type ChatStage =
   | 'music_usage'
   | 'confirm'
   | 'free_chat'
-  | 'complete';
+  | 'complete'
+  | 'story_script_edit';
 
 interface ChatScreenProps {
   usePageLayout?: boolean;
@@ -128,6 +134,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   // Add state for showing playback buttons
   const [showPlaybackButtons, setShowPlaybackButtons] = useState(false);
 
+  // 1. 在 useState 区域增加 isPromptGenerated 状态
+  const [isPromptGenerated, setIsPromptGenerated] = useState(false);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -180,90 +189,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [musicTempoOptions, setMusicTempoOptions] = useState<string[]>([]);
   const [musicUsageOptions, setMusicUsageOptions] = useState<string[]>([]);
 
-  // Add a state to store the final prompt
+  // 1. 新增：通用 prompt 编辑状态
   const [finalPrompt, setFinalPrompt] = useState<string>('');
+  const [showPromptEdit, setShowPromptEdit] = useState(false);
+  const [aiEditInput, setAiEditInput] = useState('');
 
-  const fetchOptions = async (stage: 'audio_atmosphere' | 'audio_mood' | 'audio_elements') => {
-    try {
-      const res = await fetch('http://localhost:8000/api/generate-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, input: initialInput, stage }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return Array.isArray(data.options) ? data.options : [];
-      }
-    } catch (e) {}
-    return [];
-  };
-
-  const fetchMusicGenOptions = async (stage: 'genre' | 'instruments' | 'tempo' | 'usage', userInput: string = '') => {
-    try {
-      const res = await fetch('http://localhost:8000/api/generate-musicgen-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage, user_input: userInput }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return Array.isArray(data.options) ? data.options : [];
-      }
-    } catch (e) {}
-    return [];
-  };
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isLoading) {
-      interval = setInterval(() => {
-        setCurrentLoadingMessageIndex((prevIndex) =>
-          (prevIndex + 1) % loadingMessages.length
-        );
-      }, 3000); // Change message every 3 seconds
-    }
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isLoading, loadingMessages.length]);
-
-  // NEW useEffect to manage showElementSelectionAndButton based on currentStage
-  useEffect(() => {
-    if (currentStage === 'audio_elements') {
-      setShowElementSelectionAndButton(true);
-    } else {
-      setShowElementSelectionAndButton(false);
-    }
-  }, [currentStage]);
-
-  useEffect(() => {
-    let introMessage = `Welcome to Nightingale!`;
-    if (initialInput) {
-      introMessage += ` And you've started with the idea: "${initialInput}".`;
-    }
-    introMessage += ` What do you want to generate?`;
-    setMessages([
-      ...(initialInput ? [{ sender: 'user' as Message['sender'], text: initialInput, isUser: true }] : []),
-      { sender: 'ai' as Message['sender'], text: introMessage, isUser: false },
-    ]);
-    setCurrentStage('selectType');
-    setInputText('');
-  }, [initialInput, mode, aiName]);
-
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // 2. 修改 handleOptionSelect，移除 setShowPromptEdit、setFinalPrompt、setIsPromptGenerated
   const handleOptionSelect = (
     option: string,
     type:
@@ -275,24 +206,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       | 'music_tempo'
       | 'music_usage'
   ) => {
-    if (type === 'audio_atmosphere' || type === 'audio_mood' || type === 'audio_elements') {
+    if (type === 'audio_mood') {
+      setAudioChoices((prev) => ({ ...prev, audio_mood: option }));
+      setCurrentStage('audio_elements'); // 关键：推进到下一个阶段
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'user', text: option, isUser: true },
+      ]);
+      return;
+    }
+    if (type === 'audio_elements') {
       setAudioChoices((prev) => {
         const newChoices = { ...prev };
-        if (type === 'audio_elements') {
-          if (newChoices.audio_elements.includes(option)) {
-            newChoices.audio_elements = newChoices.audio_elements.filter((item) => item !== option);
-          } else {
-            if (newChoices.audio_elements.length < 3) {
-              newChoices.audio_elements = [...newChoices.audio_elements, option];
-            }
+        if (newChoices.audio_elements.includes(option)) {
+          newChoices.audio_elements = newChoices.audio_elements.filter((item) => item !== option);
+        } else {
+          if (newChoices.audio_elements.length < 3) {
+            newChoices.audio_elements = [...newChoices.audio_elements, option];
           }
-        } else if (type === 'audio_atmosphere' || type === 'audio_mood') {
-          newChoices[type] = option;
         }
         return newChoices;
       });
-      if (type === 'audio_atmosphere') setCurrentStage('audio_mood');
-      else if (type === 'audio_mood') setCurrentStage('audio_elements');
       setMessages((prev) => [
         ...prev,
         { sender: 'user', text: option, isUser: true },
@@ -308,12 +242,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         newChoices.genre = option;
       } else if (type === 'music_tempo') {
         newChoices.tempo = option;
-        console.log('musicChoices.tempo set:', option);
       } else if (type === 'music_usage') {
         newChoices.usage = option;
-        console.log('musicChoices.usage set:', option);
       }
-      console.log('musicChoices', newChoices);
       return newChoices;
     });
     if (type === 'music_genre') setCurrentStage('music_instruments');
@@ -327,23 +258,45 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
 
   const handleTypeSelect = (type: 'audio' | 'music') => {
     setSelectedType(type);
-    if (type === 'audio') {
-      setCurrentStage('audio_atmosphere');
+    if (mode === 'story') {
+      setIsLoading(true);
+      fetch('http://localhost:8000/api/generate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: initialInput, mode: 'story' })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.narrative_script) {
+            setFinalPrompt(data.narrative_script); // Set finalPrompt for story mode
+            setShowPromptEdit(true); // Show prompt edit for story mode
+            setMessages(prev => [
+              ...prev,
+              { sender: 'ai', text: 'Here is a narrative script based on your story. You can edit it below, or ask me to improve it!', isUser: false }
+            ]);
+          }
+        })
+        .finally(() => setIsLoading(false));
     } else {
-      setCurrentStage('music_genre');
+      if (type === 'audio') {
+        setCurrentStage('audio_mood'); // 直接进入 mood
+      } else {
+        setCurrentStage('music_genre');
+      }
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'ai', text: type === 'audio'
+            ? "Let's build your perfect soundscape! What kind of mood or feeling do you want to evoke?"
+            : "Let's compose your music! First, what genre or style do you want?", isUser: false }
+      ]);
     }
-    setMessages((prev) => [
-      ...prev,
-      { sender: 'ai', text: type === 'audio'
-          ? "Let's build your perfect soundscape! First, what kind of atmosphere are you looking for?"
-          : "Let's compose your music! First, what genre or style do you want?", isUser: false }
-    ]);
   };
 
   const handleGenerate = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setShowPromptEdit(false); // 1. 点击“Generate Soundscape”后关闭弹窗
       abortControllerRef.current = new AbortController();
       let audioOrMusicUrl = null;
       let prompt = '';
@@ -355,32 +308,64 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       ];
       const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
       const allSubjects = [...subjects, ...extraInputs];
-      prompt = buildAudioGenPrompt({ subjects: allSubjects, actions, scenes });
+      prompt = buildAudioGenPrompt({ subjects: allSubjects, actions, scenes, type: selectedType === 'music' ? 'music' : 'audio' });
       setFinalPrompt(prompt);
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Generating your soundscape...', isUser: false },
         { sender: 'ai', text: `Prompt: ${prompt}`, isUser: false },
       ]);
-      const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: prompt,
-          duration: 10,
-          is_poem: false,
-          mode: mode,
-          effects_config: null,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (!audioResponse.ok) {
-        const errorData = await audioResponse.json();
-        throw new Error(errorData.detail || 'Failed to generate audio');
+      
+      // Story Mode: 调用 /api/create-story
+      if (mode === 'story') {
+        const storyResponse = await fetch('http://localhost:8000/api/create-story', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            original_description: initialInput || ''
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+        if (!storyResponse.ok) {
+          const errorData = await storyResponse.json();
+          throw new Error(errorData.detail || 'Failed to create story');
+        }
+        const storyData = await storyResponse.json();
+        audioOrMusicUrl = storyData.audio_url;
+        setCurrentAudioUrl(storyData.audio_url);
+        // 设置旁白脚本
+        if (storyData.narrative_script) {
+          setFinalPrompt(storyData.narrative_script); // Set finalPrompt for story mode
+          setShowPromptEdit(true); // Show prompt edit for story mode
+        }
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
+        ]);
+      } else {
+        // 原有的 soundscape 生成逻辑
+        const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: prompt,
+            duration: 10,
+            is_poem: false,
+            mode: mode,
+            effects_config: null,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+        if (!audioResponse.ok) {
+          const errorData = await audioResponse.json();
+          throw new Error(errorData.detail || 'Failed to generate audio');
+        }
+        const audioData = await audioResponse.json();
+        audioOrMusicUrl = audioData.audio_url;
+        setCurrentAudioUrl(audioData.audio_url);
       }
-      const audioData = await audioResponse.json();
-      audioOrMusicUrl = audioData.audio_url;
-      setCurrentAudioUrl(audioData.audio_url);
+      
       // 1.2 自动生成背景图片
       const backgroundDescription = initialInput || 'a beautiful soundscape background';
       const bgResponse = await fetch('http://localhost:8000/api/generate-background', {
@@ -396,9 +381,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       // 1.3 完成后显示播放/再生成按钮
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: 'ai' as Message['sender'], text: 'Your personalized soundscape is ready! What would you like to do?', isUser: false },
+        { sender: 'ai' as Message['sender'], text: mode === 'story' ? 'Your personalized story is ready! What would you like to do?' : 'Your personalized soundscape is ready! What would you like to do?', isUser: false },
       ]);
-      setShowPlaybackButtons(true);
+      setShowPlaybackButtons(true); // 2. 生成结束后显示按钮区
       setCurrentStage('complete');
     } catch (err) {
       if (err && typeof err === 'object' && 'name' in err && (err as any).name === 'AbortError') {
@@ -422,7 +407,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       state: {
         audioUrl: isMusic ? currentMusicUrl : currentAudioUrl,
         backgroundImageUrl: currentBackgroundImageUrl,
-        selectedChoices: selectedType === 'music' ? musicChoices : audioChoices,
         description: finalPrompt
       }
     });
@@ -557,46 +541,41 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     setError(null);
   };
 
+  // 恢复 AI 选项 fetch 逻辑，去掉 audio_atmosphere 阶段
   useEffect(() => {
-    if (currentStage === 'audio_atmosphere') {
-      fetchOptions('audio_atmosphere').then((options) => {
-        setAtmosphereOptions(options.length > 0 ? options : defaultOptions.audio_atmosphere);
-      });
-    }
     if (currentStage === 'audio_mood') {
-      fetchOptions('audio_mood').then((options) => {
-        setMoodOptions(options.length > 0 ? options : defaultOptions.audio_mood);
-      });
+      setIsLoading(true);
+      fetch('http://localhost:8000/api/generate-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          input: initialInput,
+          stage: 'mood',
+        }),
+      })
+        .then(res => res.json())
+        .then(data => setMoodOptions(data.options || defaultOptions.audio_mood))
+        .catch(() => setMoodOptions(defaultOptions.audio_mood))
+        .finally(() => setIsLoading(false));
     }
     if (currentStage === 'audio_elements') {
-      fetchOptions('audio_elements').then((options) => {
-        setElementOptions(options.length > 0 ? options : defaultOptions.audio_elements);
-      });
+      setIsLoading(true);
+      fetch('http://localhost:8000/api/generate-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          input: initialInput,
+          stage: 'elements',
+        }),
+      })
+        .then(res => res.json())
+        .then(data => setElementOptions(data.options || defaultOptions.audio_elements))
+        .catch(() => setElementOptions(defaultOptions.audio_elements))
+        .finally(() => setIsLoading(false));
     }
   }, [currentStage, mode, initialInput]);
-
-  useEffect(() => {
-    if (currentStage === 'music_genre') {
-      fetchMusicGenOptions('genre', initialInput).then((options) => {
-        setMusicGenreOptions(options);
-      });
-    }
-    if (currentStage === 'music_instruments') {
-      fetchMusicGenOptions('instruments', musicChoices.genre || '').then((options) => {
-        setMusicInstrumentOptions(options);
-      });
-    }
-    if (currentStage === 'music_tempo') {
-      fetchMusicGenOptions('tempo', musicChoices.instruments.join(', ')).then((options) => {
-        setMusicTempoOptions(options);
-      });
-    }
-    if (currentStage === 'music_usage') {
-      fetchMusicGenOptions('usage', musicChoices.tempo || '').then((options) => {
-        setMusicUsageOptions(options);
-      });
-    }
-  }, [currentStage, initialInput, musicChoices]);
 
   useEffect(() => {
     if (currentStage === 'music_usage') {
@@ -660,6 +639,59 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         ]);
         console.error('Error generating music:', err);
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImprovePrompt = async () => {
+    // TODO: 实现 AI 改写逻辑
+  };
+
+  // 1. 新增：通用 prompt 编辑状态
+  // 2. 修改 handleOptionSelect，移除 setShowPromptEdit、setFinalPrompt、setIsPromptGenerated
+  // 3. 新增 handleGeneratePrompt 函数
+  // 4. 弹窗只在 showPromptEdit 时显示，内容为 finalPrompt，按钮为“Generate Soundscape”按钮和右上角关闭X
+  // 5. 选完元素后不再自动 setShowPromptEdit(true)，移除相关逻辑
+  // 在 ChatScreen 组件内添加如下 useEffect，确保初始消息和 stage：
+  useEffect(() => {
+    let introMessage = `Welcome to Nightingale!`;
+    if (initialInput) {
+      introMessage += ` And you've started with the idea: "${initialInput}".`;
+    }
+    introMessage += ` What do you want to generate?`;
+    setMessages([
+      ...(initialInput ? [{ sender: 'user' as const, text: initialInput, isUser: true }] : []),
+      { sender: 'ai' as const, text: introMessage, isUser: false },
+    ]);
+    setCurrentStage('selectType');
+    setInputText('');
+  }, [initialInput, mode, aiName]);
+
+  const handleGeneratePrompt = async () => {
+    setIsLoading(true);
+    try {
+      // 用元素和 mood 拼成一句 prompt
+      const promptParts = [];
+      if (audioChoices.audio_mood) promptParts.push(audioChoices.audio_mood);
+      if (audioChoices.audio_elements && audioChoices.audio_elements.length > 0) promptParts.push(audioChoices.audio_elements.join(', '));
+      if (initialInput) promptParts.push(initialInput);
+      const prompt = promptParts.join(' | ');
+      const res = await fetch('http://localhost:8000/api/generate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          mode: mode || 'default',
+          chat_history: [],
+        }),
+      });
+      const data = await res.json();
+      setFinalPrompt(data.prompt || data.scene_description || data.narrative_script || data.ai_response || '');
+      setShowPromptEdit(true);
+      setIsPromptGenerated(true);
+    } catch (err) {
+      setError('Failed to generate prompt');
     } finally {
       setIsLoading(false);
     }
@@ -792,28 +824,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {currentStage === 'audio_atmosphere' && !isLoading && !showPlaybackButtons && (
-        <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>What kind of atmosphere are you looking for?</Typography>
-          <Stack direction="row" flexWrap="wrap" spacing={1}>
-            {atmosphereOptions.map((option) => (
-              <OptionChip
-                key={option}
-                label={option}
-                onClick={() => handleOptionSelect(option, 'audio_atmosphere')}
-                variant={audioChoices.audio_atmosphere === option ? 'filled' : 'outlined'}
-                color={audioChoices.audio_atmosphere === option ? 'primary' : 'default'}
-                sx={{
-                  cursor: audioChoices.audio_atmosphere === option ? 'pointer' : 'pointer',
-                  transition: 'all 0.2s',
-                  fontWeight: audioChoices.audio_atmosphere === option ? 700 : 400,
-                  boxShadow: audioChoices.audio_atmosphere === option ? '0 2px 8px rgba(45,156,147,0.15)' : 'none',
-                }}
-              />
-            ))}
-          </Stack>
-        </OptionMessageBubbleContent>
-      )}
       {currentStage === 'audio_mood' && !isLoading && !showPlaybackButtons && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>What kind of mood or feeling do you want to evoke?</Typography>
@@ -825,12 +835,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                 onClick={() => handleOptionSelect(option, 'audio_mood')}
                 variant={audioChoices.audio_mood === option ? 'filled' : 'outlined'}
                 color={audioChoices.audio_mood === option ? 'primary' : 'default'}
-                sx={{
-                  cursor: audioChoices.audio_mood === option ? 'pointer' : 'pointer',
-                  transition: 'all 0.2s',
-                  fontWeight: audioChoices.audio_mood === option ? 700 : 400,
-                  boxShadow: audioChoices.audio_mood === option ? '0 2px 8px rgba(45,156,147,0.15)' : 'none',
-                }}
               />
             ))}
           </Stack>
@@ -864,30 +868,89 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {currentStage === 'audio_elements' && !showPlaybackButtons && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+      {/* 1. 弹窗部分优化 */}
+      {/* 在 showPromptEdit 为 true 时渲染 Dialog/Modal，内容区只显示“Generate Soundscape”按钮和右上角关闭X */}
+      {showPromptEdit && (
+        <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your soundscape description</Typography>
+          <TextField
+            multiline
+            minRows={5}
+            fullWidth
+            value={finalPrompt}
+            onChange={e => setFinalPrompt(e.target.value)}
+            variant="standard"
+            sx={{
+              mb: 2,
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 2,
+              color: 'white',
+              '& .MuiInputBase-input': { color: 'white' },
+            }}
+            InputProps={{
+              style: { color: 'white' },
+              disableUnderline: true,
+            }}
+          />
+          {/* AI 改写输入框和按钮 */}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+            <TextField
+              placeholder="Ask AI to improve (e.g. Make it more poetic)"
+              value={aiEditInput}
+              onChange={e => setAiEditInput(e.target.value)}
+              sx={{ flex: 1, background: 'rgba(255,255,255,0.02)', borderRadius: 2, '& .MuiInputBase-input': { color: 'white' } }}
+              disabled={isLoading}
+              InputProps={{ style: { color: 'white' }, disableUnderline: true }}
+            />
+            <IconButton
+              color="primary"
+              onClick={handleImprovePrompt}
+              disabled={isLoading || !aiEditInput.trim()}
+              sx={{ background: 'rgba(45,156,147,0.15)', '&:hover': { background: 'rgba(45,156,147,0.25)' } }}
+            >
+              <SendIcon />
+            </IconButton>
+          </Box>
           <Button
             variant="contained"
             onClick={handleGenerate}
-            disabled={isLoading || audioChoices.audio_elements.length === 0}
-            sx={{ minWidth: 140 }}
+            sx={{ mt: 2, color: 'white', fontWeight: 700, background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)', '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' } }}
+            fullWidth
           >
             Generate Soundscape
           </Button>
+        </Box>
+      )}
+
+      {/* 2. 主页面按钮区优化 */}
+      {/* 只在 showPromptEdit=false 时渲染主按钮区 */}
+      {currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && audioChoices.audio_elements.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
           <Button
-            variant="outlined"
-            color="success"
-            onClick={handleCancelGenerate}
-            sx={{ minWidth: 100 }}
+            variant="contained"
+            color="primary"
+            onClick={handleGeneratePrompt}
+            disabled={isLoading}
+            sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
           >
-            Cancel
+            Generate Prompt
           </Button>
         </Box>
       )}
-      {showPlaybackButtons && (
-        <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
+      {/* 只在 showPromptEdit=false 时渲染主按钮区 */}
+      {!showPromptEdit && showPlaybackButtons && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleRegenerate}
+            sx={{ minWidth: 140, fontWeight: 600 }}
+          >
+            Regenerate
+          </Button>
           <Button
             variant="contained"
+            color="primary"
             onClick={() => navigate('/player', {
               state: {
                 audioUrl: currentMusicUrl || currentAudioUrl,
@@ -895,28 +958,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                 description: finalPrompt,
               },
             })}
-            sx={{
-              backgroundColor: 'rgba(45, 156, 147, 0.8)',
-              '&:hover': {
-                backgroundColor: 'rgba(45, 156, 147, 1)',
-              },
-            }}
+            sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
           >
             Enter Player
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleRegenerate}
-            sx={{
-              borderColor: 'rgba(45, 156, 147, 0.8)',
-              color: 'white',
-              '&:hover': {
-                borderColor: 'rgba(45, 156, 147, 1)',
-                backgroundColor: 'rgba(45, 156, 147, 0.1)',
-              },
-            }}
-          >
-            Regenerate
           </Button>
         </Box>
       )}
@@ -1008,6 +1052,83 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             sx={{ minWidth: 100 }}
           >
             Cancel
+          </Button>
+        </Box>
+      )}
+      {/* story_script_edit 阶段渲染 */}
+      {currentStage === 'story_script_edit' && (
+        <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your story script</Typography>
+          <TextField
+            multiline
+            minRows={5}
+            fullWidth
+            value={finalPrompt}
+            onChange={e => setFinalPrompt(e.target.value)}
+            variant="standard"
+            sx={{
+              mb: 2,
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 2,
+              color: 'white',
+              '& .MuiInputBase-input': { color: 'white' },
+            }}
+            InputProps={{
+              style: { color: 'white' },
+              disableUnderline: true,
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => { setShowPromptEdit(false); setCurrentStage('confirm'); }}
+            sx={{
+              mt: 2,
+              color: 'white',
+              fontWeight: 700,
+              background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)',
+              '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' }
+            }}
+            fullWidth
+          >
+            Confirm and continue
+          </Button>
+        </Box>
+      )}
+      {mode === 'story' && showPromptEdit && (
+        <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your story script</Typography>
+          <TextField
+            multiline
+            minRows={5}
+            fullWidth
+            value={finalPrompt}
+            onChange={e => setFinalPrompt(e.target.value)}
+            variant="standard"
+            sx={{
+              mb: 2,
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 2,
+              color: 'white',
+              '& .MuiInputBase-input': { color: 'white' },
+            }}
+            InputProps={{
+              style: { color: 'white' },
+              disableUnderline: true,
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => { setShowPromptEdit(false); setCurrentStage('confirm'); }}
+            sx={{
+              mt: 2,
+              color: 'white',
+              fontWeight: 700,
+              background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)',
+              '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' }
+            }}
+            fullWidth
+          >
+            Confirm and continue
           </Button>
         </Box>
       )}

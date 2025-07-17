@@ -5,7 +5,9 @@ from pydub import AudioSegment
 import subprocess
 from .audio_effects import AudioEffectsService
 from .storage_service import storage_service
-from .freesound_concat_demo import generate_freesound_mix
+from .freesound_concat_demo import generate_freesound_mix, generate_freesound_mix_with_duration
+import asyncio
+import edge_tts
 
 class AudioGenerationService:
     def __init__(self):
@@ -159,6 +161,10 @@ class AudioGenerationService:
         except Exception as e:
             print(f"[ERROR] Music generation failed: {e}")
             return None
+
+async def tts_to_audio(text: str, output_path: str, voice: str = 'en-US-AriaNeural'):
+    communicate = edge_tts.Communicate(text, voice=voice)
+    await communicate.save(output_path)
 
 # Create singleton instance
 audio_service = AudioGenerationService() 

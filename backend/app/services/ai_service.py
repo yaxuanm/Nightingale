@@ -50,7 +50,6 @@ class AIService:
                 contents=prompt
             )
             raw_response_text = response.text or ""
-            print(f"DEBUG: Raw Gemini response for parse_scene: {raw_response_text}")
             json_match = re.search(r'```json\n([\s\S]*?)\n```', raw_response_text)
             if json_match:
                 json_string = json_match.group(1).strip()
@@ -61,7 +60,6 @@ class AIService:
                     json_string = raw_response_text[start:end+1].strip()
                 else:
                     json_string = raw_response_text.strip()
-            print(f"DEBUG: Cleaned JSON string for parsing: >>>{json_string}<<< (length={len(json_string)})")
             elements = json.loads(json_string)
             return elements
         except Exception as e:
@@ -150,7 +148,6 @@ You are an expert in soundscape and music design. The user may input in Chinese 
                         contents=prompt
                     )
                     raw_response_text = response.text or ""
-                    print(f"DEBUG: Raw Gemini response for generate_options: {raw_response_text}")
                     json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
                     if json_match:
                         json_string = json_match.group(1).strip()
@@ -161,7 +158,6 @@ You are an expert in soundscape and music design. The user may input in Chinese 
                             json_string = raw_response_text[start:end+1].strip()
                         else:
                             json_string = raw_response_text.strip()
-                    print(f"DEBUG: Cleaned JSON string for options: >>>{json_string}<<< (length={len(json_string)})")
                     options = json.loads(json_string)
                     if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
                         return options
@@ -303,7 +299,6 @@ Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
                         contents=prompt
                     )
                     raw_response_text = response.text or ""
-                    print(f"DEBUG: Raw Gemini response for generate_inspiration_chips: {raw_response_text}")
                     json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
                     if json_match:
                         json_string = json_match.group(1).strip()
@@ -314,7 +309,6 @@ Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
                             json_string = raw_response_text[start:end+1].strip()
                         else:
                             json_string = raw_response_text.strip()
-                    print(f"DEBUG: Cleaned JSON string for inspiration chips: >>>{json_string}<<< (length={len(json_string)})")
                     chips = json.loads(json_string)
                     if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
                         return chips
