@@ -357,7 +357,7 @@ function saveAllEvaluations() {
         completed_items: Object.keys(evaluations).length
     };
 
-    // 发送到 Webhook.site
+    // 1. 上传到 Webhook.site
     fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2af', {
         method: 'POST',
         headers: {
@@ -366,11 +366,20 @@ function saveAllEvaluations() {
         body: JSON.stringify(data)
     })
     .then(response => {
-        alert('提交成功！你的评测数据已上传。');
+        alert('提交成功！你的评测数据已上传，并已自动下载本地备份。');
     })
     .catch(error => {
-        alert('提交失败: ' + error.message);
+        alert('提交失败: ' + error.message + '，但本地已保存备份。');
     });
+
+    // 2. 同时自动下载本地备份
+    const dataStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+    link.click();
 }
 
 document.addEventListener('DOMContentLoaded', loadTestData);
