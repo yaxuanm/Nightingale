@@ -368,39 +368,25 @@ function saveAllEvaluations() {
     link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
     link.click();
 
-    // 用隐藏表单+iframe方式提交到 Google Forms
-    const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeVRmeAKTcca7TzAHFxDS9gNCdJza1M0ipDejXOLwO82VVvpA/formResponse';
-    const fieldId = 'entry.1514086642';
-
-    // 创建隐藏iframe
-    const iframe = document.createElement('iframe');
-    iframe.name = 'hidden_iframe';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    // 创建隐藏form
-    const form = document.createElement('form');
-    form.action = formUrl;
-    form.method = 'POST';
-    form.target = 'hidden_iframe';
-    form.style.display = 'none';
-
-    // 创建input
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = fieldId;
-    input.value = dataStr;
-    form.appendChild(input);
-
-    document.body.appendChild(form);
-
-    form.submit();
-
-    setTimeout(() => {
-        document.body.removeChild(form);
-        document.body.removeChild(iframe);
-        alert('✅ 评测数据已自动下载到本地，并已提交到云端（Google Forms）！');
-    }, 1000);
+    // 提交到 Airtable
+    fetch('https://api.airtable.com/v0/appIBNrXotnFDiV8e/Evaluations', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer patFeYeJ0TYlD5X2G.f10e7edc650b9a7aad1e3c823bb7daf87de69ca6f9186df271946225b0b41c80',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            fields: {
+                RawData: dataStr
+            }
+        })
+    }).then(response => {
+        if (response.ok) {
+            alert('✅ 评测数据已自动下载到本地，并已提交到云端（Airtable）！');
+        } else {
+            alert('⚠️ 云端提交失败，但本地备份已保存。');
+        }
+    });
 }
 
 
