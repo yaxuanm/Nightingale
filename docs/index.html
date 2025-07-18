@@ -213,7 +213,7 @@
     <div id="error" class="error" style="display:none;"></div>
     <div id="test-content" style="display:none;">
       <div id="test-grid" class="test-grid"></div>
-      <button id="save-all-btn" class="save-all-btn" onclick="saveAllEvaluations()">💾 Save All Evaluations</button>
+      <button id="save-all-btn" class="save-all-btn" onclick="saveAllEvaluations()">💾 Save Evaluations</button>
     </div>
   </div>
   <script>
@@ -360,7 +360,7 @@ function saveAllEvaluations() {
     };
 
     // 1. 上传到 Webhook.site
-    fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2af', {
+    fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2a', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -368,9 +368,14 @@ function saveAllEvaluations() {
         body: JSON.stringify(data)
     })
     .then(response => {
-        alert('提交成功！你的评测数据已上传，并已自动下载本地备份。');
+        if (response.ok) {
+            alert('提交成功！你的评测数据已上传，并已自动下载本地备份。');
+        } else {
+            throw new Error('Server responded with status: ' + response.status);
+        }
     })
     .catch(error => {
+        console.error('Webhook submission failed:', error);
         alert('提交失败: ' + error.message + '，但本地已保存备份。');
     });
 
