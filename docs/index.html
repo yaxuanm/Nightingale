@@ -368,18 +368,17 @@ function saveAllEvaluations() {
     link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
     link.click();
 
-    // 提交到 Google Forms
-    submitToGoogleForms(data);
-}
-
     // 提交到 webhook.site
     console.log('Submitting to webhook.site...');
+    console.log('Data to submit:', data);
+    
     fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2af', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        mode: 'cors'  // 明确指定CORS模式
     })
     .then(response => {
         console.log('Webhook response status:', response.status);
@@ -393,6 +392,7 @@ function saveAllEvaluations() {
         console.error('Webhook submission failed:', error);
         alert('⚠️ 云端提交失败，但本地备份已保存。\n\n错误详情: ' + error.message);
     });
+}
 
 
 document.addEventListener('DOMContentLoaded', loadTestData);
