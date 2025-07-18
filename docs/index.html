@@ -368,20 +368,39 @@ function saveAllEvaluations() {
     link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
     link.click();
 
-    // 提交到 Google Forms
+    // 用隐藏表单+iframe方式提交到 Google Forms
     const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeVRmeAKTcca7TzAHFxDS9gNCdJza1M0ipDejXOLwO82VVvpA/formResponse';
-    const formData = new FormData();
-    formData.append('entry.1514086642', dataStr); // 字段ID
+    const fieldId = 'entry.1514086642';
 
-    fetch(formUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: formData
-    }).then(() => {
+    // 创建隐藏iframe
+    const iframe = document.createElement('iframe');
+    iframe.name = 'hidden_iframe';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // 创建隐藏form
+    const form = document.createElement('form');
+    form.action = formUrl;
+    form.method = 'POST';
+    form.target = 'hidden_iframe';
+    form.style.display = 'none';
+
+    // 创建input
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = fieldId;
+    input.value = dataStr;
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+
+    form.submit();
+
+    setTimeout(() => {
+        document.body.removeChild(form);
+        document.body.removeChild(iframe);
         alert('✅ 评测数据已自动下载到本地，并已提交到云端（Google Forms）！');
-    }).catch((error) => {
-        alert('⚠️ 云端提交失败，但本地备份已保存。\n\n错误详情: ' + error.message);
-    });
+    }, 1000);
 }
 
 
