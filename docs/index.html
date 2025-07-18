@@ -359,8 +359,14 @@ function saveAllEvaluations() {
         completed_items: Object.keys(evaluations).length
     };
 
-    // 准备数据用于云端提交
+    // 自动下载本地备份（总是执行）
     const dataStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+    link.click();
 
     // 尝试云端提交（使用CORS代理）
     console.log('Attempting to submit to webhook via proxy...');
@@ -377,7 +383,7 @@ function saveAllEvaluations() {
     .then(response => {
         console.log('Proxy response status:', response.status);
         if (response.ok) {
-            alert('✅ 提交成功！\n\n你的评测数据已上传到云端。');
+            alert('✅ 提交成功！\n\n你的评测数据已上传到云端，并已自动下载本地备份。');
         } else {
             throw new Error('Proxy server responded with status: ' + response.status);
         }
@@ -398,7 +404,7 @@ function saveAllEvaluations() {
     })
     .then(response => {
         if (response && response.ok) {
-            alert('✅ 提交成功！\n\n你的评测数据已上传到云端。');
+            alert('✅ 提交成功！\n\n你的评测数据已上传到云端，并已自动下载本地备份。');
         } else if (response) {
             throw new Error('Direct submission failed with status: ' + response.status);
         }
