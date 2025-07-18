@@ -154,7 +154,7 @@ async def api_generate_progress(task_id: str):
     return resp
 
 def open_browser():
-    url = "http://127.0.0.1:8000/"
+    url = "http://127.0.0.1:8010/"
     webbrowser.open(url)
 
 def main():

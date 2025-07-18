@@ -53,14 +53,14 @@ app.add_middleware(
 app.mount("/audio_files", StaticFiles(directory=AUDIO_DIR), name="audio_files")
 
 def load_test_data():
-    """加载测试数据"""
+    """Load test data"""
     if not WEB_DATA_FILE.exists():
-        # 如果web数据文件不存在，尝试从固定数据创建
+        # If web data file doesn't exist, try to create from fixed data
         try:
             from fixed_test_data import get_fixed_prompts
             prompts = get_fixed_prompts()
             
-            # 创建基本的web数据
+            # Create basic web data
             web_data = []
             for prompt in prompts:
                 web_data.append({
@@ -76,13 +76,13 @@ def load_test_data():
                     }
                 })
             
-            # 保存web数据
+            # Save web data
             with open(WEB_DATA_FILE, 'w', encoding='utf-8') as f:
                 json.dump(web_data, f, ensure_ascii=False, indent=2)
             
             return web_data
         except Exception as e:
-            print(f"无法加载测试数据: {e}")
+            print(f"Failed to load test data: {e}")
             return []
     
     with open(WEB_DATA_FILE, 'r', encoding='utf-8') as f:
@@ -96,7 +96,7 @@ async def index():
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Nightingale 固定测试 - 30个音频样本</title>
+    <title>Nightingale Fixed Test - 30 Audio Samples</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -308,14 +308,14 @@ async def index():
         <h3>Instructions</h3>
         <p>• Each audio sample has a corresponding English description.</p>
         <p>• Please listen carefully to each audio and rate it on 4 dimensions.</p>
-        <p>• After completing the ratings, click the "Save All Evaluations" button to download your results.</p>
+        <p>• You can save your evaluations at any time - just complete at least one item and click "Save Evaluations".</p>
     </div>
     
     <div id="loading" class="loading">Loading test data...</div>
     <div id="error" class="error" style="display:none;"></div>
     <div id="test-content" style="display:none;">
         <div id="test-grid" class="test-grid"></div>
-        <button id="save-all-btn" class="save-all-btn" onclick="saveAllEvaluations()">💾 Save All Evaluations</button>
+        <button id="save-all-btn" class="save-all-btn" onclick="saveAllEvaluations()">💾 Save Evaluations</button>
     </div>
 </div>
 
@@ -333,7 +333,7 @@ async function loadTestData() {
         showTestContent();
     } catch (error) {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').textContent = '加载测试数据失败: ' + error.message;
+        document.getElementById('error').textContent = 'Failed to load test data: ' + error.message;
         document.getElementById('error').style.display = 'block';
     }
 }
@@ -454,11 +454,12 @@ function updateSaveButton() {
     const completedCount = Object.keys(evaluations).length;
     const totalCount = testData.length;
     
-    if (completedCount === totalCount) {
-        saveBtn.textContent = `💾 Save All Evaluations (${completedCount}/${totalCount})`;
+    // 只要有一道题完成就可以保存
+    if (completedCount > 0) {
+        saveBtn.textContent = `💾 Save Evaluations (${completedCount}/${totalCount})`;
         saveBtn.disabled = false;
     } else {
-        saveBtn.textContent = `💾 Save All Evaluations (${completedCount}/${totalCount})`;
+        saveBtn.textContent = `💾 Save Evaluations (0/${totalCount})`;
         saveBtn.disabled = true;
     }
 }
@@ -485,7 +486,7 @@ function saveAllEvaluations() {
     link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
     link.click();
     
-    alert(`Evaluation results saved! Completed ${Object.keys(evaluations).length}/${testData.length} evaluations.`);
+    alert(`Evaluation results saved! You can continue evaluating more items. Completed ${Object.keys(evaluations).length}/${testData.length} evaluations.`);
 }
 
 // 页面加载时获取测试数据
@@ -498,7 +499,7 @@ document.addEventListener('DOMContentLoaded', loadTestData);
 
 @app.get("/api/test-data")
 async def api_test_data():
-    """获取测试数据"""
+    """Get test data"""
     try:
         data = load_test_data()
         return JSONResponse(data)
@@ -507,7 +508,7 @@ async def api_test_data():
 
 @app.post("/api/save-evaluation")
 async def api_save_evaluation(evaluation_data: Dict[str, Any]):
-    """保存用户评价结果"""
+    """Save user evaluation results"""
     try:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = f"evaluation_{timestamp}.json"
@@ -521,28 +522,28 @@ async def api_save_evaluation(evaluation_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Failed to save evaluation: {str(e)}")
 
 def open_browser():
-    """打开浏览器"""
+    """Open browser"""
     url = f"http://127.0.0.1:{args.port}/"
     webbrowser.open(url)
 
 def main():
-    """启动服务"""
-    print("=== Nightingale 固定测试服务 ===")
-    print(f"服务地址: http://127.0.0.1:{args.port}/")
-    print("音频文件目录:", AUDIO_DIR)
+    """Start service"""
+    print("=== Nightingale Fixed Test Service ===")
+    print(f"Service URL: http://127.0.0.1:{args.port}/")
+    print("Audio files directory:", AUDIO_DIR)
     
-    # 检查测试数据
+    # Check test data
     test_data = load_test_data()
-    print(f"加载了 {len(test_data)} 个测试项目")
+    print(f"Loaded {len(test_data)} test items")
     
-    # 检查音频文件
+    # Check audio files
     audio_files = list(AUDIO_DIR.glob("*.wav"))
-    print(f"找到 {len(audio_files)} 个音频文件")
+    print(f"Found {len(audio_files)} audio files")
     
     if len(audio_files) == 0:
-        print("⚠️  警告：未找到音频文件，请先运行 generate_fixed_audio.py 生成音频")
+        print("⚠️  Warning: No audio files found, please run generate_fixed_audio.py first")
     
-    # 启动服务
+    # Start service
     threading.Timer(1.0, open_browser).start()
     uvicorn.run(app, host="0.0.0.0", port=args.port)
 
