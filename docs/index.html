@@ -359,7 +359,7 @@ function saveAllEvaluations() {
         completed_items: Object.keys(evaluations).length
     };
 
-    // 自动下载本地备份（总是执行）
+    // 自动下载本地备份
     const dataStr = JSON.stringify(data, null, 2);
     const blob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -368,28 +368,18 @@ function saveAllEvaluations() {
     link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
     link.click();
 
-    // 提交到 webhook.site
-    console.log('Submitting to webhook.site...');
-    console.log('Data to submit:', data);
-    
-    fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2af', {
+    // 提交到 Google Forms
+    const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeVRmeAKTcca7TzAHFxDS9gNCdJza1M0ipDejXOLwO82VVvpA/formResponse';
+    const formData = new FormData();
+    formData.append('entry.1514086642', dataStr); // 字段ID
+
+    fetch(formUrl, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data),
-        mode: 'cors'  // 明确指定CORS模式
-    })
-    .then(response => {
-        console.log('Webhook response status:', response.status);
-        if (response.ok) {
-            alert('✅ 提交成功！\n\n你的评测数据已上传到云端，并已自动下载本地备份。');
-        } else {
-            throw new Error('Server responded with status: ' + response.status);
-        }
-    })
-    .catch(error => {
-        console.error('Webhook submission failed:', error);
+        mode: 'no-cors',
+        body: formData
+    }).then(() => {
+        alert('✅ 评测数据已自动下载到本地，并已提交到云端（Google Forms）！');
+    }).catch((error) => {
         alert('⚠️ 云端提交失败，但本地备份已保存。\n\n错误详情: ' + error.message);
     });
 }
