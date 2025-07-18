@@ -359,56 +359,57 @@ function saveAllEvaluations() {
         completed_items: Object.keys(evaluations).length
     };
 
-    // 自动下载本地备份（总是执行）
+    // 准备数据用于云端提交
     const dataStr = JSON.stringify(data, null, 2);
-    const blob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `nightingale_evaluation_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
-    link.click();
 
-    // 尝试云端提交（可能因CORS失败）
-    console.log('Attempting to submit to webhook...');
+    // 尝试云端提交（使用CORS代理）
+    console.log('Attempting to submit to webhook via proxy...');
     
-    // 方法1: 尝试直接fetch
-    fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2a', {
+    // 方法1: 使用CORS代理
+    fetch('https://cors-anywhere.herokuapp.com/https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2a', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Origin': 'https://yaxuanm.github.io'
         },
-        body: JSON.stringify(data),
-        mode: 'cors'
+        body: JSON.stringify(data)
     })
     .then(response => {
-        console.log('Webhook response status:', response.status);
+        console.log('Proxy response status:', response.status);
         if (response.ok) {
-            alert('✅ 提交成功！\n\n你的评测数据已上传到云端，并已自动下载本地备份。');
+            alert('✅ 提交成功！\n\n你的评测数据已上传到云端。');
         } else {
-            throw new Error('Server responded with status: ' + response.status);
+            throw new Error('Proxy server responded with status: ' + response.status);
         }
     })
     .catch(error => {
-        console.error('Webhook submission failed:', error);
+        console.error('Proxy submission failed:', error);
         
-        // 方法2: 尝试使用JSONP方式（绕过CORS）
-        console.log('Trying JSONP method as fallback...');
-        const script = document.createElement('script');
-        script.src = `https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2a?callback=webhookCallback&data=${encodeURIComponent(JSON.stringify(data))}`;
-        document.head.appendChild(script);
-        
-        // 设置超时，如果JSONP也失败
-        setTimeout(() => {
-            alert('⚠️ 云端提交失败（GitHub Pages跨域限制）\n\n✅ 本地备份已自动下载\n\n📧 请将下载的JSON文件发送到: yaxuanm@microsoft.com\n\n错误详情: ' + error.message);
-        }, 3000);
+        // 方法2: 尝试直接提交（备用方案）
+        console.log('Trying direct submission as fallback...');
+        return fetch('https://webhook.site/47f1d081-9ba9-4b59-ad1d-86bf0f88f2a', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data),
+            mode: 'cors'
+        });
+    })
+    .then(response => {
+        if (response && response.ok) {
+            alert('✅ 提交成功！\n\n你的评测数据已上传到云端。');
+        } else if (response) {
+            throw new Error('Direct submission failed with status: ' + response.status);
+        }
+    })
+    .catch(error => {
+        console.error('All submission methods failed:', error);
+        alert('⚠️ 云端提交失败\n\n📧 请将评测结果发送到: yaxuanm@microsoft.com\n\n错误详情: ' + error.message);
     });
 }
 
-// JSONP回调函数
-function webhookCallback(response) {
-    console.log('JSONP webhook response:', response);
-    alert('✅ 提交成功！\n\n你的评测数据已通过备用方式上传，并已自动下载本地备份。');
-}
+
 
 document.addEventListener('DOMContentLoaded', loadTestData);
   </script>
