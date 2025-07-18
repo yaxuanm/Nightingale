@@ -207,7 +207,7 @@
       <h3>Instructions</h3>
       <p>• Each audio sample has a corresponding English description.</p>
       <p>• Please listen carefully to each audio and rate it on 4 dimensions.</p>
-      <p>• After completing the ratings, click the "Save All Evaluations" button to download your results.</p>
+      <p>• You can save your evaluations at any time - just complete at least one item and click "Save Evaluations".</p>
     </div>
     <div id="loading" class="loading">Loading test data...</div>
     <div id="error" class="error" style="display:none;"></div>
@@ -334,11 +334,13 @@ function updateSaveButton() {
   const saveBtn = document.getElementById('save-all-btn');
   const completedCount = Object.keys(evaluations).length;
   const totalCount = testData.length;
-  if (completedCount === totalCount) {
-    saveBtn.textContent = `💾 Save All Evaluations (${completedCount}/${totalCount})`;
+  
+  // 只要有一道题完成就可以保存
+  if (completedCount > 0) {
+    saveBtn.textContent = `💾 Save Evaluations (${completedCount}/${totalCount})`;
     saveBtn.disabled = false;
   } else {
-    saveBtn.textContent = `💾 Save All Evaluations (${completedCount}/${totalCount})`;
+    saveBtn.textContent = `💾 Save Evaluations (0/${totalCount})`;
     saveBtn.disabled = true;
   }
 }
