@@ -223,6 +223,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         } else {
           if (newChoices.audio_elements.length < 3) {
             newChoices.audio_elements = [...newChoices.audio_elements, option];
+          } else {
+            // console.log('Cannot add more elements, max 3 reached'); // Removed console.log
           }
         }
         // story mode 下不再自动生成音频，去除自动 handleGenerate 逻辑
@@ -304,6 +306,64 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
+  // 非story模式下生成prompt的函数
+  const handleGeneratePrompt = async () => {
+    setIsLoading(true);
+    try {
+      // 添加调试信息
+      console.log('Debug - selectedType:', selectedType);
+      console.log('Debug - audioChoices:', audioChoices);
+      
+      // 使用简洁的buildAudioGenPrompt生成prompt
+      const subjects = audioChoices.audio_elements;
+      const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
+      const scenes = [
+        ...(audioChoices.audio_atmosphere ? [audioChoices.audio_atmosphere] : []),
+        ...(mode && mode !== 'default' ? [`for ${mode}`] : [])
+      ];
+      const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
+      const allSubjects = [...subjects, ...extraInputs];
+      
+      // 确保selectedType正确
+      const promptType = selectedType === 'music' ? 'music' : 'audio';
+      console.log('Debug - promptType:', promptType);
+      
+      const structuredPrompt = buildAudioGenPrompt({
+        subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
+        actions,
+        scenes,
+        type: promptType
+      });
+      
+      console.log('Debug - structuredPrompt:', structuredPrompt);
+      
+      // 直接使用简洁的structuredPrompt，而不是调用后端API
+      setFinalPrompt(structuredPrompt);
+      setShowPromptEdit(true); // 显示编辑弹窗
+    } catch (error) {
+      console.error('Error generating prompt:', error);
+      // 如果buildAudioGenPrompt失败，使用默认的prompt
+      const subjects = audioChoices.audio_elements;
+      const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
+      const scenes = [
+        ...(audioChoices.audio_atmosphere ? [audioChoices.audio_atmosphere] : []),
+        ...(mode && mode !== 'default' ? [`for ${mode}`] : [])
+      ];
+      const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
+      const allSubjects = [...subjects, ...extraInputs];
+      const structuredPrompt = buildAudioGenPrompt({
+        subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
+        actions,
+        scenes,
+        type: selectedType === 'music' ? 'music' : 'audio'
+      });
+      setFinalPrompt(structuredPrompt);
+      setShowPromptEdit(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // handleGenerate 只在 narrative 编辑弹窗点击后调用，生成音频，生成后只显示 Enter Player/Regenerate 按钮
   const handleGenerate = async () => {
     try {
@@ -358,7 +418,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            description: structuredPrompt,
+            description: finalPrompt, // 使用用户编辑后的prompt
             duration: 10,
             is_poem: false,
             mode: mode,
@@ -581,6 +641,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         .finally(() => setIsLoading(false));
     }
   }, [currentStage, mode, initialInput]);
+
+  // 添加调试useEffect
+  useEffect(() => {
+    if (currentStage === 'audio_elements') {
+      console.log('Debug - currentStage:', currentStage);
+      console.log('Debug - elementOptions:', elementOptions);
+      console.log('Debug - audioChoices.audio_elements:', audioChoices.audio_elements);
+    }
+  }, [currentStage, elementOptions, audioChoices.audio_elements]);
 
   useEffect(() => {
     if (currentStage === 'music_usage') {
@@ -852,7 +921,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {/* story mode 下，audio_elements 阶段显示“Generate Story Script”按钮 */}
+      {/* story mode 下，audio_elements 阶段显示"Generate Story Script"按钮 */}
       {mode === 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && audioChoices.audio_elements.length > 0 && (
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
           <Button
@@ -866,11 +935,58 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
+      {/* 非story模式下，audio_elements 阶段显示"Generate Prompt"按钮 */}
+      {mode !== 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && audioChoices.audio_elements.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleGeneratePrompt}
+            disabled={isLoading}
+            sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
+          >
+            Generate Prompt
+          </Button>
+        </Box>
+      )}
       {/* 1. 弹窗部分优化 */}
       {/* 已彻底删除860行左右的 {mode === 'story' && showPromptEdit && (...)} story script 编辑弹窗（含注释和 Box 内容），只保留底部的那一段。 */}
       {mode === 'story' && showPromptEdit && (
         <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
           <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your story script</Typography>
+          <TextField
+            multiline
+            minRows={5}
+            fullWidth
+            value={finalPrompt}
+            onChange={e => setFinalPrompt(e.target.value)}
+            variant="standard"
+            sx={{
+              mb: 2,
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 2,
+              color: 'white',
+              '& .MuiInputBase-input': { color: 'white' },
+            }}
+            InputProps={{
+              style: { color: 'white' },
+              disableUnderline: true,
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={handleGenerate}
+            sx={{ mt: 2, color: 'white', fontWeight: 700, background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)', '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' } }}
+            fullWidth
+          >
+            Generate Soundscape
+          </Button>
+        </Box>
+      )}
+      {/* 非story模式下，prompt编辑弹窗 */}
+      {mode !== 'story' && showPromptEdit && (
+        <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your soundscape description</Typography>
           <TextField
             multiline
             minRows={5}

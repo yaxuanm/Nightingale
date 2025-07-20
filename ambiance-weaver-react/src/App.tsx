@@ -19,7 +19,8 @@ function App() {
       <CssBaseline />
       <Router>
         <Routes>
-          <Route path="/" element={<Overview />} />
+          <Route path="/" element={<VideoIntro />} />
+          <Route path="/overview" element={<Overview />} />
           <Route path="/demo" element={<DemoOverview />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/main" element={<MainScreen />} />
