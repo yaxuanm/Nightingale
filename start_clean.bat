@@ -29,11 +29,14 @@ goto invalid_choice
 echo.
 echo Starting Gemini API Service...
 cd backend
+echo Current directory: %CD%
+echo Checking for venv_gemini\Scripts\activate.bat...
 if exist "venv_gemini\Scripts\activate.bat" (
-    start cmd /k "call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Found venv_gemini environment
+    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
 ) else (
-    echo Error: venv_gemini environment not found
+    echo Error: venv_gemini environment not found at %CD%\venv_gemini\Scripts\activate.bat
     echo Please run option 5 to setup environment first
 )
 cd ..
@@ -43,11 +46,14 @@ goto end
 echo.
 echo Starting Stable Audio Service...
 cd backend
+echo Current directory: %CD%
+echo Checking for venv_stableaudio\Scripts\activate.bat...
 if exist "venv_stableaudio\Scripts\activate.bat" (
-    start cmd /k "call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
+    echo Found venv_stableaudio environment
+    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
 ) else (
-    echo Error: venv_stableaudio environment not found
+    echo Error: venv_stableaudio environment not found at %CD%\venv_stableaudio\Scripts\activate.bat
     echo Please run option 5 to setup environment first
 )
 cd ..
@@ -74,21 +80,27 @@ echo.
 
 REM Gemini API Service
 cd backend
+echo Current directory: %CD%
+echo Checking for venv_gemini\Scripts\activate.bat...
 if exist "venv_gemini\Scripts\activate.bat" (
-    start cmd /k "call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Found venv_gemini environment
+    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
 ) else (
-    echo Warning: venv_gemini environment not found, skipping Gemini service
+    echo Warning: venv_gemini environment not found at %CD%\venv_gemini\Scripts\activate.bat, skipping Gemini service
 )
 cd ..
 
 REM Stable Audio Service
 cd backend
+echo Current directory: %CD%
+echo Checking for venv_stableaudio\Scripts\activate.bat...
 if exist "venv_stableaudio\Scripts\activate.bat" (
-    start cmd /k "call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
+    echo Found venv_stableaudio environment
+    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
 ) else (
-    echo Warning: venv_stableaudio environment not found, skipping Stable Audio service
+    echo Warning: venv_stableaudio environment not found at %CD%\venv_stableaudio\Scripts\activate.bat, skipping Stable Audio service
 )
 cd ..
 

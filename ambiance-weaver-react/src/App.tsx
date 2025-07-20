@@ -11,6 +11,7 @@ import Lockscreen from './components/Lockscreen';
 import ChatScreen from './components/ChatScreen';
 import AllScreensShowcase from './components/AllScreensShowcase';
 import VideoIntro from './components/VideoIntro';
+import SharePage from './components/SharePage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/main" element={<MainScreen />} />
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/player" element={<Player audioUrl={''} description={''} />} />
+          <Route path="/share/:shareId" element={<SharePage />} />
           <Route path="/video-intro" element={<VideoIntro />} />
           <Route path="/showcase" element={<AllScreensShowcase />} />
           <Route path="*" element={<Navigate to="/" replace />} />

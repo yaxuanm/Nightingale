@@ -24,6 +24,8 @@ from pydub import AudioSegment
 from .services.freesound_concat_demo import generate_freesound_mix, generate_freesound_mix_with_duration
 # from .services.stable_audio_service import stable_audio_service
 import tempfile
+import json
+from datetime import datetime
 
 def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segment_duration: float = 10.0, crossfade_ms: int = 1000) -> str:
     """
@@ -42,7 +44,7 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             venv_python = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv_stableaudio", "Scripts", "python.exe"))
             cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
             print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             if result.returncode != 0:
                 print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
                 raise Exception("Stable Audio worker failed")
@@ -398,6 +400,86 @@ Narrative script:"""
         return {"narrative_script": narrative_script, "audio_url": cloud_url}
     except Exception as e:
         print(f"[ERROR] /api/create-story: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 获取分享基础URL
+SHARE_BASE_URL = os.getenv("SHARE_BASE_URL", "http://localhost:3000")
+
+@app.post("/api/create-share")
+async def create_share(request: dict):
+    """
+    创建分享链接，包含音频和背景数据
+    输入: { "audio_url": "...", "background_url": "...", "description": "...", "title": "..." }
+    输出: { "share_id": "...", "share_url": "..." }
+    """
+    audio_url = request.get("audio_url")
+    background_url = request.get("background_url")
+    description = request.get("description", "")
+    title = request.get("title", "My Soundscape")
+    
+    if not audio_url:
+        raise HTTPException(status_code=400, detail="Missing 'audio_url' parameter")
+    
+    try:
+        # 生成唯一的分享ID
+        share_id = str(uuid.uuid4())
+        
+        # 创建分享数据
+        share_data = {
+            "id": share_id,
+            "audio_url": audio_url,
+            "background_url": background_url,
+            "description": description,
+            "title": title,
+            "created_at": str(datetime.now()),
+            "views": 0
+        }
+        
+        # 保存到数据库或文件系统（这里简化处理，实际应该用数据库）
+        shares_dir = os.path.join(BASE_DIR, "shares")
+        os.makedirs(shares_dir, exist_ok=True)
+        
+        share_file = os.path.join(shares_dir, f"{share_id}.json")
+        with open(share_file, 'w', encoding='utf-8') as f:
+            json.dump(share_data, f, ensure_ascii=False, indent=2)
+        
+        # 使用环境变量中的域名生成分享URL
+        share_url = f"{SHARE_BASE_URL}/share/{share_id}"
+        
+        return {
+            "share_id": share_id,
+            "share_url": share_url,
+            "message": "Share created successfully"
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] /api/create-share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/share/{share_id}")
+async def get_share(share_id: str):
+    """
+    获取分享数据
+    """
+    try:
+        shares_dir = os.path.join(BASE_DIR, "shares")
+        share_file = os.path.join(shares_dir, f"{share_id}.json")
+        
+        if not os.path.exists(share_file):
+            raise HTTPException(status_code=404, detail="Share not found")
+        
+        with open(share_file, 'r', encoding='utf-8') as f:
+            share_data = json.load(f)
+        
+        # 增加访问计数
+        share_data["views"] += 1
+        with open(share_file, 'w', encoding='utf-8') as f:
+            json.dump(share_data, f, ensure_ascii=False, indent=2)
+        
+        return share_data
+        
+    except Exception as e:
+        print(f"[ERROR] /api/share/{share_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")
