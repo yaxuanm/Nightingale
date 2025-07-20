@@ -5,31 +5,20 @@ import {
   IconButton,
   Slider,
   Button,
-  FormControlLabel,
-  Switch,
   styled,
-  Collapse,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
+  CircularProgress,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
-  SkipNext as NextIcon,
-  SkipPrevious as PreviousIcon,
-  Favorite as FavoriteIcon,
   ArrowBack as ArrowBackIcon,
   Share as ShareIcon,
-  Tune as TuneIcon,
-  Help as HelpIcon,
-  VolumeUp as VolumeUpIcon,
-  VolumeOff as VolumeOffIcon,
-  MusicNote as MusicNoteIcon,
-  Image as ImageIcon,
-  HelpOutline as HelpOutlineIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -62,12 +51,12 @@ const PlayPauseButton = styled(ControlButton)(({ theme }) => ({
 
 const ActionButton = styled(Button)(({ theme }) => ({
   flex: 1,
-  height: 44,
+  height: 40,
   background: 'rgba(255, 255, 255, 0.05)',
   border: '1px solid rgba(45, 156, 147, 0.2)',
-  borderRadius: '22px',
+  borderRadius: '20px',
   color: '#ffffff',
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 500,
   backdropFilter: 'blur(10px)',
   '&:hover': {
@@ -75,33 +64,6 @@ const ActionButton = styled(Button)(({ theme }) => ({
     transform: 'translateY(-1px)',
   },
 }));
-
-const EffectsPanel = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  marginBottom: theme.spacing(3),
-}));
-
-const EffectControl = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  '&:last-child': {
-    marginBottom: 0,
-  },
-}));
-
-interface SoundscapeState {
-  rainIntensity: number;
-  cafeChatter: number;
-  coffeeMachine: number;
-  footsteps: number;
-}
-
-interface AudioEffect {
-  type: 'reverb' | 'echo' | 'fade' | 'volume';
-  enabled: boolean;
-  params: {
-    [key: string]: number;
-  };
-}
 
 interface PlayerProps {
   audioUrl: string;
@@ -130,46 +92,7 @@ const Player: React.FC<PlayerProps> = ({
   const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl;
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [showEffects, setShowEffects] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
-  const [effects, setEffects] = useState<AudioEffect[]>([
-    {
-      type: 'reverb',
-      enabled: false,
-      params: {
-        roomSize: 0.5,
-        damping: 0.5,
-        wetLevel: 0.3,
-        dryLevel: 0.7,
-      },
-    },
-    {
-      type: 'echo',
-      enabled: false,
-      params: {
-        delay: 300,
-        feedback: 0.3,
-        mix: 0.5,
-      },
-    },
-    {
-      type: 'fade',
-      enabled: false,
-      params: {
-        fadeIn: 2000,
-        fadeOut: 3000,
-      },
-    },
-    {
-      type: 'volume',
-      enabled: true,
-      params: {
-        level: 0.8,
-      },
-    },
-  ]);
-
+  const [isDownloading, setIsDownloading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
@@ -180,6 +103,7 @@ const Player: React.FC<PlayerProps> = ({
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentAudioUrl && audioRef.current) {
@@ -206,95 +130,82 @@ const Player: React.FC<PlayerProps> = ({
 
   const handleShare = async () => {
     setShareDialogOpen(true);
-    const shareUrl = window.location.href;
+    
     try {
+      // 调用后端API创建分享链接
+      const response = await fetch('http://localhost:8000/api/create-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audio_url: currentAudioUrl,
+          background_url: currentBackgroundImageUrl,
+          description: description,
+          title: 'My Nightingale Soundscape'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create share');
+      }
+      
+      const shareData = await response.json();
+      const shareUrl = shareData.share_url;
+      
+      // 复制分享链接到剪贴板
       await navigator.clipboard.writeText(shareUrl);
-      setSnackbar({ open: true, message: 'Link copied to clipboard!' });
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to copy link. Please copy manually.' });
+      setSnackbar({ open: true, message: 'Share link copied to clipboard!' });
+      
+      // 更新对话框中的链接
+      setShareUrl(shareUrl);
+      
+    } catch (error) {
+      console.error('Share creation failed:', error);
+      // 回退到原来的方式
+      const fallbackUrl = window.location.href;
+      await navigator.clipboard.writeText(fallbackUrl);
+      setSnackbar({ open: true, message: 'Failed to create share link. Copied current page URL instead.' });
+      setShareUrl(fallbackUrl);
     }
   };
 
-  const handleFavorite = () => {
-    setIsFavorite((prev) => {
-      const newValue = !prev;
-      setSnackbar({ open: true, message: newValue ? 'Added to favorites!' : 'Removed from favorites.' });
-      return newValue;
-    });
-  };
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    
+    try {
+      // 下载音频文件
+      if (currentAudioUrl) {
+        const audioResponse = await fetch(currentAudioUrl);
+        const audioBlob = await audioResponse.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audioLink = document.createElement('a');
+        audioLink.href = audioUrl;
+        audioLink.download = `nightingale_audio_${Date.now()}.wav`;
+        document.body.appendChild(audioLink);
+        audioLink.click();
+        document.body.removeChild(audioLink);
+        URL.revokeObjectURL(audioUrl);
+      }
 
-  const handleSliderChange = (name: keyof SoundscapeState) => (event: Event, value: number | number[]) => {
-    // Handle soundscape parameter changes - 保留用于未来功能扩展
+      // 下载背景图片
+      if (currentBackgroundImageUrl) {
+        const imageResponse = await fetch(currentBackgroundImageUrl);
+        const imageBlob = await imageResponse.blob();
+        const imageUrl = URL.createObjectURL(imageBlob);
+        const imageLink = document.createElement('a');
+        imageLink.href = imageUrl;
+        imageLink.download = `nightingale_background_${Date.now()}.png`;
+        document.body.appendChild(imageLink);
+        imageLink.click();
+        document.body.removeChild(imageLink);
+        URL.revokeObjectURL(imageUrl);
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      setSnackbar({ open: true, message: 'Download failed. Please try again.' });
+    } finally {
+      setIsDownloading(false);
+    }
   };
-
-  const handleEffectToggle = (index: number) => {
-    const newEffects = [...effects];
-    newEffects[index].enabled = !newEffects[index].enabled;
-    setEffects(newEffects);
-  };
-
-  const handleEffectParamChange = (effectIndex: number, paramName: string, value: number) => {
-    const newEffects = [...effects];
-    newEffects[effectIndex].params[paramName] = value;
-    setEffects(newEffects);
-  };
-
-  const renderEffectControls = () => (
-    <EffectsPanel>
-      {effects.map((effect, index) => (
-        <EffectControl key={effect.type}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={effect.enabled}
-                onChange={() => handleEffectToggle(index)}
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': {
-                    color: '#2d9c93',
-                  },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                    backgroundColor: '#2d9c93',
-                  },
-                }}
-              />
-            }
-            label={
-              <Typography sx={{ color: '#ffffff', textTransform: 'capitalize' }}>
-                {effect.type}
-              </Typography>
-            }
-          />
-          {effect.enabled && (
-            <Box sx={{ mt: 1, ml: 4 }}>
-              {Object.entries(effect.params).map(([paramName, value]) => (
-                <Box key={paramName} sx={{ mb: 1 }}>
-                  <Typography sx={{ color: '#c0c0c0', fontSize: 14, mb: 0.5 }}>
-                    {paramName}
-                  </Typography>
-                  <Slider
-                    value={value}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={(_, newValue) => handleEffectParamChange(index, paramName, newValue as number)}
-                    sx={{
-                      color: '#2d9c93',
-                      height: 4,
-                      '& .MuiSlider-thumb': {
-                        width: 12,
-                        height: 12,
-                        backgroundColor: '#ffffff',
-                      },
-                    }}
-                  />
-                </Box>
-              ))}
-            </Box>
-          )}
-        </EffectControl>
-      ))}
-    </EffectsPanel>
-  );
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -345,9 +256,7 @@ const Player: React.FC<PlayerProps> = ({
           <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 600 }}>
             Now Playing
           </Typography>
-          <IconButton sx={{ color: '#ffffff' }} onClick={handleShare}>
-            <ShareIcon />
-          </IconButton>
+          <Box sx={{ width: 48 }} /> {/* 占位符，保持标题居中 */}
         </Box>
 
         <Box sx={{
@@ -430,9 +339,6 @@ const Player: React.FC<PlayerProps> = ({
             }}
           />
           <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(duration)}</Typography>
-          <IconButton onClick={() => setShowHelp(true)} sx={{ color: '#ffffff', ml: 1, p: '4px' }}>
-            <HelpOutlineIcon sx={{ fontSize: 18 }} />
-          </IconButton>
         </Box>
 
         {/* Action Buttons */}
@@ -441,65 +347,17 @@ const Player: React.FC<PlayerProps> = ({
           display: 'flex',
           gap: 2,
         }}>
-          <ActionButton onClick={handleFavorite} startIcon={<FavoriteIcon color={isFavorite ? 'error' : 'inherit'} />}>
-            {isFavorite ? 'Favorited' : 'Favorite'}
+          <ActionButton 
+            onClick={handleDownload} 
+            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+            disabled={isDownloading}
+          >
+            {isDownloading ? 'Downloading...' : 'Download'}
           </ActionButton>
-          <ActionButton onClick={() => setShowEffects(true)} startIcon={<TuneIcon />}>
-            Effects
+          <ActionButton onClick={handleShare} startIcon={<ShareIcon />}>
+            Share
           </ActionButton>
         </Box>
-
-        {/* Effects Dialog */}
-        <Dialog open={showEffects} onClose={() => setShowEffects(false)} PaperProps={{
-          sx: {
-            background: 'rgba(12, 26, 26, 0.9)',
-            backdropFilter: 'blur(15px)',
-            borderRadius: '20px',
-            border: '1px solid rgba(45, 156, 147, 0.3)',
-            color: '#ffffff',
-          }
-        }}>
-          <DialogTitle sx={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>Audio Effects</DialogTitle>
-          <DialogContent sx={{ pt: 2 }}>
-            <Typography sx={{ color: '#ffffff', mb: 2 }}>
-              Adjust the audio effects below to personalize your soundscape. Enable or disable effects and fine-tune their parameters.
-            </Typography>
-            {renderEffectControls()}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowEffects(false)} sx={{ color: '#2d9c93' }}>Close</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Help Dialog */}
-        <Dialog open={showHelp} onClose={() => setShowHelp(false)} PaperProps={{
-          sx: {
-            background: 'rgba(12, 26, 26, 0.9)',
-            backdropFilter: 'blur(15px)',
-            borderRadius: '20px',
-            border: '1px solid rgba(45, 156, 147, 0.3)',
-            color: '#ffffff',
-          }
-        }}>
-          <DialogTitle sx={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>Help</DialogTitle>
-          <DialogContent sx={{ pt: 2 }}>
-            <Typography sx={{ color: '#ffffff', mb: 2 }}>
-              Welcome to the Ambiance AI Player! Here you can:
-            </Typography>
-            <ul style={{ color: '#fff', marginLeft: 20, marginBottom: 16 }}>
-              <li>Play, pause, and seek through your generated soundscape.</li>
-              <li>Adjust audio effects for a personalized experience.</li>
-              <li>Click "Favorite" to save your favorite soundscapes.</li>
-              <li>Use the "Share" button to copy a link and share with friends.</li>
-            </ul>
-            <Typography sx={{ color: '#ffffff', mb: 2 }}>
-              If you have any questions or feedback, feel free to contact us!
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowHelp(false)} sx={{ color: '#2d9c93' }}>Got It</Button>
-          </DialogActions>
-        </Dialog>
       </Box>
 
       <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
@@ -529,7 +387,7 @@ const Player: React.FC<PlayerProps> = ({
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <TextField
-              value={window.location.href}
+              value={shareUrl || window.location.href}
               fullWidth
               InputProps={{ readOnly: true, sx: { color: '#fff' } }}
               variant="outlined"
@@ -537,7 +395,7 @@ const Player: React.FC<PlayerProps> = ({
             />
             <Button onClick={async () => {
               try {
-                await navigator.clipboard.writeText(window.location.href);
+                await navigator.clipboard.writeText(shareUrl || window.location.href);
                 setSnackbar({ open: true, message: 'Link copied to clipboard!' });
               } catch {
                 setSnackbar({ open: true, message: 'Failed to copy link. Please copy manually.' });

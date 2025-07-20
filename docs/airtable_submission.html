@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Airtable 数据收集示例</title>
+</head>
+<body>
+    <h1>Airtable 数据收集方案</h1>
+    <p>这是一个使用 Airtable 收集数据的示例</p>
+    
+    <script>
+        // Airtable 配置
+        const AIRTABLE_API_KEY = 'YOUR_API_KEY';
+        const AIRTABLE_BASE_ID = 'YOUR_BASE_ID';
+        const AIRTABLE_TABLE_NAME = 'Evaluations';
+        
+        async function submitToAirtable(data) {
+            try {
+                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fields: {
+                            'Evaluation Data': JSON.stringify(data),
+                            'Timestamp': new Date().toISOString(),
+                            'Completed Items': data.completed_items,
+                            'Total Items': data.total_items
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ 数据已成功提交到 Airtable！');
+                } else {
+                    throw new Error('Airtable submission failed');
+                }
+            } catch (error) {
+                console.error('Airtable submission error:', error);
+                alert('⚠️ Airtable 提交失败，但本地备份已保存');
+            }
+        }
+    </script>
+</body>
+</html> 
