@@ -78,8 +78,6 @@ env.bak/
 venv.bak/
 
 # Keep only specific virtual environments for this project
-!venv_gemini/
-!backend/venv_stableaudio/
 
 # PyInstaller
 *.manifest
