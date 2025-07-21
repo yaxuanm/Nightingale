@@ -402,6 +402,99 @@ Narrative script:"""
         print(f"[ERROR] /api/create-story: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/create-story-music")
+async def create_story_music(request: dict):
+    """
+    生成旁白+音乐混音（音乐用Stable Audio生成）
+    输入: { "narrative": "...", "music_prompt": "...", "duration": 30 }
+    输出: { "narrative_script": "...", "audio_url": "..." }
+    """
+    narrative = request.get("narrative")
+    music_prompt = request.get("music_prompt")
+    duration = float(request.get("duration", 30))
+
+    if not narrative or not music_prompt:
+        raise HTTPException(status_code=400, detail="Missing narrative or music_prompt")
+
+    try:
+        # 1. 生成旁白音频
+        tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
+        tts_path = os.path.join("audio_output", tts_filename)
+        await tts_to_audio(narrative, tts_path, voice="en-US-JennyNeural")
+
+        # 2. 用Stable Audio生成音乐
+        music_path = generate_long_stable_audio(music_prompt, total_duration=duration)
+
+        # 3. 混音
+        tts_audio = AudioSegment.from_file(tts_path)
+        music_audio = AudioSegment.from_file(music_path)
+        # 如果音乐比旁白短，循环补齐
+        if len(music_audio) < len(tts_audio):
+            repeats = int(len(tts_audio) / len(music_audio)) + 1
+            music_audio = music_audio * repeats
+        music_audio = music_audio[:len(tts_audio) + 2000]  # 比旁白长2秒
+        tts_audio = tts_audio - 2  # 旁白音量降低
+        music_audio = music_audio - 4  # 音乐音量降低
+        mixed = music_audio.overlay(tts_audio)
+        mixed_filename = f"story_music_mix_{uuid.uuid4().hex}.mp3"
+        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed.export(mixed_path, format="mp3")
+
+        # 4. 上传合成音频
+        from .services.storage_service import storage_service
+        cloud_url = await storage_service.upload_audio(mixed_path, mixed_filename)
+        return {
+            "narrative_script": narrative,
+            "audio_url": cloud_url
+        }
+    except Exception as e:
+        print(f"[ERROR] /api/create-story-music: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/music-prompt")
+async def music_prompt(request: dict):
+    """
+    生成适合Stable Audio的音乐描述prompt。
+    输入: { "genre": ..., "tempo": ..., "usage": ..., "instruments": [...], "input": ... }
+    输出: { "prompt": "..." }
+    """
+    genre = request.get("genre")
+    tempo = request.get("tempo")
+    usage = request.get("usage")
+    instruments = request.get("instruments", [])
+    user_input = request.get("input", "")
+    try:
+        # 1. 让Gemini根据Stable Audio需求生成自然语言描述
+        gemini_prompt = f"""
+You are a world-class music prompt engineer. Given the following user selections, write a single, vivid, natural English sentence describing the music to be generated. The description should be suitable for input to a generative AI music model (Stable Audio) and should include genre, tempo, usage, and instruments, as well as the user's inspiration or idea. Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+Selections:
+- Genre: {genre}
+- Tempo: {tempo}
+- Usage: {usage}
+- Instruments: {', '.join(instruments)}
+- User input: {user_input}
+
+Example output:
+"A slow ambient piece for background use, featuring synth and violin, inspired by whispers of forgotten lore in a moonlit ancient ruin."
+
+Now write the prompt:
+"""
+        response = ai_service.client.models.generate_content(
+            model=ai_service._get_current_model(),
+            contents=gemini_prompt
+        )
+        text = response.text.strip() if response and response.text else None
+        # 只取第一行或第一个句号前内容，去除多余解释
+        if text:
+            text = text.split('\n')[0].strip('"')
+        if not text:
+            raise Exception("Failed to generate music prompt")
+        return {"prompt": text}
+    except Exception as e:
+        print(f"[ERROR] /api/music-prompt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # 获取分享基础URL
 SHARE_BASE_URL = os.getenv("SHARE_BASE_URL", "http://localhost:3000")
 
@@ -454,6 +547,34 @@ async def create_share(request: dict):
         
     except Exception as e:
         print(f"[ERROR] /api/create-share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/edit-prompt")
+async def edit_prompt(request: dict):
+    """
+    AI编辑prompt或narrative
+    输入: { "current_prompt": "...", "edit_instruction": "...", "mode": "...", "is_story": true/false }
+    输出: { "edited_prompt": "..." }
+    """
+    current_prompt = request.get("current_prompt", "")
+    edit_instruction = request.get("edit_instruction", "")
+    mode = request.get("mode", "default")
+    is_story = request.get("is_story", False)
+    
+    if not current_prompt or not edit_instruction:
+        raise HTTPException(status_code=400, detail="Missing 'current_prompt' or 'edit_instruction' parameter")
+    
+    try:
+        # 使用AI服务编辑prompt或narrative
+        edited_prompt = await ai_service.edit_prompt(current_prompt, edit_instruction, mode, is_story)
+        
+        return {
+            "edited_prompt": edited_prompt,
+            "message": "Prompt edited successfully"
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] /api/edit-prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/share/{share_id}")
