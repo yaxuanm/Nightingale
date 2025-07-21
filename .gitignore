@@ -215,3 +215,7 @@ backend/app/image_output/
 # Keep some essential files
 !backend/app/audio_output/.gitkeep
 !backend/app/image_output/.gitkeep 
+
+backend/venv_audio/
+backend/venv_stableaudio/
+backend/venv_gemini/ 
