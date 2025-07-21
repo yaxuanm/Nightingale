@@ -524,6 +524,44 @@ Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
             parts.append(extra)
         return ', '.join([str(p) for p in parts if p])
 
+    async def edit_prompt(self, current_prompt: str, edit_instruction: str, mode: str = "default", is_story: bool = False) -> str:
+        """
+        使用AI编辑prompt或narrative
+        """
+        try:
+            content_type = "narrative" if is_story else "audio description"
+            prompt = f"""
+You are an expert in {content_type} and storytelling. The user wants to edit their current {content_type} based on their instruction.
+
+Current {content_type}: "{current_prompt}"
+User's edit instruction: "{edit_instruction}"
+Mode: {mode}
+
+Please edit the {content_type} according to the user's instruction. Keep the core meaning but apply the requested changes. Return only the edited {content_type}, no explanations.
+
+Examples for {content_type} editing:
+- If user says "make it shorter", condense the {content_type}
+- If user says "add more details", expand with more atmospheric elements
+- If user says "make it more poetic", add lyrical language
+- If user says "make it more dramatic", add intensity and emotion
+- If user says "add more emotion", enhance emotional elements
+- If user says "make it more intense", add dramatic tension
+
+Edited {content_type}:"""
+            
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            
+            edited_prompt = response.text.strip() if response and response.text else current_prompt
+            return edited_prompt
+            
+        except Exception as e:
+            print(f"Error in edit_prompt: {e}")
+            # 如果AI编辑失败，返回原始prompt
+            return current_prompt
+
 def get_instruments_from_ai(atmosphere: Optional[str], mood: Optional[str], elements: Optional[List[str]], user_input: Optional[str], reference_era: Optional[str]) -> List[str]:
     """
     调用 AI 补全乐器（此处为 mock，可对接 Gemini/GPT/OpenAI）。

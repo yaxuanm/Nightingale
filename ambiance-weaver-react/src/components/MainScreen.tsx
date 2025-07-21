@@ -13,7 +13,6 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  Mic as MicIcon,
   ArrowBack as ArrowBackIcon,
   HelpOutline as HelpIcon,
   Refresh as RefreshIcon,
@@ -33,8 +32,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = (location.state as { mode: string } | null) || { mode: 'default' };
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+
   
   // 新增状态用于动态inspiration chips
   // inspiration chips 状态，初始为默认prompts
@@ -53,6 +51,15 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
 
   // Story Mode: custom prompt and UI
   const isStoryMode = mode === 'story';
+
+  // 在story模式下重置inspiration chips状态
+  useEffect(() => {
+    if (isStoryMode) {
+      setInspirationChips([]);
+      setIsLoadingChips(false);
+      fetchedRef.current = false;
+    }
+  }, [isStoryMode]);
 
   // 获取随机的inspiration chips，支持是否显示loading
   const fetchInspirationChips = async (showLoading = false) => {
@@ -86,15 +93,19 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   // 用 useRef 保证 fetchInspirationChips 只在首次加载时调用
   const fetchedRef = useRef(false);
   useEffect(() => {
-    if (fetchedRef.current) return;
+    // 只在非story模式下才获取inspiration chips
+    if (fetchedRef.current || isStoryMode) return;
     fetchedRef.current = true;
     fetchInspirationChips(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isStoryMode]);
 
   // 刷新inspiration chips（手动刷新时才显示loading）
   const handleRefreshChips = () => {
-    fetchInspirationChips(true);
+    // 只在非story模式下才允许刷新
+    if (!isStoryMode) {
+      fetchInspirationChips(true);
+    }
   };
 
   const handleHelpClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -115,32 +126,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
     setInputValue(suggestion);
   };
 
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
-      return;
-    }
-    if (!recognitionRef.current) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US'; // English recognition
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputValue((prev) => prev ? prev + ' ' + transcript : transcript);
-      };
-      recognitionRef.current.onend = () => setIsListening(false);
-      recognitionRef.current.onerror = () => setIsListening(false);
-    }
-    if (!isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } else {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  };
+
 
   const content = (
     <>
@@ -195,11 +181,6 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
         <Box sx={{ mb: uiSystem.spacing.large }}>
           {/* Toolbar */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: uiSystem.spacing.small }}>
-            <Tooltip title="Voice input">
-              <IconButton sx={uiSystem.buttons.icon} onClick={handleVoiceInput} color={isListening ? "primary" : "default"}>
-                <MicIcon />
-              </IconButton>
-            </Tooltip>
             <IconButton onClick={handleHelpClick} sx={uiSystem.buttons.icon}>
               <HelpIcon />
             </IconButton>
