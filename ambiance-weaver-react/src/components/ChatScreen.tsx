@@ -189,6 +189,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [musicTempoOptions, setMusicTempoOptions] = useState<string[]>([]);
   const [musicUsageOptions, setMusicUsageOptions] = useState<string[]>([]);
 
+  // 静态音乐选项
+  useEffect(() => {
+    setMusicGenreOptions(['Ambient', 'Classical', 'Jazz', 'Electronic', 'Pop', 'Rock', 'Cinematic', 'Folk', 'Lo-fi', 'World']);
+    setMusicInstrumentOptions(['Piano', 'Guitar', 'Synth', 'Drums', 'Violin', 'Flute', 'Bass', 'Strings', 'Brass', 'Percussion']);
+    setMusicTempoOptions(['Slow', 'Medium', 'Fast', 'Variable']);
+    setMusicUsageOptions(['Background', 'Focus', 'Relaxation', 'Party', 'Workout', 'Meditation', 'Study', 'Sleep']);
+  }, []);
+
   // 1. 新增：通用 prompt 编辑状态
   const [finalPrompt, setFinalPrompt] = useState<string>('');
   const [showPromptEdit, setShowPromptEdit] = useState(false);
@@ -239,20 +247,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     // MusicGen 分支
     setMusicChoices((prev) => {
       const newChoices = { ...prev };
-      if (type === 'music_instruments') {
-        newChoices.instruments = [option];
-      } else if (type === 'music_genre') {
+      if (type === 'music_genre') {
         newChoices.genre = option;
+        setCurrentStage('music_tempo');
       } else if (type === 'music_tempo') {
         newChoices.tempo = option;
-      } else if (type === 'music_usage') {
-        newChoices.usage = option;
+        setCurrentStage('music_instruments');
+      } else if (type === 'music_instruments') {
+        if (newChoices.instruments.includes(option)) {
+          newChoices.instruments = newChoices.instruments.filter((item) => item !== option);
+        } else {
+          if (newChoices.instruments.length < 3) {
+            newChoices.instruments = [...newChoices.instruments, option];
+          }
+        }
+        // 不自动进入下一阶段
       }
       return newChoices;
     });
-    if (type === 'music_genre') setCurrentStage('music_instruments');
-    else if (type === 'music_instruments') setCurrentStage('music_tempo');
-    else if (type === 'music_tempo') setCurrentStage('music_usage');
     setMessages((prev) => [
       ...prev,
       { sender: 'user', text: option, isUser: true },
@@ -301,6 +313,73 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       const data = await res.json();
       setFinalPrompt(data.narrative_script || '');
       setShowPromptEdit(true); // 只弹出编辑弹窗
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // AI聊天编辑prompt的函数
+  const handleAiEdit = async () => {
+    if (!aiEditInput.trim() || isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      // 区分story模式和非story模式
+      const isStory = mode === 'story';
+      const contentType = isStory ? 'narrative' : 'prompt';
+      
+      const response = await fetch('http://localhost:8000/api/edit-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_prompt: finalPrompt,
+          edit_instruction: aiEditInput,
+          mode: mode,
+          is_story: isStory,
+          content_type: contentType
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to edit prompt');
+      }
+      
+      const data = await response.json();
+      setFinalPrompt(data.edited_prompt);
+      setAiEditInput(''); // 清空输入框
+      
+      // 添加用户消息到聊天记录
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'user', text: aiEditInput, isUser: true },
+        { sender: 'ai', text: `I've updated your ${contentType}: "${data.edited_prompt}"`, isUser: false }
+      ]);
+      
+    } catch (error) {
+      console.error('Error editing prompt:', error);
+      // 如果API调用失败，使用简单的文本替换作为fallback
+      const lowerInstruction = aiEditInput.toLowerCase();
+      let editedPrompt = finalPrompt;
+      
+      if (lowerInstruction.includes('shorter') || lowerInstruction.includes('shorten')) {
+        editedPrompt = finalPrompt.split('.').slice(0, 2).join('.') + '.';
+      } else if (lowerInstruction.includes('longer') || lowerInstruction.includes('expand')) {
+        editedPrompt = finalPrompt + ' with more detailed atmospheric elements.';
+      } else if (lowerInstruction.includes('poetic') || lowerInstruction.includes('poetry')) {
+        editedPrompt = finalPrompt.replace(/\./g, ', like poetry in motion.');
+      } else if (lowerInstruction.includes('dramatic') || lowerInstruction.includes('intense')) {
+        editedPrompt = finalPrompt + ' with heightened dramatic tension.';
+      }
+      
+      setFinalPrompt(editedPrompt);
+      setAiEditInput('');
+      
+      const contentType = mode === 'story' ? 'narrative' : 'description';
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'user', text: aiEditInput, isUser: true },
+        { sender: 'ai', text: `I've updated your ${contentType}: "${editedPrompt}"`, isUser: false }
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -657,7 +736,105 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   }, [currentStage]);
 
+  const handleGenerateStoryMusic = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setShowPromptEdit(false);
+      abortControllerRef.current = new AbortController();
+
+      // 旁白内容：用户在AI编辑弹窗中编辑的内容
+      const narrative = finalPrompt;
+
+      // 1. 先用musicChoices和initialInput生成music prompt（调用后端）
+      let musicPrompt = '';
+      try {
+        const res = await fetch('http://localhost:8000/api/music-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            genre: musicChoices.genre,
+            tempo: musicChoices.tempo,
+            instruments: musicChoices.instruments,
+            usage: mode,
+            input: initialInput,
+          }),
+        });
+        const data = await res.json();
+        musicPrompt = data.prompt || '';
+      } catch (e) {
+        musicPrompt = '';
+      }
+
+      // 2. 生成story+music
+      const res = await fetch('http://localhost:8000/api/create-story-music', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          narrative,
+          music_prompt: musicPrompt,
+          duration: 30,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || 'Failed to generate story music');
+      }
+      const data = await res.json();
+      setCurrentMusicUrl(data.audio_url);
+      setFinalPrompt(data.narrative_script || narrative);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { sender: 'ai', text: 'Your personalized story with music is ready! What would you like to do?', isUser: false },
+      ]);
+      setShowPlaybackButtons(true);
+      setCurrentStage('complete');
+    } catch (err) {
+      if (err && typeof err === 'object' && 'name' in err && (err as any).name === 'AbortError') {
+        setMessages((prev) => [...prev, { sender: 'ai', text: 'Generation cancelled.', isUser: false }]);
+      } else {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai' as Message['sender'], text: `Error generating story music: ${err instanceof Error ? err.message : 'An unknown error occurred'}.`, isUser: false },
+        ]);
+        console.error('Error generating story music:', err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateMusicPrompt = async () => {
+    setIsLoading(true);
+    try {
+      // 生成音乐描述prompt，usage直接用mode
+      const res = await fetch('http://localhost:8000/api/music-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          genre: musicChoices.genre,
+          tempo: musicChoices.tempo,
+          instruments: musicChoices.instruments,
+          usage: mode, // 直接用mode
+          input: initialInput,
+        }),
+      });
+      const data = await res.json();
+      setFinalPrompt(data.prompt || '');
+      setShowPromptEdit(true); // 显示编辑弹窗
+    } catch (error) {
+      console.error('Error generating music prompt:', error);
+      setFinalPrompt('');
+      setShowPromptEdit(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGenerateMusic = async () => {
+    setShowPromptEdit(false); // 立即关闭编辑弹窗，与audio mode一致
     try {
       setIsLoading(true);
       setError(null);
@@ -765,7 +942,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           width: '100%',
         }}
       >
-        <IconButton onClick={() => navigate(-1)} sx={{ color: uiSystem.colors.white, p: 0, mr: 2 }}>
+        <IconButton onClick={() => {
+          if (isLoading && abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+          navigate(-1);
+        }} sx={{ color: uiSystem.colors.white, p: 0, mr: 2 }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h6" sx={{ color: uiSystem.colors.white, ...uiSystem.typography.h3 }}>
@@ -829,7 +1011,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         )}
         <div ref={messagesEndRef} />
       </Stack>
-      {currentStage === 'selectType' && !showPlaybackButtons && (
+      {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>What do you want to generate?</Typography>
           <Button
@@ -877,7 +1059,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {currentStage === 'audio_mood' && !isLoading && !showPlaybackButtons && (
+      {currentStage === 'audio_mood' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>What kind of mood or feeling do you want to evoke?</Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
@@ -893,7 +1075,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {currentStage === 'audio_elements' && !isLoading && !showPlaybackButtons && (
+      {currentStage === 'audio_elements' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>Select sound elements (max 3):</Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
@@ -949,11 +1131,84 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {/* 1. 弹窗部分优化 */}
-      {/* 已彻底删除860行左右的 {mode === 'story' && showPromptEdit && (...)} story script 编辑弹窗（含注释和 Box 内容），只保留底部的那一段。 */}
+      {/* Story模式下的AI编辑弹窗 */}
       {mode === 'story' && showPromptEdit && (
         <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
-          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your story script</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ color: 'white' }}>Edit your story narrative</Typography>
+            <IconButton
+              onClick={() => {
+                setShowPromptEdit(false);
+                // 完全重置，回到选择Background Sound/Music阶段
+                setCurrentStage('selectType');
+                setSelectedType(null);
+                setAudioChoices({ audio_elements: [], extraInputs: [] });
+                setMusicChoices({ instruments: [] });
+                setFinalPrompt('');
+                setAiEditInput('');
+                setMessages([]);
+              }}
+              sx={{ color: 'white', '&:hover': { color: '#2d9c93' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          
+          {/* 聊天编辑区域 */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
+              Chat with AI to edit your story, or edit directly below:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Try: 'make it shorter', 'add more emotion', 'make it more dramatic'..."
+                value={aiEditInput}
+                onChange={(e) => setAiEditInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAiEdit()}
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    '& fieldset': {
+                      borderColor: 'rgba(255,255,255,0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255,255,255,0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#2d9c93',
+                    },
+                  },
+                  '& .MuiInputBase-input': { 
+                    color: 'white',
+                    '&::placeholder': { 
+                      color: 'rgba(255,255,255,0.5)',
+                      opacity: 1,
+                    },
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleAiEdit}
+                disabled={!aiEditInput.trim() || isLoading}
+                sx={{ 
+                  minWidth: 80, 
+                  background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
+                  '&:hover': { background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)' }
+                }}
+              >
+                {isLoading ? 'Editing...' : 'Edit'}
+              </Button>
+            </Box>
+          </Box>
+          
+          {/* 直接编辑区域 */}
+          <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
+            Or edit your story directly:
+          </Typography>
           <TextField
             multiline
             minRows={5}
@@ -983,10 +1238,86 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {/* 非story模式下，prompt编辑弹窗 */}
+      {/* 非story模式下的AI编辑弹窗 */}
       {mode !== 'story' && showPromptEdit && (
         <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
-          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your soundscape description</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ color: 'white' }}>
+              {selectedType === 'music' ? 'Edit your music description' : 'Edit your soundscape description'}
+            </Typography>
+            <IconButton
+              onClick={() => {
+                setShowPromptEdit(false);
+                // 完全重置，回到选择Background Sound/Music阶段
+                setCurrentStage('selectType');
+                setSelectedType(null);
+                setAudioChoices({ audio_elements: [], extraInputs: [] });
+                setMusicChoices({ instruments: [] });
+                setFinalPrompt('');
+                setAiEditInput('');
+                setMessages([]);
+              }}
+              sx={{ color: 'white', '&:hover': { color: '#2d9c93' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          
+          {/* 聊天编辑区域 */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
+              Chat with AI to edit your description, or edit directly below:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Try: 'make it shorter', 'add more details', 'make it more poetic'..."
+                value={aiEditInput}
+                onChange={(e) => setAiEditInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAiEdit()}
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    '& fieldset': {
+                      borderColor: 'rgba(255,255,255,0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255,255,255,0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#2d9c93',
+                    },
+                  },
+                  '& .MuiInputBase-input': { 
+                    color: 'white',
+                    '&::placeholder': { 
+                      color: 'rgba(255,255,255,0.5)',
+                      opacity: 1,
+                    },
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleAiEdit}
+                disabled={!aiEditInput.trim() || isLoading}
+                sx={{ 
+                  minWidth: 80, 
+                  background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
+                  '&:hover': { background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)' }
+                }}
+              >
+                {isLoading ? 'Editing...' : 'Edit'}
+              </Button>
+            </Box>
+          </Box>
+          
+          {/* 直接编辑区域 */}
+          <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
+            Or edit directly:
+          </Typography>
           <TextField
             multiline
             minRows={5}
@@ -1008,18 +1339,28 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           />
           <Button
             variant="contained"
-            onClick={handleGenerate}
+            onClick={
+              mode === 'story' && selectedType === 'music'
+                ? handleGenerateStoryMusic
+                : selectedType === 'music'
+                  ? handleGenerateMusic
+                  : handleGenerate
+            }
             sx={{ mt: 2, color: 'white', fontWeight: 700, background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)', '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' } }}
             fullWidth
           >
-            Generate Soundscape
+            {mode === 'story' && selectedType === 'music'
+              ? 'Generate Story + Music'
+              : selectedType === 'music'
+                ? 'Generate Music'
+                : 'Generate Soundscape'}
           </Button>
         </Box>
       )}
 
       {/* 2. 主页面按钮区优化 */}
       {/* story mode 下，audio_elements 有内容时显示“Generate Soundscape”按钮 */}
-      {mode === 'story' && currentStage === 'audio_elements' && !showPlaybackButtons && audioChoices.audio_elements.length > 0 && (
+      {mode === 'story' && currentStage === 'audio_elements' && !showPlaybackButtons && !showPromptEdit && audioChoices.audio_elements.length > 0 && (
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
           {/* 删除 Generate Prompt 按钮 */}
         </Box>
@@ -1051,7 +1392,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {currentStage === 'music_genre' && !isLoading && !showPlaybackButtons && (
+      {currentStage === 'music_genre' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>What genre or style do you want?</Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
@@ -1067,23 +1408,71 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {currentStage === 'music_instruments' && !isLoading && !showPlaybackButtons && (
-        <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>Pick up to 3 instruments:</Typography>
-          <Stack direction="row" flexWrap="wrap" spacing={1}>
-            {musicInstrumentOptions.map((option) => (
-              <OptionChip
-                key={option}
-                label={option}
-                onClick={() => handleOptionSelect(option, 'music_instruments')}
-                variant={musicChoices.instruments.includes(option) ? 'filled' : 'outlined'}
-                color={musicChoices.instruments.includes(option) ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </OptionMessageBubbleContent>
+      {currentStage === 'music_instruments' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
+        <>
+          <OptionMessageBubbleContent sx={{ mt: 2 }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>Pick up to 3 instruments:</Typography>
+            <Stack direction="row" flexWrap="wrap" spacing={1}>
+              {musicInstrumentOptions.map((option) => {
+                const selected = musicChoices.instruments.includes(option);
+                const disabled = !selected && musicChoices.instruments.length >= 3;
+                return (
+                  <OptionChip
+                    key={option}
+                    label={option}
+                    onClick={() => !disabled && handleOptionSelect(option, 'music_instruments')}
+                    variant={selected ? 'filled' : 'outlined'}
+                    color={selected ? 'primary' : 'default'}
+                    disabled={disabled}
+                    sx={disabled ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+                  />
+                );
+              })}
+            </Stack>
+          </OptionMessageBubbleContent>
+          {musicChoices.instruments.length > 0 && (
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  if (mode === 'story') {
+                    setIsLoading(true);
+                    try {
+                      const res = await fetch('http://localhost:8000/api/generate-scene', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          prompt: initialInput,
+                          mode: 'story',
+                          // 这里可以根据需要传musicChoices参数
+                          genre: musicChoices.genre,
+                          tempo: musicChoices.tempo,
+                          instruments: musicChoices.instruments,
+                        }),
+                      });
+                      const data = await res.json();
+                      setFinalPrompt(data.narrative_script || '');
+                      setShowPromptEdit(true);
+                    } catch (e) {
+                      setFinalPrompt('');
+                      setShowPromptEdit(true);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  } else {
+                    handleGenerateMusicPrompt(); // 非story模式走原逻辑
+                  }
+                }}
+                disabled={isLoading || musicChoices.instruments.length === 0}
+                sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
+              >
+                Generate
+              </Button>
+            </Box>
+          )}
+        </>
       )}
-      {currentStage === 'music_tempo' && !isLoading && !showPlaybackButtons && (
+      {currentStage === 'music_tempo' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>What tempo do you prefer?</Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
@@ -1099,49 +1488,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {currentStage === 'music_usage' && !isLoading && !showPlaybackButtons && (
-        <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>Where will you use this music?</Typography>
-          <Stack direction="row" flexWrap="wrap" spacing={1}>
-            {musicUsageOptions.map((option) => (
-              <OptionChip
-                key={option}
-                label={option}
-                onClick={() => handleOptionSelect(option, 'music_usage')}
-                variant={musicChoices.usage === option ? 'filled' : 'outlined'}
-                color={musicChoices.usage === option ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </OptionMessageBubbleContent>
-      )}
-      {currentStage === 'music_usage' && !showPlaybackButtons && musicChoices.usage && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleGenerateMusic}
-            disabled={
-              isLoading ||
-              !musicChoices.genre ||
-              !musicChoices.tempo ||
-              !musicChoices.usage ||
-              !musicChoices.instruments ||
-              musicChoices.instruments.length === 0
-            }
-            sx={{ minWidth: 140 }}
-          >
-            Generate Music
-          </Button>
-          <Button
-            variant="outlined"
-            color="success"
-            onClick={handleCancelGenerate}
-            sx={{ minWidth: 100 }}
-          >
-            Cancel
-          </Button>
-        </Box>
-      )}
+      {/* 移除music_usage相关UI和逻辑 */}
       {/* story_script_edit 阶段渲染 */}
       {/* 删除 story_script_edit 阶段的编辑弹窗，只保留 showPromptEdit 的弹窗 */}
       {false && currentStage === 'story_script_edit' && (
@@ -1183,69 +1530,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         </Box>
       )}
    
-      <Box
-        sx={{
-          p: 0,
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          position: 'relative',
-          zIndex: 2,
-          width: '100%',
-          mt: 3,
-        }}
-      >
-        <Box sx={{ display: 'flex', gap: 1, my: 1.5 }}>
-          {currentStage === 'free_chat' && (
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={handleReturnToGuidedMode}
-              sx={{
-                color: 'white',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                height: 50,
-                '&:hover': {
-                  borderColor: '#2d9c93',
-                },
-              }}
-            >
-              Return to Guided Mode
-            </Button>
-          )}
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Type your message..."
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-              },
-              '& .MuiInputBase-input::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
-                opacity: 1,
-              },
-            }}
-            disabled={isLoading || showPlaybackButtons || currentStage === 'complete'}
-            autoComplete="off"
-          />
-          <IconButton
-            sx={{
-              bgcolor: '#2d9c93',
-              color: 'white',
-              '&:hover': {
-                bgcolor: '#1a5f5a',
-              },
-              width: 50,
-              height: 50,
-            }}
-            onClick={handleSendMessage}
-            disabled={isLoading || inputText.trim() === '' || showPlaybackButtons || currentStage === 'complete'}
-          >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
-          </IconButton>
-        </Box>
-      </Box>
+      {/* 删除底部聊天框 - 不再需要 */}
+      {/* 原来的聊天框代码已删除，因为现在使用引导式流程和AI编辑弹窗 */}
     </>
   );
 
