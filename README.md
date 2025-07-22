@@ -1,10 +1,10 @@
 # Nightingale
 
-Nightingale is a modern, cross-platform audio generation and mixing toolkit, featuring a web frontend, a React Native mobile app, and a Python FastAPI backend. It supports real-time audio playback, AI-powered sound generation, and sharing features.
+Nightingale is a modern, cross-platform audio generation and mixing toolkit, featuring a web frontend, a React Native mobile app, and a Python FastAPI backend. It supports real-time audio playback, AI-powered sound generation (using Stability AI Stable Audio), and sharing features.
 
 ## Features
 - Real-time audio playback and mixing
-- AI-powered audio generation (text-to-audio)
+- **AI-powered audio generation (text-to-audio via Stability AI Stable Audio)**
 - Audio effects and visualization
 - Multi-platform: Web, Native (React Native), Backend API
 - Share and export audio and images
@@ -13,7 +13,7 @@ Nightingale is a modern, cross-platform audio generation and mixing toolkit, fea
 ## Tech Stack
 - **Web**: React 18, TypeScript, Material-UI, Framer Motion
 - **Native**: React Native, Expo, TypeScript
-- **Backend**: Python 3, FastAPI, Uvicorn, HuggingFace, Google Generative AI, Stability AI
+- **Backend**: Python 3, FastAPI, Uvicorn, HuggingFace, Google Generative AI, **Stability AI Stable Audio**
 
 ## Project Structure
 ```
