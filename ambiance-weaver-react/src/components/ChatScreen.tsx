@@ -28,6 +28,26 @@ import PageLayout from '../components/PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 import { buildAudioGenPrompt } from '../utils/promptBuilder';
 
+// 多mode定制文案
+const moodQuestions: Record<string, string> = {
+  focus: 'What kind of focus do you want? (e.g. deep, alert, calm)',
+  creative: 'What creative mood do you want to inspire? (e.g. playful, energetic, dreamy)',
+  mindful: 'What kind of calm or peace do you seek? (e.g. serene, meditative, gentle)',
+  sleep: 'What kind of sleep environment do you prefer? (e.g. quiet, cozy, gentle)',
+  asmr: 'What kind of ASMR feeling do you want to evoke? (e.g. tingling, relaxing, satisfying)',
+  story: 'What kind of mood or feeling do you want to evoke?',
+  default: 'What kind of mood or feeling do you want to evoke?'
+};
+const elementQuestions: Record<string, string> = {
+  focus: 'Select sounds that help you concentrate (max 3):',
+  creative: 'Select elements that spark creativity (max 3):',
+  mindful: 'Select soothing elements (max 3):',
+  sleep: 'Select sounds that help you sleep (max 3):',
+  asmr: 'Select ASMR triggers (max 3):',
+  story: 'Select sound elements (max 3):',
+  default: 'Select sound elements (max 3):'
+};
+
 interface Message {
   sender: 'user' | 'ai';
   text: string;
@@ -389,54 +409,30 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGeneratePrompt = async () => {
     setIsLoading(true);
     try {
-      // 添加调试信息
-      console.log('Debug - selectedType:', selectedType);
-      console.log('Debug - audioChoices:', audioChoices);
-      
-      // 使用简洁的buildAudioGenPrompt生成prompt
-      const subjects = audioChoices.audio_elements;
-      const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
-      const scenes = [
-        ...(audioChoices.audio_atmosphere ? [audioChoices.audio_atmosphere] : []),
-        ...(mode && mode !== 'default' ? [`for ${mode}`] : [])
-      ];
-      const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
-      const allSubjects = [...subjects, ...extraInputs];
-      
-      // 确保selectedType正确
-      const promptType = selectedType === 'music' ? 'music' : 'audio';
-      console.log('Debug - promptType:', promptType);
-      
-      const structuredPrompt = buildAudioGenPrompt({
-        subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
-        actions,
-        scenes,
-        type: promptType
+      // 收集参数
+      const userInput = initialInput;
+      const mood = audioChoices.audio_mood || '';
+      const elements = audioChoices.audio_elements;
+      // 调用后端LLM生成自然语言prompt
+      const res = await fetch('http://localhost:8000/api/generate-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_input: userInput,
+          mood: mood,
+          elements: elements,
+          mode: mode
+        })
       });
-      
-      console.log('Debug - structuredPrompt:', structuredPrompt);
-      
-      // 直接使用简洁的structuredPrompt，而不是调用后端API
-      setFinalPrompt(structuredPrompt);
+      if (!res.ok) {
+        throw new Error('Failed to generate prompt');
+      }
+      const data = await res.json();
+      setFinalPrompt(data.prompt || '');
       setShowPromptEdit(true); // 显示编辑弹窗
     } catch (error) {
       console.error('Error generating prompt:', error);
-      // 如果buildAudioGenPrompt失败，使用默认的prompt
-      const subjects = audioChoices.audio_elements;
-      const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
-      const scenes = [
-        ...(audioChoices.audio_atmosphere ? [audioChoices.audio_atmosphere] : []),
-        ...(mode && mode !== 'default' ? [`for ${mode}`] : [])
-      ];
-      const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
-      const allSubjects = [...subjects, ...extraInputs];
-      const structuredPrompt = buildAudioGenPrompt({
-        subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
-        actions,
-        scenes,
-        type: selectedType === 'music' ? 'music' : 'audio'
-      });
-      setFinalPrompt(structuredPrompt);
+      setFinalPrompt('');
       setShowPromptEdit(true);
     } finally {
       setIsLoading(false);
@@ -915,7 +911,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       ...(initialInput ? [{ sender: 'user' as const, text: initialInput, isUser: true }] : []),
       { sender: 'ai' as const, text: introMessage, isUser: false },
     ]);
-    setCurrentStage('selectType');
+    // asmr模式直接跳到audio_elements阶段
+    if (mode === 'asmr') {
+      setCurrentStage('audio_elements');
+      setSelectedType('audio');
+    } else {
+      setCurrentStage('selectType');
+    }
     setInputText('');
   }, [initialInput, mode, aiName]);
 
@@ -1011,7 +1013,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         )}
         <div ref={messagesEndRef} />
       </Stack>
-      {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && (
+      {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && mode !== 'asmr' && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>What do you want to generate?</Typography>
           <Button
@@ -1061,7 +1063,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       )}
       {currentStage === 'audio_mood' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>What kind of mood or feeling do you want to evoke?</Typography>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            {moodQuestions[mode] || moodQuestions.default}
+          </Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
             {moodOptions.map((option) => (
               <OptionChip
@@ -1077,7 +1081,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       )}
       {currentStage === 'audio_elements' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>Select sound elements (max 3):</Typography>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            {elementQuestions[mode] || elementQuestions.default}
+          </Typography>
           <Stack direction="row" flexWrap="wrap" spacing={1}>
             {elementOptions.map((option) => {
               const isSelected = audioChoices.audio_elements.includes(option);

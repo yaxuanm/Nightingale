@@ -79,12 +79,18 @@ class AudioGenerationService:
             print(f"GenAI conversion failed: {e}")
             return None
 
-    async def generate_audio(self, description, duration=20, output_path=None, model_type="audiogen"):
+    async def generate_audio(self, description, duration=20, output_path=None, model_type="audiogen", mode=None):
         print("[INFO] Using Freesound混音方案作为主音频生成逻辑")
-        audio_path = await generate_freesound_mix(description)
+        # 新增：根据mode使用模板
+        if mode and mode in self.mode_prompts:
+            template = self.mode_prompts[mode]
+            final_prompt = template.format(description=description)
+        else:
+            final_prompt = description
+        audio_path = await generate_freesound_mix(final_prompt)
         # 上传到 Supabase
         try:
-            cloud_url = await storage_service.upload_audio(audio_path, f"freesound_{abs(hash(description))}")
+            cloud_url = await storage_service.upload_audio(audio_path, f"freesound_{abs(hash(final_prompt))}")
             if cloud_url:
                 print(f"[SUCCESS] Uploaded to Supabase: {cloud_url}")
                 return cloud_url
