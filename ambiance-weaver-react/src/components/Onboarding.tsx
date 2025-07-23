@@ -7,6 +7,9 @@ import {
   Spa as SpaIcon,
   AutoStories as StoryIcon,
   MusicNote as MusicIcon,
+  Hearing as HearingIcon,
+  MenuBook as BookIcon,
+  Lightbulb as LightbulbIcon,
 } from '@mui/icons-material';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
@@ -23,7 +26,7 @@ const modes = [
     id: 'creative',
     title: 'Creative Flow',
     description: 'Ignites creativity and inspiration.',
-    icon: StoryIcon,
+    icon: LightbulbIcon,
     color: '#2d8f9c'
   },
   {
@@ -40,13 +43,19 @@ const modes = [
     icon: MusicIcon,
     color: '#8f9c2d'
   },
-  // 新增 Story Mode
   {
     id: 'story',
-    title: 'Relive your story',
-    description: 'Relive your story with narration and sound',
-    icon: StoryIcon,
-    color: '#e6b800' // Gold tone for storytelling
+    title: 'Story',
+    description: 'Bring your story to life with narration and sound.',
+    icon: BookIcon,
+    color: '#e6b800'
+  },
+  {
+    id: 'asmr',
+    title: 'ASMR',
+    description: 'Immersive, soothing sounds for relaxation and tingles.',
+    icon: HearingIcon,
+    color: '#b39ddb'
   }
 ];
 

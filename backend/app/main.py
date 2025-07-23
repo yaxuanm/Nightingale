@@ -495,6 +495,59 @@ Now write the prompt:
         print(f"[ERROR] /api/music-prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/generate-prompt")
+async def generate_prompt(request: dict):
+    """
+    根据用户输入、mood、elements、mode生成自然语言音频描述prompt。
+    输入: { "user_input": ..., "mood": ..., "elements": [...], "mode": ... }
+    输出: { "prompt": "..." }
+    """
+    user_input = request.get("user_input", "")
+    mood = request.get("mood", "")
+    elements = request.get("elements", [])
+    mode = request.get("mode", "default")
+    try:
+        # 构建LLM prompt
+        if mode == "asmr":
+            llm_prompt = f"""
+You are an expert in ASMR soundscape design. Given the user's idea and selected sound elements, write a single, vivid, natural English sentence describing the ASMR soundscape to be generated. Focus on tactile, soothing, and immersive triggers. 80% of the content should be classic ASMR triggers (e.g. Tapping, Brushing, Page turning, Ear cleaning, Crinkling, Hand movements, Water sounds, Glove sounds, Typing, Spray sounds, Personal attention, Hair brushing, Face touching, Light triggers, Scalp massage, Whispering, Scratching, Plastic crinkling, Mic brushing, Roleplay: doctor, Roleplay: haircut, Roleplay: spa). 20% can be gentle, relaxing environmental sounds (e.g. Gentle rain, Soft wind, Distant thunder, Footsteps on carpet, Water dripping, Fire crackling, Pages turning in a quiet library). Do not generate poetic lines, abstract moods, or pure nature scenes without a tactile or ASMR element. Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Selected elements: {', '.join(elements)}
+Mode: asmr
+
+Example chips: Tapping, Brushing, Page turning, Ear cleaning, Gentle rain, Soft wind, Distant thunder, Footsteps on carpet, Water dripping, Fire crackling, Whispering, Scalp massage
+
+Example output:
+"A soothing ASMR soundscape with gentle rain tapping on the window, soft brushing sounds, and the subtle footsteps in a quiet room."
+"""
+        else:
+            llm_prompt = f"""
+You are an expert in soundscape design. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing the soundscape to be generated. The description should be suitable for input to a generative AI audio model. Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: {mode}
+
+Example output:
+"A peaceful soundscape for deep focus, featuring gentle rain, soft wind, and distant thunder."
+"""
+        response = ai_service.client.models.generate_content(
+            model=ai_service._get_current_model(),
+            contents=llm_prompt
+        )
+        text = response.text.strip() if response and response.text else None
+        # 只取第一行或第一个句号前内容，去除多余解释
+        if text:
+            text = text.split('\n')[0].strip('"')
+        if not text:
+            raise Exception("Failed to generate prompt")
+        return {"prompt": text}
+    except Exception as e:
+        print(f"[ERROR] /api/generate-prompt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # 获取分享基础URL
 SHARE_BASE_URL = os.getenv("SHARE_BASE_URL", "http://localhost:3000")
 

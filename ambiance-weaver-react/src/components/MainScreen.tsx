@@ -126,7 +126,15 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
     setInputValue(suggestion);
   };
 
-
+  const modePrompts: Record<string, string> = {
+    focus: 'Describe a soundscape that helps you focus.',
+    creative: 'Describe a scene or idea to spark your creativity.',
+    mindful: 'Describe a calming or peaceful soundscape.',
+    sleep: 'Describe a soothing soundscape to help you sleep.',
+    story: 'Describe a memory, story, or scene you want to relive.',
+    asmr: 'Describe an ASMR sound or trigger (e.g. tapping, brushing, etc.).',
+    default: 'Describe your perfect atmosphere or paste a poem, quote, or movie line.'
+  };
 
   const content = (
     <>
@@ -169,9 +177,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             ...uiSystem.typography.body1,
           }}
         >
-          {isStoryMode
-            ? 'Describe a memory, story, or scene you want to relive. The AI will narrate it and create a matching soundscape.'
-            : 'Describe your perfect atmosphere or paste a poem, quote, or movie line to inspire music'}
+          {modePrompts[mode] || modePrompts.default}
         </Typography>
       </Box>
 
@@ -192,9 +198,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             minRows={isStoryMode ? 7 : 5}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={isStoryMode
-              ? 'E.g. A summer afternoon at grandma’s house, cicadas singing, watermelon in hand.\nE.g. The first snowfall you remember, quiet streets, warm lights in windows.\nE.g. The day you met your best friend, laughter echoing in a sunlit park.'
-              : `Try: "The rain falls like silver threads on cobblestone streets"\nTry: "Grandma's kitchen on Sunday morning, cinnamon in the air"\nTry: "A library where time stands still, dust motes dance in sunbeams"\nTry: "The quiet before dawn, when the world holds its breath"\nTry: "To see a world in a grain of sand..."`}
+            placeholder={modePrompts[mode] || modePrompts.default}
             InputProps={isStoryMode ? {
               sx: {
                 fontSize: 20,

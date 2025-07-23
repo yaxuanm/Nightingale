@@ -79,7 +79,15 @@ class AIService:
             'music_usage': ["Background", "Focus", "Relaxation", "Study", "Sleep"]
         }
         if stage in ['mood', 'audio_mood']:
-            prompt = f"""
+            if mode == 'asmr':
+                prompt = f"""
+List 5 ASMR-specific feelings or triggers suitable for AI sound generation. 80% should be classic ASMR triggers (e.g. Tapping, Brushing, Page turning, Ear cleaning, Crinkling, Hand movements, Water sounds, Glove sounds, Typing, Spray sounds, Personal attention, Hair brushing, Face touching, Light triggers, Scalp massage, Whispering, Scratching, Plastic crinkling, Mic brushing, Roleplay: doctor, Roleplay: haircut, Roleplay: spa). 20% can be gentle, relaxing environmental sounds (e.g. Gentle rain, Soft wind, Distant thunder, Footsteps on carpet, Water dripping, Fire crackling, Pages turning in a quiet library). Do not generate poetic lines, abstract moods, or pure nature scenes without a tactile or ASMR element. Only return a JSON array of strings.
+Examples: ["Tapping", "Brushing", "Page turning", "Ear cleaning", "Gentle rain"]
+- mode: {mode}
+- user input: {user_input}
+"""
+            else:
+                prompt = f"""
 List 5 moods for a soundscape. Each should be a single English word or a short phrase (max 2 words), e.g. "Calm", "Mysterious", "Uplifting", "Bittersweet", "Suspenseful". Do not include any scene, sound, or environment words.
 Examples: ["Calm", "Dreamy", "Energetic", "Peaceful", "Tense"]
 Only return a JSON array of strings.
@@ -105,7 +113,19 @@ Only return a JSON array of strings.
 - mode: {mode}
 """
         elif stage in ['audio_elements']:
-            prompt = f"""
+            if mode == 'asmr':
+                prompt = f"""
+For 'asmr' and audio_elements stage:
+- Generate 5 ASMR sound element options.
+- At least 2-3 options should be classic ASMR triggers unrelated to the user's input, such as: Tapping, Brushing, Ear cleaning, Crinkling, Hand movements, Water sounds, Glove sounds, Typing, Spray sounds, Personal attention, Hair brushing, Face touching, Light triggers, Scalp massage, Whispering, Scratching, Plastic crinkling, Mic brushing, Roleplay: doctor, Roleplay: haircut, Roleplay: spa.
+- The remaining options can be related to the user's input (e.g. paper/page), but do not make all options the same category.
+- Do not simply repeat or paraphrase the user's input. Each option should be a distinct ASMR sound type or gentle environmental sound.
+- Example chips: Tapping, Brushing, Page turning, Ear cleaning, Crinkling, Whispering, Gentle rain, Soft wind
+User input: {user_input}
+Only return a JSON array of 5 strings.
+"""
+            else:
+                prompt = f"""
 Based on the user's input and mode, generate 5 sound element options that are closely related to the user's idea, each with a slight variation or added detail. Do not suggest unrelated sounds or events. Do not simply repeat the original input. Do not include any scene or environment words already mentioned in the atmosphere (such as cafe, rain, afternoon, etc.). Only describe specific sounds or events, not the overall scene or mood.
 
 User input: "A cozy cafe on a rainy afternoon"
@@ -248,7 +268,20 @@ User input: {user_input}
         """
         生成随机的inspiration chips，用于MainScreen的提示选项
         """
-        prompt = f"""
+        if mode == 'asmr':
+            prompt = f"""
+For 'asmr':
+- Generate 6 inspiration chips for ASMR soundscape creation.
+- At least 5 out of 6 must be classic ASMR triggers or sound types, such as: Tapping, Brushing, Page turning, Ear cleaning, Crinkling, Hand movements, Water sounds, Glove sounds, Typing, Spray sounds, Personal attention, Hair brushing, Face touching, Light triggers, Scalp massage, Whispering, Scratching, Plastic crinkling, Mic brushing, Roleplay: doctor, Roleplay: haircut, Roleplay: spa.
+- At most 1 chip can be a gentle, tactile environmental sound (e.g. Gentle rain tapping, Soft wind, Distant thunder, Footsteps on carpet, Water dripping, Fire crackling, Pages turning in a quiet library).
+- Do not generate poetic lines, scenes, or abstract moods. Each chip must be a concrete ASMR sound or trigger, 1-3 words only.
+- Each time you are called, generate a new, diverse set of chips. Avoid repeating the same chips as previous calls.
+- Example chips: Tapping, Brushing, Page turning, Ear cleaning, Crinkling, Whispering
+User input: {user_input}
+Only return a JSON array of 6 strings.
+"""
+        else:
+            prompt = f"""
 You are an expert in creating atmospheric and emotional soundscapes. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. These should be a mix of different types of inspiration:
 
 **Types of inspiration to include:**
@@ -263,74 +296,41 @@ You are an expert in creating atmospheric and emotional soundscapes. Generate 6 
 - Mix different styles: some poetic, some descriptive, some abstract
 - Each prompt should be 5-20 words long
 - Make them creative, inspiring, and diverse
-- Consider the mode: {mode} (focus, relax, story, music, etc.)
+- Consider the mode: {mode}
 - If user_input is provided, make some prompts related to it
 - Avoid generic phrases, be specific and evocative
-
-**Examples of good prompts:**
-- "The rain falls like silver threads on cobblestone streets" (poetic)
-- "Grandma's kitchen on Sunday morning, cinnamon in the air" (memory)
-- "A library where time stands still, dust motes dance in sunbeams" (atmospheric)
-- "The quiet before dawn, when the world holds its breath" (emotional)
-- "A steampunk workshop where brass gears whisper secrets" (imaginary)
-- "Fresh snow crunching underfoot, breath visible in cold air" (sensory)
+- Each time you are called, generate a new, diverse set of chips. Avoid repeating the same chips as previous calls.
 
 **Mode-specific considerations:**
 - For 'focus': Include concentration, productivity, clarity themes
 - For 'relax': Include peace, calm, soothing themes  
 - For 'story': Include narrative, dramatic, cinematic themes
 - For 'music': Include rhythmic, melodic, harmonic themes
+- For 'asmr': See above for triggers and environmental sounds.
 
 User input: {user_input}
 
 Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
 """
-        
-        # 尝试所有可用模型
-        for model_attempt in range(len(self.models)):
-            current_model = self._get_current_model()
-            print(f"🔧 尝试模型: {current_model}")
-            
-            max_retries = 2
-            for attempt in range(max_retries):
-                try:
-                    response = self.client.models.generate_content(
-                        model=current_model,
-                        contents=prompt
-                    )
-                    raw_response_text = response.text or ""
-                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
-                    if json_match:
-                        json_string = json_match.group(1).strip()
-                    else:
-                        start = raw_response_text.find('[')
-                        end = raw_response_text.rfind(']')
-                        if start != -1 and end != -1 and end > start:
-                            json_string = raw_response_text[start:end+1].strip()
-                        else:
-                            json_string = raw_response_text.strip()
-                    chips = json.loads(json_string)
-                    if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
-                        return chips
-                    return self._get_fallback_inspiration_chips()
-                except Exception as e:
-                    print(f"Error in generate_inspiration_chips (model: {current_model}, attempt {attempt + 1}): {str(e)}")
-                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                        print(f"⚠️  API 配额限制，尝试下一个模型...")
-                        if attempt < max_retries - 1:
-                            wait_time = (2 ** attempt) + random.uniform(1, 3)
-                            print(f"⏳ 等待 {wait_time:.1f} 秒后重试...")
-                            time.sleep(wait_time)
-                            continue
-                        else:
-                            self._switch_to_next_model()
-                            break
-                    else:
-                        print(f"❌ 其他错误，使用 fallback 选项")
-                        return self._get_fallback_inspiration_chips()
-            if model_attempt < len(self.models) - 1:
-                continue
-        print(f"❌ 所有模型都失败，使用 fallback 选项")
+        # LLM采样参数提升多样性（已移除generationConfig，避免API报错）
+        response = self.client.models.generate_content(
+            model=self._get_current_model(),
+            contents=prompt
+        )
+        raw_response_text = response.text or ""
+        json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+        if json_match:
+            json_string = json_match.group(1).strip()
+        else:
+            start = raw_response_text.find('[')
+            end = raw_response_text.rfind(']')
+            if start != -1 and end != -1 and end > start:
+                json_string = raw_response_text[start:end+1].strip()
+            else:
+                json_string = raw_response_text.strip()
+        chips = json.loads(json_string)
+        if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
+            return chips
         return self._get_fallback_inspiration_chips()
 
     def _get_fallback_inspiration_chips(self) -> List[str]:
