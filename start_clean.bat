@@ -13,10 +13,12 @@ echo 3. Start Frontend React App
 echo 4. Start All Services (Recommended)
 echo 5. Setup Environment (First Time)
 echo 6. Fix Python 3.13 Compatibility Issues
-echo 7. Exit
+echo 7. Test Python 3.13 Compatibility (Safe)
+echo 8. Test Single Package Installation
+echo 9. Exit
 echo.
 
-set /p choice="Please select (1-7): "
+set /p choice="Please select (1-9): "
 
 if "%choice%"=="1" goto start_gemini
 if "%choice%"=="2" goto start_stable_audio
@@ -24,7 +26,9 @@ if "%choice%"=="3" goto start_frontend
 if "%choice%"=="4" goto start_all
 if "%choice%"=="5" goto setup_env
 if "%choice%"=="6" goto fix_python313
-if "%choice%"=="7" goto exit
+if "%choice%"=="7" goto test_compatibility_safe
+if "%choice%"=="8" goto test_single_package
+if "%choice%"=="9" goto exit
 goto invalid_choice
 
 :start_gemini
@@ -32,13 +36,19 @@ echo.
 echo Starting Gemini API Service...
 cd backend
 echo Current directory: %CD%
-echo Checking for venv_gemini\Scripts\activate.bat...
+echo Checking for venv_gemini environment...
 if exist "venv_gemini\Scripts\activate.bat" (
-    echo Found venv_gemini environment
-    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Found venv_gemini environment (batch)
+    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && set GEMINI_API_KEY=AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI && set GOOGLE_API_KEY=AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
+    echo API Keys have been set automatically
+) else if exist "venv_gemini\Scripts\activate.ps1" (
+    echo Found venv_gemini environment (powershell)
+    start powershell -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI'; $env:GOOGLE_API_KEY='AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Gemini API Service started in new window (http://127.0.0.1:8000)
+    echo API Keys have been set automatically
 ) else (
-    echo Error: venv_gemini environment not found at %CD%\venv_gemini\Scripts\activate.bat
+    echo Error: venv_gemini environment not found at %CD%\venv_gemini\Scripts\
     echo Please run option 5 to setup environment first
 )
 cd ..
@@ -49,13 +59,19 @@ echo.
 echo Starting Stable Audio Service...
 cd backend
 echo Current directory: %CD%
-echo Checking for venv_stableaudio\Scripts\activate.bat...
+echo Checking for venv_stableaudio environment...
 if exist "venv_stableaudio\Scripts\activate.bat" (
-    echo Found venv_stableaudio environment
-    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
+    echo Found venv_stableaudio environment (batch)
+    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python app/main_stable_audio.py"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
+    echo Environment variables will be loaded from .env file
+) else if exist "venv_stableaudio\Scripts\activate.ps1" (
+    echo Found venv_stableaudio environment (powershell)
+    start powershell -Command "cd '%CD%'; .\venv_stableaudio\Scripts\Activate.ps1; python app/main_stable_audio.py"
+    echo Stable Audio Service started in new window (http://127.0.0.1:8001)
+    echo Environment variables will be loaded from .env file
 ) else (
-    echo Error: venv_stableaudio environment not found at %CD%\venv_stableaudio\Scripts\activate.bat
+    echo Error: venv_stableaudio environment not found at %CD%\venv_stableaudio\Scripts\
     echo Please run option 5 to setup environment first
 )
 cd ..
@@ -83,13 +99,19 @@ echo.
 REM Gemini API Service
 cd backend
 echo Current directory: %CD%
-echo Checking for venv_gemini\Scripts\activate.bat...
+echo Checking for venv_gemini environment...
 if exist "venv_gemini\Scripts\activate.bat" (
-    echo Found venv_gemini environment
-    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Found venv_gemini environment (batch)
+    start cmd /k "cd /d %CD% && call venv_gemini\Scripts\activate.bat && set GEMINI_API_KEY=AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI && set GOOGLE_API_KEY=AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
+    echo API Keys have been set automatically
+) else if exist "venv_gemini\Scripts\activate.ps1" (
+    echo Found venv_gemini environment (powershell)
+    start powershell -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI'; $env:GOOGLE_API_KEY='AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    echo Gemini API Service started in new window (http://127.0.0.1:8000)
+    echo API Keys have been set automatically
 ) else (
-    echo Warning: venv_gemini environment not found at %CD%\venv_gemini\Scripts\activate.bat, skipping Gemini service
+    echo Warning: venv_gemini environment not found at %CD%\venv_gemini\Scripts\, skipping Gemini service
 )
 cd ..
 
@@ -99,8 +121,9 @@ echo Current directory: %CD%
 echo Checking for venv_stableaudio\Scripts\activate.bat...
 if exist "venv_stableaudio\Scripts\activate.bat" (
     echo Found venv_stableaudio environment
-    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001"
+    start cmd /k "cd /d %CD% && call venv_stableaudio\Scripts\activate.bat && python app/main_stable_audio.py"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
+    echo Environment variables will be loaded from .env file
 ) else (
     echo Warning: venv_stableaudio environment not found at %CD%\venv_stableaudio\Scripts\activate.bat, skipping Stable Audio service
 )
@@ -231,6 +254,40 @@ if exist "scripts\fix_python313.bat" (
 cd ..
 echo.
 echo Fix completed! You can now try running the services again
+goto end
+
+:test_compatibility_safe
+echo.
+echo Running safe Python 3.13 compatibility test...
+echo.
+cd backend
+if exist "scripts\test_install_safe.bat" (
+    call scripts\test_install_safe.bat
+    echo Safe compatibility test completed
+) else (
+    echo Error: scripts\test_install_safe.bat not found
+    echo Please check if the file exists
+)
+cd ..
+echo.
+echo Test completed! Check the results above
+goto end
+
+:test_single_package
+echo.
+echo Running single package installation test...
+echo.
+cd backend
+if exist "scripts\test_single_package.bat" (
+    call scripts\test_single_package.bat
+    echo Single package test completed
+) else (
+    echo Error: scripts\test_single_package.bat not found
+    echo Please check if the file exists
+)
+cd ..
+echo.
+echo Test completed! Check the results above
 goto end
 
 :fix_python312

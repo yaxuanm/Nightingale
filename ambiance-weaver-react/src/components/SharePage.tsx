@@ -19,7 +19,6 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
-import { getShareUrl } from '../config/api';
 
 const PlayPauseButton = styled(IconButton)(({ theme }) => ({
   width: 80,
@@ -77,7 +76,7 @@ const SharePage: React.FC = () => {
       if (!shareId) return;
       
       try {
-        const response = await fetch(getShareUrl(shareId));
+        const response = await fetch(`http://localhost:8000/api/share/${shareId}`);
         if (!response.ok) {
           throw new Error('Share not found');
         }

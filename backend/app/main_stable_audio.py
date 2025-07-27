@@ -8,6 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 import sys
+from pathlib import Path
+
+# 加载 .env 文件
+from dotenv import load_dotenv
+
+# 获取项目根目录
+project_root = Path(__file__).parent.parent
+env_path = project_root / ".env"
+
+# 加载环境变量
+if env_path.exists():
+    load_dotenv(env_path)
+    print(f"✅ 已加载环境变量文件: {env_path}")
+else:
+    print(f"⚠️  环境变量文件不存在: {env_path}")
 
 # 添加当前目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -126,4 +141,14 @@ async def generate_stable_audio(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001) 
+    
+    # 从环境变量获取配置
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", 8001))
+    reload = os.getenv("RELOAD", "True").lower() == "true"
+    
+    print(f"🚀 启动 Stable Audio 服务...")
+    print(f"📍 地址: http://{host}:{port}")
+    print(f"🔄 热重载: {reload}")
+    
+    uvicorn.run(app, host=host, port=port, reload=reload) 

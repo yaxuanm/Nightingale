@@ -26,6 +26,7 @@ echo # 设置环境变量
 echo os.environ['PYTHONHASHSEED'] = '0'
 echo os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
 echo os.environ['PYTHONUTF8'] = '1'
+echo os.environ['PIP_NO_CACHE_DIR'] = '1'
 echo.
 echo # 为 Python 3.12+ 添加 ImpImporter 兼容性
 echo if not hasattr^(pkgutil, 'ImpImporter'^):
@@ -37,6 +38,7 @@ echo             return None
 echo         def load_module^(self, fullname^):
 echo             return None
 echo     pkgutil.ImpImporter = ImpImporter
+echo     print^('✓ ImpImporter 兼容性补丁已应用'^)
 echo.
 echo # 修复 setuptools 兼容性
 echo try:
@@ -44,6 +46,7 @@ echo     import setuptools
 echo     # 强制使用新版本的 setuptools 机制
 echo     if hasattr^(setuptools, '_distutils'^):
 echo         setuptools._distutils = None
+echo     print^('✓ setuptools 兼容性已修复'^)
 echo except Exception as e:
 echo     warnings.warn^(f"setuptools 兼容性警告: {e}"^)
 echo.
@@ -53,6 +56,7 @@ echo     import pkg_resources
 echo     # 确保 pkg_resources 使用新的导入机制
 echo     if hasattr^(pkg_resources, 'working_set'^):
 echo         pkg_resources.working_set = pkg_resources.WorkingSet^(^)
+echo     print^('✓ pkg_resources 兼容性已修复'^)
 echo except Exception as e:
 echo     warnings.warn^(f"pkg_resources 兼容性警告: {e}"^)
 echo.
@@ -62,6 +66,7 @@ echo     import pip
 echo     # 确保 pip 使用新的包管理机制
 echo     if hasattr^(pip, 'main'^):
 echo         pip.main = lambda args: None
+echo     print^('✓ pip 兼容性已修复'^)
 echo except Exception as e:
 echo     warnings.warn^(f"pip 兼容性警告: {e}"^)
 echo.

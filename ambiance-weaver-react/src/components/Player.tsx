@@ -24,7 +24,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import Snackbar from '@mui/material/Snackbar';
-import { API_ENDPOINTS } from '../config/api';
 
 const ControlButton = styled(IconButton)(({ theme }) => ({
   width: 48,
@@ -67,8 +66,8 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }));
 
 interface PlayerProps {
-  audioUrl?: string;
-  description?: string;
+  audioUrl: string;
+  description: string;
   onGenerateMusic?: () => void;
   onGenerateBackground?: () => void;
   backgroundImageUrl?: string;
@@ -77,8 +76,8 @@ interface PlayerProps {
 }
 
 const Player: React.FC<PlayerProps> = ({
-  audioUrl = "",
-  description = "",
+  audioUrl,
+  description,
   onGenerateMusic,
   onGenerateBackground,
   backgroundImageUrl,
@@ -87,15 +86,10 @@ const Player: React.FC<PlayerProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { 
-    audioUrl: stateAudioUrl, 
-    backgroundImageUrl: stateBackgroundImageUrl,
-    description: stateDescription 
-  } = location.state || {};
+  const { audioUrl: stateAudioUrl, backgroundImageUrl: stateBackgroundImageUrl } = location.state || {};
   
   const currentAudioUrl = audioUrl || stateAudioUrl;
   const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl;
-  const currentDescription = description || stateDescription;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -139,7 +133,7 @@ const Player: React.FC<PlayerProps> = ({
     
     try {
       // 调用后端API创建分享链接
-      const response = await fetch(API_ENDPOINTS.CREATE_SHARE, {
+      const response = await fetch('http://localhost:8000/api/create-share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,24 +225,6 @@ const Player: React.FC<PlayerProps> = ({
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  const formatPrompt = (prompt: string) => {
-    // 清理prompt，移除多余的空格和换行
-    const cleaned = prompt.trim().replace(/\s+/g, ' ');
-    
-    // 尝试找到第一个句号，如果存在则截取到第一个句号
-    const firstSentence = cleaned.match(/^[^.]*\./);
-    if (firstSentence) {
-      return firstSentence[0];
-    }
-    
-    // 如果没有句号，则截取前80个字符
-    if (cleaned.length > 80) {
-      return cleaned.substring(0, 80) + '...';
-    }
-    
-    return cleaned;
-  };
-
   const handleSeek = (event: Event, newValue: number | number[]) => {
     if (audioRef.current) {
       audioRef.current.currentTime = newValue as number;
@@ -267,24 +243,39 @@ const Player: React.FC<PlayerProps> = ({
           gap: 3,
         }}
       >
-        {/* Header with Logo and Prompt */}
         <Box sx={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: 2,
-          mb: 2,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          mb: 3,
         }}>
-          {/* Logo */}
+          <IconButton onClick={() => navigate(-1)} sx={{ color: '#ffffff' }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 600 }}>
+            Now Playing
+          </Typography>
+          <Box sx={{ width: 48 }} /> {/* 占位符，保持标题居中 */}
+        </Box>
+
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          flexGrow: 1,
+          justifyContent: 'center',
+        }}>
           <Box sx={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'rgba(45,156,147,0.10)',
-            flexShrink: 0,
+            mb: 2,
           }}>
             <img
               src={`${process.env.PUBLIC_URL}/logo.png`}
@@ -292,50 +283,47 @@ const Player: React.FC<PlayerProps> = ({
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </Box>
-          
-          {/* Prompt */}
-          {currentDescription && (
+          <Typography variant="h5" sx={{ color: '#ffffff', fontWeight: 700, mt: 2 }}>
+            Your personalized soundscape
+          </Typography>
+          {description && (
             <Typography 
               variant="body2" 
               sx={{ 
-                color: '#ffffff',
-                fontSize: '0.7rem',
-                lineHeight: 1.2,
-                maxHeight: '60px',
-                overflow: 'auto',
-                flexGrow: 1,
-                '&::-webkit-scrollbar': {
-                  width: '4px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '2px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: 'rgba(255, 255, 255, 0.3)',
-                  borderRadius: '2px',
-                },
+                color: '#2d9c93',
+                textAlign: 'center',
+                maxWidth: '80%',
+                mx: 'auto',
+                mt: 1,
+                mb: 2,
+                fontFamily: 'monospace',
+                fontSize: '0.9rem',
+                wordBreak: 'break-word',
+                bgcolor: 'rgba(45,156,147,0.08)',
+                px: 2,
+                py: 1,
+                borderRadius: 1,
+                border: '1px solid rgba(45,156,147,0.15)',
               }}
             >
-              {formatPrompt(currentDescription)}
+              {description}
             </Typography>
           )}
+          <Typography variant="body2" sx={{ color: '#c0c0c0', mb: 3 }}>
+            Generated by Nightingale
+          </Typography>
         </Box>
 
+        {/* Player Controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <PlayPauseButton onClick={handlePlayPause}>
+            {isPlaying ? <PauseIcon sx={{ fontSize: 40 }} /> : <PlayIcon sx={{ fontSize: 40 }} />}
+          </PlayPauseButton>
+        </Box>
 
-
-        {/* Progress Bar */}
-        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography sx={{ 
-            color: '#ffffff', 
-            fontSize: '8px !important',
-            fontWeight: 400,
-            lineHeight: 1,
-            minWidth: '20px',
-            textAlign: 'center',
-          }}>
-            {formatTime(currentTime)}
-          </Typography>
+        {/* Progress Bar and Time */}
+        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(currentTime)}</Typography>
           <Slider
             aria-label="time-slider"
             value={currentTime}
@@ -344,14 +332,14 @@ const Player: React.FC<PlayerProps> = ({
             onChange={handleSeek}
             sx={{
               color: '#2d9c93',
-              height: 3,
+              height: 4,
               '& .MuiSlider-thumb': {
-                width: 10,
-                height: 10,
+                width: 12,
+                height: 12,
                 backgroundColor: '#ffffff',
-                boxShadow: '0 0 0 2px rgba(45, 156, 147, 0.3)',
+                boxShadow: '0 0 0 4px rgba(45, 156, 147, 0.3)',
                 '&:hover, &.Mui-focusVisible': {
-                  boxShadow: '0 0 0 4px rgba(45, 156, 147, 0.4)',
+                  boxShadow: '0 0 0 6px rgba(45, 156, 147, 0.4)',
                 },
               },
               '& .MuiSlider-rail': {
@@ -359,66 +347,26 @@ const Player: React.FC<PlayerProps> = ({
               },
             }}
           />
-          <Typography sx={{ 
-            color: '#ffffff', 
-            fontSize: '8px !important',
-            fontWeight: 400,
-            lineHeight: 1,
-            minWidth: '20px',
-            textAlign: 'center',
-          }}>
-            {formatTime(duration)}
-          </Typography>
+          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(duration)}</Typography>
         </Box>
 
-        {/* Control Buttons */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
+        {/* Action Buttons */}
+        <Box sx={{
           width: '100%',
+          display: 'flex',
+          gap: 2,
         }}>
-          <IconButton 
+          <ActionButton 
             onClick={handleDownload} 
+            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
             disabled={isDownloading}
-            sx={{ 
-              width: 36, 
-              height: 36, 
-              color: '#ffffff',
-              fontSize: 20,
-            }}
           >
-            {isDownloading ? <CircularProgress size={16} /> : <DownloadIcon />}
-          </IconButton>
-          
-          <IconButton 
-            onClick={handlePlayPause}
-            sx={{ 
-              width: 40, 
-              height: 40, 
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '50%',
-              color: '#ffffff',
-              fontSize: 20,
-            }}
-          >
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-          </IconButton>
-          
-          <IconButton 
-            onClick={handleShare}
-            sx={{ 
-              width: 36, 
-              height: 36, 
-              color: '#ffffff',
-              fontSize: 20,
-            }}
-          >
-            <ShareIcon />
-          </IconButton>
+            {isDownloading ? 'Downloading...' : 'Download'}
+          </ActionButton>
+          <ActionButton onClick={handleShare} startIcon={<ShareIcon />}>
+            Share
+          </ActionButton>
         </Box>
-
-
       </Box>
 
       <audio ref={audioRef} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} />
@@ -472,12 +420,22 @@ const Player: React.FC<PlayerProps> = ({
   );
 
   return usePageLayout ? (
-    <PageLayout backgroundImageUrl={currentBackgroundImageUrl} maxWidth={360} minHeight="auto">
+    <PageLayout backgroundImageUrl={currentBackgroundImageUrl} maxWidth={700} minHeight="500px">
       {playerContent}
+      <Box sx={{ width: '100%', textAlign: 'center', mt: 4, mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ color: '#c0c0c0', fontStyle: 'italic', letterSpacing: 1 }}>
+          Let Sound Touch the Soul.
+        </Typography>
+      </Box>
     </PageLayout>
   ) : (
     <>
       {playerContent}
+      <Box sx={{ width: '100%', textAlign: 'center', mt: 4, mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ color: '#c0c0c0', fontStyle: 'italic', letterSpacing: 1 }}>
+          Let Sound Touch the Soul.
+        </Typography>
+      </Box>
     </>
   );
 };
