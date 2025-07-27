@@ -63,6 +63,9 @@ python scripts/batch_test_web.py
 ```powershell
 cd backend
 python scripts/fixed_test_web.py --data_file audio_test_output/generated_20250714_145931/web_test_data.json --audio_dir audio_test_output/generated_20250714_145931/audio_files --port 8010
+gitpage: https://yaxuanm.github.io/Nightingale/
+数据保存在airtable
+
 ```
 - 启动后会自动打开浏览器访问静态评测界面。
 - 如未自动打开，可手动访问：http://127.0.0.1:8010/
@@ -79,7 +82,7 @@ python scripts/fixed_test_web.py --data_file audio_test_output/generated_2025071
 ### 测试环境设置
 ```powershell
 cd backend
-python test_environments.py
+# 环境测试脚本已移除，可直接启动服务测试
 ```
 
 ### 测试音频生成
@@ -114,5 +117,5 @@ python test_stable_audio_save.py
 ## 📖 详细文档
 
 - `backend/README_ENVIRONMENTS.md` - 分环境部署详细说明
-- `backend/test_environments.py` - 环境测试脚本
+- `backend/scripts/setup_environments.bat` - 环境设置脚本
 - `CLEANUP_GUIDE.md` - 环境清理与结构建议 

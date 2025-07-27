@@ -41,7 +41,7 @@ const PageContainer = styled(Box)<{ backgroundImageUrl?: string; showBackground?
 const ContentWrapper = styled(Paper)(({ theme }) => ({
   position: 'relative',
   zIndex: 2,
-  padding: theme.spacing(4),
+  padding: theme.spacing(5),
   display: 'flex',
   flexDirection: 'column',
   background: 'rgba(255, 255, 255, 0.05)',
@@ -49,29 +49,33 @@ const ContentWrapper = styled(Paper)(({ theme }) => ({
   border: '1px solid rgba(255, 255, 255, 0.1)',
   borderRadius: '16px',
   width: '100%',
-  maxWidth: 800,
-  minHeight: 600,
+  maxWidth: 1200,
+  minHeight: 700,
   maxHeight: '90vh',
   overflow: 'auto',
-  
+  fontSize: '1.1rem',
+  [theme.breakpoints.up('md')]: {
+    fontSize: '1.2rem',
+    padding: theme.spacing(6),
+    minHeight: 850,
+    maxWidth: 1400,
+  },
+  [theme.breakpoints.up('lg')]: {
+    fontSize: '1.3rem',
+    padding: theme.spacing(7),
+    minHeight: 950,
+    maxWidth: 1400,
+  },
+  [theme.breakpoints.up('xl')]: {
+    fontSize: '1.4rem',
+    padding: theme.spacing(8),
+    minHeight: 1050,
+    maxWidth: 1400,
+  },
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(3),
     minHeight: 500,
     maxHeight: '95vh',
-  },
-  [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(5),
-    minHeight: 650,
-  },
-  [theme.breakpoints.up('lg')]: {
-    padding: theme.spacing(6),
-    minHeight: 700,
-    maxWidth: 900,
-  },
-  [theme.breakpoints.up('xl')]: {
-    padding: theme.spacing(7),
-    minHeight: 750,
-    maxWidth: 1000,
   },
 }));
 
@@ -82,12 +86,37 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   minHeight = '600px',
   showBackground = true,
 }) => {
+  // 检测是否为Player页面（通过maxWidth判断）
+  const isPlayerPage = typeof maxWidth === 'number' && maxWidth <= 500;
+  
   return (
     <PageContainer backgroundImageUrl={backgroundImageUrl} showBackground={showBackground}>
       <ContentWrapper
         sx={{
           maxWidth,
           minHeight,
+          ...(isPlayerPage && {
+            padding: {
+              xs: '16px !important',
+              md: '20px !important',
+            },
+            fontSize: {
+              xs: '0.7rem !important',
+              md: '0.8rem !important',
+            },
+            minHeight: 'auto !important',
+            maxHeight: 'none !important',
+            width: {
+              xs: '280px !important',
+              md: '360px !important',
+            },
+            maxWidth: {
+              xs: '280px !important',
+              md: '360px !important',
+            },
+            height: 'auto !important',
+            overflow: 'hidden !important',
+          }),
         }}
       >
         {children}

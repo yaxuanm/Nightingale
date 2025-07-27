@@ -25,7 +25,7 @@ function App() {
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/main" element={<MainScreen />} />
           <Route path="/chat" element={<ChatScreen />} />
-          <Route path="/player" element={<Player audioUrl={''} description={''} />} />
+          <Route path="/player" element={<Player />} />
           <Route path="/share/:shareId" element={<SharePage />} />
           <Route path="/video-intro" element={<VideoIntro />} />
           <Route path="/showcase" element={<AllScreensShowcase />} />

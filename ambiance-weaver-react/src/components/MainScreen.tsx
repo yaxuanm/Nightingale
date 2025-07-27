@@ -41,12 +41,12 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
 
   // 默认的fallback选项
   const defaultSuggestedPrompts = [
-    "The rain falls like silver threads on cobblestone streets",
-    "Grandma's kitchen on Sunday morning, cinnamon in the air",
-    "A library where time stands still, dust motes dance in sunbeams",
-    "The quiet before dawn, when the world holds its breath",
-    "A steampunk workshop where brass gears whisper secrets",
-    "Fresh snow crunching underfoot, breath visible in cold air",
+    "Steady rain with distant thunder",
+    "Ocean waves with seagull calls",
+    "Cafe ambience with coffee machine",
+    "Forest sounds with bird songs", 
+    "City traffic with car horns",
+    "Kitchen sounds with water running"
   ];
 
   // Story Mode: custom prompt and UI
@@ -93,19 +93,16 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   // 用 useRef 保证 fetchInspirationChips 只在首次加载时调用
   const fetchedRef = useRef(false);
   useEffect(() => {
-    // 只在非story模式下才获取inspiration chips
-    if (fetchedRef.current || isStoryMode) return;
+    // 只在首次加载时获取inspiration chips
+    if (fetchedRef.current) return;
     fetchedRef.current = true;
     fetchInspirationChips(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStoryMode]);
+  }, [mode]);
 
   // 刷新inspiration chips（手动刷新时才显示loading）
   const handleRefreshChips = () => {
-    // 只在非story模式下才允许刷新
-    if (!isStoryMode) {
-      fetchInspirationChips(true);
-    }
+    fetchInspirationChips(true);
   };
 
   const handleHelpClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -145,7 +142,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
           borderBottom: `1px solid ${uiSystem.colors.white20}`,
           px: 0,
           mx: 0,
-          py: 1.5,
+          py: 2.5, // header上下间距加大
           minHeight: 56,
           background: 'transparent',
           width: '100%',
@@ -184,9 +181,9 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
       {/* Main Content Section */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {/* Input Section */}
-        <Box sx={{ mb: uiSystem.spacing.large }}>
+        <Box sx={{ mb: `calc(${uiSystem.spacing.large} * 1.5)` }}>
           {/* Toolbar */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: uiSystem.spacing.small }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: `calc(${uiSystem.spacing.small} * 1.5)` }}>
             <IconButton onClick={handleHelpClick} sx={uiSystem.buttons.icon}>
               <HelpIcon />
             </IconButton>
@@ -211,7 +208,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
               },
             } : {}}
             sx={{ 
-              mb: uiSystem.spacing.large,
+              mb: `calc(${uiSystem.spacing.large} * 1.5)`,
               '& .MuiOutlinedInput-root': {
                 color: uiSystem.colors.white,
                 fieldset: { borderColor: uiSystem.colors.white20 },
@@ -227,32 +224,31 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
               },
             }}
           />
-          {/* Suggestions Section */}
-          {!isStoryMode && (
+        </Box>
+        {/* Suggestions Section */}
+        <Box sx={{ mb: `calc(${uiSystem.spacing.large} * 1.2)` }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: uiSystem.spacing.small }}>
             <Typography
-              variant="subtitle1" 
-              sx={{ 
-                color: uiSystem.colors.white70,
-                ...uiSystem.typography.body2,
+              variant="subtitle2"
+              sx={{
+                color: uiSystem.colors.white,
+                fontWeight: 600,
+                fontSize: { xs: '1.05rem', md: '1.18rem', xl: '1.25rem' },
+                letterSpacing: 0.2,
               }}
             >
               Or try these inspirations:
             </Typography>
-            <Tooltip title="Refresh inspiration chips">
-              <IconButton 
-                onClick={handleRefreshChips} 
-                sx={uiSystem.buttons.icon} 
-                disabled={isLoadingChips}
-                size="small"
-              >
+            <Box>
+              <IconButton onClick={handleRefreshChips} sx={uiSystem.buttons.icon}>
                 <RefreshIcon />
               </IconButton>
-            </Tooltip>
+              <IconButton onClick={handleHelpClick} sx={uiSystem.buttons.icon}>
+                <HelpIcon />
+              </IconButton>
+            </Box>
           </Box>
-          )}
-          {!isStoryMode && (
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: uiSystem.spacing.large }}>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ mb: uiSystem.spacing.large, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
             {isLoadingChips ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <CircularProgress size={20} color="primary" />
@@ -261,24 +257,47 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 </Typography>
               </Box>
             ) : (
-              inspirationChips.map((prompt) => {
+              inspirationChips.map((prompt, idx) => {
                 // 去掉末尾括号和模式标签
                 const cleanPrompt = prompt.replace(/\s*\([^)]*\)\s*$/, '');
                 return (
                   <Chip
-                    key={prompt}
+                    key={prompt + idx}
                     label={cleanPrompt}
                     onClick={() => setInputValue(cleanPrompt)}
                     sx={{
                       bgcolor: uiSystem.colors.white05,
                       color: uiSystem.colors.primary,
                       border: `1px solid ${uiSystem.colors.white20}`,
-                      cursor: 'pointer',
-                      fontSize: uiSystem.typography.label.fontSize,
-                      fontWeight: uiSystem.typography.label.fontWeight,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      transition: 'all 0.2s',
+                      borderRadius: { xs: 3, md: 4 },
+                      px: { xs: 2, md: 2.5 },
+                      py: { xs: 0.5, md: 1 },
+                      height: { xs: 32, md: 40 },
+                      fontSize: { xs: '1.15rem', md: '1.25rem', lg: '1.35rem' },
+                      fontWeight: 500,
+                      letterSpacing: 0.1,
+                      lineHeight: 1.5,
+                      fontFamily: 'inherit',
+                      '& .MuiChip-label': {
+                        fontSize: { xs: '1.15rem !important', md: '1.25rem !important', lg: '1.35rem !important' },
+                        color: `${uiSystem.colors.primary} !important`,
+                        fontWeight: 500,
+                        letterSpacing: 0.1,
+                        lineHeight: 1.5,
+                        padding: 0,
+                        minHeight: 0,
+                        minWidth: 0,
+                        fontFamily: 'inherit',
+                      },
                       '&:hover': {
-                        bgcolor: uiSystem.colors.white10,
-                        borderColor: uiSystem.colors.primary,
+                        background: uiSystem.colors.primary,
+                        color: '#fff',
+                        boxShadow: '0 4px 16px rgba(45,156,147,0.18)',
+                        '& .MuiChip-label': {
+                          color: '#fff !important',
+                        }
                       },
                     }}
                   />
@@ -286,7 +305,6 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
               })
             )}
           </Stack>
-          )}
         </Box>
         {/* Help Popover */}
         <Popover
@@ -346,19 +364,19 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             </Typography>
           </Box>
         </Popover>
-      </Box>
-      {/* Action Button */}
-      <Box sx={{ width: '100%', mt: 2 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
-          disabled={!inputValue}
-          onClick={handleChatWithAI}
-          sx={uiSystem.buttons.primary}
-        >
-          Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
-        </Button>
+        {/* 按钮区 */}
+        <Box sx={{ width: '100%', mt: 4 }}>
+          <Button
+            variant="contained"
+            fullWidth
+            size="large"
+            disabled={!inputValue}
+            onClick={handleChatWithAI}
+            sx={uiSystem.buttons.primary}
+          >
+            Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          </Button>
+        </Box>
       </Box>
     </>
   );

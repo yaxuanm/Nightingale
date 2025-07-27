@@ -280,33 +280,68 @@ For 'asmr':
 User input: {user_input}
 Only return a JSON array of 6 strings.
 """
+        elif mode == 'story':
+            prompt = f"""
+For 'story':
+- Generate 6 inspiration chips for story-based soundscape creation.
+- Each chip should be a vivid, evocative memory fragment, scene, or narrative starter, such as: "The first snowfall you remember", "Grandma’s kitchen on Sunday morning", "Laughter echoing in a sunlit park", "A rainy night in a small town", "The day you met your best friend", "A quiet library at dusk", "The sound of waves on a childhood beach", "A summer afternoon, cicadas singing", "The last day of school", "A secret hideout in the woods".
+- Avoid abstract moods, pure nature scenes, or generic phrases. Each chip should be a specific, story-like moment or memory, 5-12 words.
+- Each chip must be unique and cover different types of scenes (e.g. family, childhood, adventure, friendship, seasons, city, countryside, school, holidays, etc.).
+- Do not repeat the same theme or setting in more than one chip.
+- If user_input is provided, make at least 2 chips inspired by it, but do not simply paraphrase it.
+- Example chips: The first snowfall you remember, Grandma’s kitchen on Sunday morning, Laughter echoing in a sunlit park, A rainy night in a small town, The day you met your best friend, A quiet library at dusk
+User input: {user_input}
+Only return a JSON array of 6 strings.
+"""
         else:
             prompt = f"""
-You are an expert in creating atmospheric and emotional soundscapes. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. These should be a mix of different types of inspiration:
+You are an expert in creating practical soundscapes for audio generation. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. Focus on concrete, generatable sounds rather than abstract concepts.
+
+**CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:**
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Focus on concrete, physical sounds that the model can actually generate
+- Avoid abstract emotional or atmospheric descriptions
+- Use specific, clear sound descriptions rather than poetic language
+- Emphasize steady, continuous sounds rather than complex interactions
 
 **Types of inspiration to include:**
-1. **Poetic verses** - Short, evocative lines from poetry or literature that capture a mood
-2. **Memory fragments** - Personal, nostalgic moments that evoke specific atmospheres
-3. **Atmospheric descriptions** - Rich, sensory descriptions of environments
-4. **Emotional states** - Abstract feelings and moods
-5. **Imaginary scenes** - Creative, fantastical settings
-6. **Sensory experiences** - Multi-sensory descriptions
+1. **Natural environments** - Rain, wind, ocean waves, forest sounds, thunder
+2. **Urban environments** - City traffic, cafe sounds, office ambience, street sounds
+3. **Domestic spaces** - Kitchen sounds, home ambience, household activities
+4. **Mechanical sounds** - Machinery, engines, tools, industrial sounds
+5. **Simple interactions** - Footsteps, door sounds, paper rustling, water dripping
+6. **Steady background sounds** - Humming, buzzing, flowing water, steady wind
 
 **Requirements:**
-- Mix different styles: some poetic, some descriptive, some abstract
-- Each prompt should be 5-20 words long
-- Make them creative, inspiring, and diverse
+- Each prompt should be 5-15 words long
+- Focus on 2-3 specific sound elements maximum
+- Use concrete nouns and clear descriptions
+- Avoid abstract modifiers like "gentle", "soft", "distant" - use "steady", "smooth", "background" instead
+- Make them practical and generatable
 - Consider the mode: {mode}
 - If user_input is provided, make some prompts related to it
-- Avoid generic phrases, be specific and evocative
-- Each time you are called, generate a new, diverse set of chips. Avoid repeating the same chips as previous calls.
+- Each time you are called, generate a new, diverse set of chips
 
 **Mode-specific considerations:**
-- For 'focus': Include concentration, productivity, clarity themes
-- For 'relax': Include peace, calm, soothing themes  
-- For 'story': Include narrative, dramatic, cinematic themes
-- For 'music': Include rhythmic, melodic, harmonic themes
+- For 'focus': Include steady, non-distracting sounds like rain, white noise, office ambience
+- For 'relax': Include smooth, natural sounds like ocean waves, gentle wind, flowing water
+- For 'story': Include atmospheric but concrete sounds like footsteps, door creaks, paper rustling
+- For 'music': Include rhythmic, steady sounds like drumming, humming, mechanical rhythms
 - For 'asmr': See above for triggers and environmental sounds.
+
+**Examples of good prompts:**
+- "Steady rain with distant thunder"
+- "Ocean waves with seagull calls"
+- "Cafe ambience with coffee machine"
+- "Forest sounds with bird songs"
+- "City traffic with car horns"
+- "Kitchen sounds with water running"
+
+**Examples of bad prompts (avoid these):**
+- "The quiet before dawn" (too abstract)
+- "Gentle whispers of the wind" (abstract modifier)
+- "A steampunk workshop where brass gears whisper secrets" (too complex, poetic)
+- "The calm before a thunderstorm" (abstract emotional state)
 
 User input: {user_input}
 
@@ -336,12 +371,12 @@ Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
     def _get_fallback_inspiration_chips(self) -> List[str]:
         """获取fallback的inspiration chips"""
         return [
-            "The rain falls like silver threads on cobblestone streets",
-            "Grandma's kitchen on Sunday morning, cinnamon in the air",
-            "A library where time stands still, dust motes dance in sunbeams",
-            "The quiet before dawn, when the world holds its breath",
-            "A steampunk workshop where brass gears whisper secrets",
-            "Fresh snow crunching underfoot, breath visible in cold air",
+            "Steady rain with distant thunder",
+            "Ocean waves with seagull calls", 
+            "Cafe ambience with coffee machine",
+            "Forest sounds with bird songs",
+            "City traffic with car horns",
+            "Kitchen sounds with water running"
         ]
 
     def analyze_music_prompt_layers(self, user_text: str = '', extra_fields: dict = None) -> dict:

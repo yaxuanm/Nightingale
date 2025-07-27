@@ -24,6 +24,64 @@ class StableAudioService:
         
         print(f"StableAudioService initialized on device: {self.device}")
     
+    def _optimize_prompt_for_stable_audio(self, prompt: str) -> str:
+        """
+        根据 Stable Audio 模型的弱点优化 prompt：
+        1. 多元素组合失败 - 简化元素数量
+        2. 语义修饰词理解失败 - 用具体描述替代抽象修饰词
+        3. 低音量声音生成失败 - 避免要求低音量
+        """
+        import re
+        
+        # 1. 移除或替换模型不理解的抽象修饰词
+        abstract_modifiers = {
+            r'\bgentle\b': 'steady',
+            r'\bsoft\b': 'smooth',
+            r'\bquiet\b': 'background',
+            r'\bcalm\b': 'steady',
+            r'\bpeaceful\b': 'steady',
+            r'\bsubtle\b': 'background',
+            r'\bdelicate\b': 'smooth',
+            r'\bwhisper\b': 'low',
+            r'\bfaint\b': 'background',
+            r'\bdistant\b': 'background',
+            r'\bintimate\b': 'close',
+            r'\bcozy\b': 'warm',
+            r'\bsoothing\b': 'smooth',
+            r'\brelaxing\b': 'steady'
+        }
+        
+        optimized = prompt
+        for pattern, replacement in abstract_modifiers.items():
+            optimized = re.sub(pattern, replacement, optimized, flags=re.IGNORECASE)
+        
+        # 2. 简化多元素组合 - 限制到2-3个核心元素
+        # 用 "with" 和 "accompanied by" 替代逗号分隔的列表
+        optimized = re.sub(r',\s*([^,]+),\s*([^,]+)', r' with \1, accompanied by \2', optimized)
+        optimized = re.sub(r',\s*([^,]+),\s*([^,]+),\s*([^,]+)', r' with \1, accompanied by \2', optimized)
+        
+        # 3. 避免要求低音量，强调声音的存在性
+        optimized = re.sub(r'\bbackground\s+noise\b', 'ambient sounds', optimized, flags=re.IGNORECASE)
+        optimized = re.sub(r'\bquiet\s+atmosphere\b', 'steady atmosphere', optimized, flags=re.IGNORECASE)
+        
+        # 4. 确保有明确的主次关系
+        if 'with' not in optimized.lower() and 'accompanied by' not in optimized.lower():
+            # 如果没有任何主次关系词，添加一个
+            parts = optimized.split(',')
+            if len(parts) > 1:
+                optimized = f"{parts[0].strip()} with {parts[1].strip()}"
+        
+        # 5. 移除多余的修饰词
+        optimized = re.sub(r'\bvery\b', '', optimized, flags=re.IGNORECASE)
+        optimized = re.sub(r'\bquite\b', '', optimized, flags=re.IGNORECASE)
+        optimized = re.sub(r'\bextremely\b', '', optimized, flags=re.IGNORECASE)
+        
+        # 6. 清理多余的空格和标点
+        optimized = re.sub(r'\s+', ' ', optimized)
+        optimized = optimized.strip()
+        
+        return optimized
+    
     def load_model(self):
         """加载 Stable Audio Open Small 模型"""
         if self.is_loaded:
@@ -100,8 +158,13 @@ class StableAudioService:
         # 限制时长在模型范围内
         duration = min(duration, 11.0)
         
+        # 优化 prompt 以适应 Stable Audio 模型的特性
+        optimized_prompt = self._optimize_prompt_for_stable_audio(prompt)
+        print(f"Original prompt: '{prompt}'")
+        print(f"Optimized prompt: '{optimized_prompt}'")
+        
         try:
-            print(f"Generating audio with prompt: '{prompt}' (duration: {duration}s)")
+            print(f"Generating audio with prompt: '{optimized_prompt}' (duration: {duration}s)")
             start_time = time.time()
             
             # === 修复：设置 numpy 随机数生成器 ===
@@ -120,7 +183,7 @@ class StableAudioService:
             
             # 设置文本和时间条件
             conditioning = [{
-                "prompt": prompt,
+                "prompt": optimized_prompt,
                 "seconds_total": duration
             }]
             
@@ -196,6 +259,26 @@ class StableAudioService:
                 # 保存音频文件
                 torchaudio.save(filepath, output, sample_rate)
                 print(f"Audio saved successfully: {filepath}")
+                
+                # 音量标准化：确保生成的音频音量足够大且统一
+                try:
+                    from pydub import AudioSegment
+                    audio_segment = AudioSegment.from_file(filepath)
+                    
+                    # 计算目标音量（-12dB 是一个比较标准的音量水平）
+                    target_dBFS = -12
+                    change_in_dBFS = target_dBFS - audio_segment.dBFS
+                    audio_segment = audio_segment + change_in_dBFS
+                    
+                    # 确保音量不会过载（限制在 -1dB 以内）
+                    if audio_segment.dBFS > -1:
+                        audio_segment = audio_segment + (-1 - audio_segment.dBFS)
+                    
+                    # 重新保存标准化后的音频
+                    audio_segment.export(filepath, format="wav")
+                    print(f"Volume normalized: {filepath} (dBFS: {audio_segment.dBFS:.2f})")
+                except Exception as e:
+                    print(f"Volume normalization failed: {e}")
                 
             except Exception as e:
                 print(f"Error in audio processing/saving: {e}")

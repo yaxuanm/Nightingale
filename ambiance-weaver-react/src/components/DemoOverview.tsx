@@ -120,14 +120,25 @@ const DemoOverview = () => {
     >
       {/* 标题区域 */}
       <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center', mb: 4 }}>
-        <motion.img 
-          src={`${process.env.PUBLIC_URL}/logo.png`} 
-          alt="Nightingale Logo" 
-          style={{ width: '120px', height: 'auto', marginBottom: '20px' }}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        />
+        <Box
+          sx={{
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(45,156,147,0.10)',
+            mb: 2,
+          }}
+        >
+          <img
+            src={`${process.env.PUBLIC_URL}/logo.png`}
+            alt="Nightingale Logo"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </Box>
         <Typography variant="h3" sx={{ mb: 2, color: 'white', fontWeight: 700 }}>
           Nightingale Demo
         </Typography>
