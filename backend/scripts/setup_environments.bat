@@ -1,35 +1,72 @@
 @echo off
 echo ========================================
-echo 设置分环境部署 - 创建两个虚拟环境
+echo Setting up environment - Creating virtual environments
 echo ========================================
 
 echo.
-echo 1. 创建 Stable Audio 环境 (venv_stableaudio)...
+echo 1. Creating Stable Audio environment (venv_stableaudio)...
 python -m venv venv_stableaudio
-call venv_stableaudio\Scripts\activate
-pip install --upgrade pip
+if %errorlevel% neq 0 (
+    echo Error: Failed to create venv_stableaudio
+    pause
+    exit /b 1
+)
+
+call venv_stableaudio\Scripts\activate.bat
+if %errorlevel% neq 0 (
+    echo Error: Failed to activate venv_stableaudio
+    pause
+    exit /b 1
+)
+
+python -m pip install --upgrade pip
 pip install -r requirements-stable-audio.txt
-echo ✓ Stable Audio 环境设置完成
+if %errorlevel% neq 0 (
+    echo Error: Failed to install requirements-stable-audio.txt
+    pause
+    exit /b 1
+)
+
+echo ✓ Stable Audio environment setup completed
 
 echo.
-echo 2. 创建 Gemini API 环境 (venv_gemini)...
-call venv_stableaudio\Scripts\deactivate
+echo 2. Creating Gemini API environment (venv_gemini)...
+call venv_stableaudio\Scripts\deactivate.bat
+
 python -m venv venv_gemini
-call venv_gemini\Scripts\activate
-pip install --upgrade pip
+if %errorlevel% neq 0 (
+    echo Error: Failed to create venv_gemini
+    pause
+    exit /b 1
+)
+
+call venv_gemini\Scripts\activate.bat
+if %errorlevel% neq 0 (
+    echo Error: Failed to activate venv_gemini
+    pause
+    exit /b 1
+)
+
+python -m pip install --upgrade pip
 pip install -r requirements-gemini-utf8.txt
-echo ✓ Gemini API 环境设置完成
+if %errorlevel% neq 0 (
+    echo Error: Failed to install requirements-gemini-utf8.txt
+    pause
+    exit /b 1
+)
+
+echo ✓ Gemini API environment setup completed
 
 echo.
 echo ========================================
-echo 环境设置完成！
+echo Environment setup completed!
 echo ========================================
 echo.
-echo 使用方法：
-echo 1. 启动 Stable Audio 服务: start_stable_audio.bat
-echo 2. 启动 Gemini API 服务: start_gemini.bat
+echo Usage:
+echo 1. Start Stable Audio service: start_stable_audio.bat
+echo 2. Start Gemini API service: start_gemini.bat
 echo.
-echo 服务地址：
+echo Service URLs:
 echo - Stable Audio: http://127.0.0.1:8001
 echo - Gemini API: http://127.0.0.1:8000
 echo ========================================

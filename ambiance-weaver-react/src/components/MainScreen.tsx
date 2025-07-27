@@ -21,6 +21,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
+import { API_ENDPOINTS } from '../config/api';
 
 interface MainScreenProps {
   usePageLayout?: boolean;
@@ -65,7 +66,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const fetchInspirationChips = async (showLoading = false) => {
     if (showLoading) setIsLoadingChips(true);
     try {
-      const response = await fetch('http://localhost:8000/api/generate-inspiration-chips', {
+      const response = await fetch(API_ENDPOINTS.GENERATE_INSPIRATION_CHIPS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

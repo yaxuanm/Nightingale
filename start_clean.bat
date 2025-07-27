@@ -127,11 +127,11 @@ echo Setting up environment...
 echo.
 echo 1. Setting up backend environment...
 cd backend
-if exist "setup_environments.bat" (
-    call setup_environments.bat
+if exist "scripts\setup_environments.bat" (
+    call scripts\setup_environments.bat
     echo Backend environment setup completed
 ) else (
-    echo Error: setup_environments.bat not found
+    echo Error: scripts\setup_environments.bat not found
 )
 cd ..
 
