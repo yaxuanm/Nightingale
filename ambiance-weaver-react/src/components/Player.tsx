@@ -24,6 +24,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import Snackbar from '@mui/material/Snackbar';
+import { API_ENDPOINTS } from '../config/api';
 
 const ControlButton = styled(IconButton)(({ theme }) => ({
   width: 48,
@@ -138,7 +139,7 @@ const Player: React.FC<PlayerProps> = ({
     
     try {
       // 调用后端API创建分享链接
-      const response = await fetch('http://localhost:8000/api/create-share', {
+      const response = await fetch(API_ENDPOINTS.CREATE_SHARE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
