@@ -27,7 +27,13 @@ import tempfile
 import json
 from datetime import datetime
 
-def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segment_duration: float = 10.0, crossfade_ms: int = 1000) -> str:
+def get_audio_output_path(filename: str) -> str:
+    """获取音频输出文件的绝对路径"""
+    audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audio_output")
+    os.makedirs(audio_output_dir, exist_ok=True)
+    return os.path.join(audio_output_dir, filename)
+
+def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segment_duration: float = 10.0, crossfade_ms: int = 200) -> str:
     """
     多段 Stable Audio worker 生成音频，拼接并做淡入淡出混合，导出总时长音频
     """
@@ -38,6 +44,9 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
     with tempfile.TemporaryDirectory() as tmpdir:
         while remaining > 0:
             seg_dur = min(segment_duration, remaining, 11.0)
+            # 如果剩余时间太短（小于2秒），直接跳过，避免生成太短的音频
+            if seg_dur < 2.0:
+                break
             seg_path = os.path.join(tmpdir, f"seg_{segment_idx}.wav")
             worker_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "../scripts/run_stable_audio_worker.py"))
             # 修正虚拟环境路径，指向 backend/venv_stableaudio/Scripts/python.exe（回退到上一级目录）
@@ -47,6 +56,8 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             if result.returncode != 0:
                 print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
+                print(f"[ERROR] Stable Audio worker stdout: {result.stdout}")
+                print(f"[ERROR] Stable Audio worker return code: {result.returncode}")
                 raise Exception("Stable Audio worker failed")
             print(f"[LONG_AUDIO] Segment {segment_idx} generated: {seg_path}")
             segments.append(AudioSegment.from_file(seg_path))
@@ -54,8 +65,11 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             segment_idx += 1
         # 拼接并做淡入淡出混合
         final_audio = segments[0]
-        for seg in segments[1:]:
+        print(f"[LONG_AUDIO] Starting with segment 0, length: {len(final_audio)}ms")
+        for i, seg in enumerate(segments[1:], 1):
+            print(f"[LONG_AUDIO] Appending segment {i}, length: {len(seg)}ms")
             final_audio = final_audio.append(seg, crossfade=crossfade_ms)
+            print(f"[LONG_AUDIO] After append, total length: {len(final_audio)}ms")
         # 截断到总时长
         final_audio = final_audio[:int(total_duration * 1000)]
         
@@ -69,7 +83,7 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
         if final_audio.dBFS > -1:
             final_audio = final_audio + (-1 - final_audio.dBFS)
         
-        out_path = os.path.join("audio_output", f"stable_long_{uuid.uuid4().hex}.wav")
+        out_path = get_audio_output_path(f"stable_long_{uuid.uuid4().hex}.wav")
         final_audio.export(out_path, format="wav")
         print(f"[LONG_AUDIO] Final audio saved: {out_path}")
         return out_path
@@ -304,8 +318,7 @@ async def tts_endpoint(request: dict):
     if not text or not isinstance(text, str):
         raise HTTPException(status_code=400, detail="Missing or invalid 'text' parameter")
     filename = f"tts_{uuid.uuid4().hex}.mp3"
-    output_path = os.path.join("audio_output", filename)
-    os.makedirs("audio_output", exist_ok=True)
+    output_path = get_audio_output_path(filename)
     # 使用更柔和的 JennyNeural
     await tts_to_audio(text, output_path, voice="en-US-JennyNeural")
     # 上传到 Supabase
@@ -321,36 +334,12 @@ async def generate_audio(request: dict):
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
-        # 生成原始音频
-        original_duration = 11.0  # 生成11秒的音频
-        out_path = generate_long_stable_audio(description, total_duration=original_duration)
-
-        # 如果不是Story mode，则重复音频到22秒
-        if mode != "story":
-            from pydub import AudioSegment
-            audio = AudioSegment.from_file(out_path)
-
-            # 重复音频到22秒
-            target_duration_ms = 22000  # 22秒
-            repeats_needed = int(target_duration_ms / len(audio)) + 1
-            repeated_audio = audio * repeats_needed
-            repeated_audio = repeated_audio[:target_duration_ms]
-
-            # 音量标准化
-            target_dBFS = -12
-            change_in_dBFS = target_dBFS - repeated_audio.dBFS
-            repeated_audio = repeated_audio + change_in_dBFS
-
-            # 确保音量不会过载
-            if repeated_audio.dBFS > -1:
-                repeated_audio = repeated_audio + (-1 - repeated_audio.dBFS)
-
-            # 保存重复后的音频
-            repeated_filename = f"repeated_{uuid.uuid4().hex}.wav"
-            repeated_path = os.path.join("audio_output", repeated_filename)
-            repeated_audio.export(repeated_path, format="wav")
-            out_path = repeated_path
-            duration = 22.0
+        # 直接使用worker生成20秒的音频（使用拼接逻辑）
+        print(f"[AUDIO] 开始生成音频 - 描述: {description[:50]}...")
+        print(f"[AUDIO] 调用 generate_long_stable_audio...")
+        out_path = generate_long_stable_audio(description, total_duration=20.0)
+        duration = 20.0
+        print(f"[AUDIO] 音频生成完成: {out_path}")
 
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_{abs(hash(description))}")
@@ -367,36 +356,12 @@ async def generate_music(request: dict):
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
-        # 生成原始音频
-        original_duration = 11.0  # 生成11秒的音频
-        out_path = generate_long_stable_audio(description, total_duration=original_duration)
-
-        # 如果不是Story mode，则重复音频到22秒
-        if mode != "story":
-            from pydub import AudioSegment
-            audio = AudioSegment.from_file(out_path)
-
-            # 重复音频到22秒
-            target_duration_ms = 22000  # 22秒
-            repeats_needed = int(target_duration_ms / len(audio)) + 1
-            repeated_audio = audio * repeats_needed
-            repeated_audio = repeated_audio[:target_duration_ms]
-
-            # 音量标准化
-            target_dBFS = -12
-            change_in_dBFS = target_dBFS - repeated_audio.dBFS
-            repeated_audio = repeated_audio + change_in_dBFS
-
-            # 确保音量不会过载
-            if repeated_audio.dBFS > -1:
-                repeated_audio = repeated_audio + (-1 - repeated_audio.dBFS)
-
-            # 保存重复后的音频
-            repeated_filename = f"repeated_{uuid.uuid4().hex}.wav"
-            repeated_path = os.path.join("audio_output", repeated_filename)
-            repeated_audio.export(repeated_path, format="wav")
-            out_path = repeated_path
-            duration = 22.0
+        # 直接使用worker生成20秒的音频（使用拼接逻辑）
+        print(f"[MUSIC] 开始生成音乐 - 描述: {description[:50]}...")
+        print(f"[MUSIC] 调用 generate_long_stable_audio...")
+        out_path = generate_long_stable_audio(description, total_duration=20.0)
+        duration = 20.0
+        print(f"[MUSIC] 音乐生成完成: {out_path}")
 
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_music_{abs(hash(description))}")
@@ -440,7 +405,7 @@ Narrative script:"""
         
         # 2. TTS 生成旁白音频
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
-        tts_path = os.path.join("audio_output", tts_filename)
+        tts_path = get_audio_output_path(tts_filename)
         await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
         
         # 3. 获取 TTS 音频长度
@@ -450,16 +415,62 @@ Narrative script:"""
         tts_duration_seconds = tts_duration_ms / 1000
         print(f"[STORY] TTS duration: {tts_duration_seconds:.2f} seconds (target: {duration}s)")
         
-        # 4. 用 Stable Audio worker 生成 soundscape（总时长为 duration）
-        stable_audio_out = generate_long_stable_audio(prompt, total_duration=duration)
+        # 4. 为 Stable Audio 生成简化的 soundscape prompt
+        # 从原始描述中提取核心音频元素，避免复杂的描述性文本
+        soundscape_prompt = f"""
+Based on the story description, create a simple audio prompt for background soundscape generation. Focus on 2-3 core sound elements that would complement the narrative. Keep it concise and specific.
+
+Story: {original_description}
+
+Generate a simple audio prompt with 2-3 sound elements. Use ONLY concrete, specific sound types that Stable Audio can generate well:
+- Environmental sounds: Rain, Wind, Ocean waves, Forest sounds, Bird songs, Thunder
+- Urban sounds: Traffic, Car horns, Cafe ambience, Coffee machine, Footsteps
+- Nature sounds: Water dripping, Fire crackling, Leaves rustling, Stream flowing
+- Mechanical sounds: Clock ticking, Fan humming, Air conditioning, Engine running
+
+Examples of good prompts: "Forest sounds with bird songs", "Rain with distant thunder", "Cafe ambience with coffee machine", "Ocean waves with seagull calls"
+
+Avoid abstract or poetic descriptions. Focus on specific, concrete sounds that can be generated by audio models.
+"""
+        response = ai_service.client.models.generate_content(
+            model=ai_service._get_current_model(),
+            contents=soundscape_prompt
+        )
+        stable_audio_prompt = response.text.strip() if response and response.text else "Forest ambience with bird songs"
+        # 清理prompt，只取第一行并去除引号（与music-prompt保持一致）
+        if stable_audio_prompt:
+            stable_audio_prompt = stable_audio_prompt.split('\n')[0].strip().strip('"')
+        
+        # 如果生成的prompt包含抽象词汇，使用fallback
+        abstract_words = ['whispering', 'faint', 'celestial', 'hint', 'suggestion', 'gentle', 'soft', 'subtle']
+        if any(word in stable_audio_prompt.lower() for word in abstract_words):
+            print(f"[STORY] Generated prompt contains abstract words, using fallback")
+            stable_audio_prompt = "Forest sounds with bird songs"
+        
+        print(f"[STORY] Stable Audio prompt: {stable_audio_prompt}")
+        
+        # 直接生成一个10秒的音频片段（和其他mode保持一致）
+        stable_audio_out = generate_long_stable_audio(stable_audio_prompt, total_duration=10.0)
         
         # 5. 混音
         soundscape_audio = AudioSegment.from_file(stable_audio_out)
-        # 确保 soundscape 长度与 TTS 匹配或稍长
+        
+        # 确保 soundscape 长度与 TTS 匹配或稍长，并添加淡入淡出
         if len(soundscape_audio) < tts_duration_ms:
             repeats_needed = int(tts_duration_ms / len(soundscape_audio)) + 1
             soundscape_audio = soundscape_audio * repeats_needed
-        soundscape_audio = soundscape_audio[:tts_duration_ms + 2000]  # 比 TTS 长 2 秒
+        
+        # 截断到目标长度并添加淡入淡出
+        target_length = tts_duration_ms + 2000  # 比 TTS 长 2 秒
+        soundscape_audio = soundscape_audio[:target_length]
+        
+        # 添加淡入淡出效果（前500ms淡入，后500ms淡出）
+        fade_in_duration = 500  # 500ms淡入
+        fade_out_duration = 500  # 500ms淡出
+        
+        if len(soundscape_audio) > fade_in_duration + fade_out_duration:
+            soundscape_audio = soundscape_audio.fade_in(fade_in_duration).fade_out(fade_out_duration)
+        
         tts_audio = tts_audio - 2  # 降低 TTS 音量
         soundscape_audio = soundscape_audio - 4  # 降低 soundscape 音量
         mixed = soundscape_audio.overlay(tts_audio)
@@ -474,7 +485,7 @@ Narrative script:"""
             mixed = mixed + (-1 - mixed.dBFS)
         
         mixed_filename = f"story_mix_{uuid.uuid4().hex}.mp3"
-        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed_path = get_audio_output_path(mixed_filename)
         mixed.export(mixed_path, format="mp3")
         
         # 6. 上传合成音频到 Supabase
@@ -502,7 +513,7 @@ async def create_story_music(request: dict):
     try:
         # 1. 生成旁白音频
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
-        tts_path = os.path.join("audio_output", tts_filename)
+        tts_path = get_audio_output_path(tts_filename)
         await tts_to_audio(narrative, tts_path, voice="en-US-JennyNeural")
 
         # 2. 用Stable Audio生成音乐
@@ -530,7 +541,7 @@ async def create_story_music(request: dict):
             mixed = mixed + (-1 - mixed.dBFS)
         
         mixed_filename = f"story_music_mix_{uuid.uuid4().hex}.mp3"
-        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed_path = get_audio_output_path(mixed_filename)
         mixed.export(mixed_path, format="mp3")
 
         # 4. 上传合成音频
