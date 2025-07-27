@@ -20,18 +20,58 @@ export const theme = createTheme({
   typography: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     h1: {
-      fontSize: '2.8rem',
+      fontSize: '2.2rem',
       fontWeight: 700,
       letterSpacing: '-0.02em',
+      '@media (min-width:900px)': {
+        fontSize: '2.8rem',
+      },
+      '@media (min-width:1280px)': {
+        fontSize: '3.2rem',
+      },
+      '@media (min-width:1920px)': {
+        fontSize: '3.6rem',
+      },
     },
     h2: {
-      fontSize: '24px',
+      fontSize: '1.5rem',
       fontWeight: 700,
       letterSpacing: '-0.01em',
+      '@media (min-width:900px)': {
+        fontSize: '2rem',
+      },
+      '@media (min-width:1280px)': {
+        fontSize: '2.4rem',
+      },
+      '@media (min-width:1920px)': {
+        fontSize: '2.8rem',
+      },
     },
     body1: {
-      fontSize: '14px',
+      fontSize: '1rem',
       color: '#a0a0a0',
+      '@media (min-width:900px)': {
+        fontSize: '1.2rem',
+      },
+      '@media (min-width:1280px)': {
+        fontSize: '1.3rem',
+      },
+      '@media (min-width:1920px)': {
+        fontSize: '1.5rem',
+      },
+    },
+    body2: {
+      fontSize: '1rem',
+      color: '#a0a0a0',
+      '@media (min-width:900px)': {
+        fontSize: '1.12rem',
+      },
+      '@media (min-width:1280px)': {
+        fontSize: '1.18rem',
+      },
+      '@media (min-width:1920px)': {
+        fontSize: '1.22rem',
+      },
     },
   },
   components: {
@@ -42,6 +82,10 @@ export const theme = createTheme({
           textTransform: 'none',
           fontWeight: 600,
           padding: '12px 24px',
+          fontSize: '1.15rem',
+          '@media (min-width:900px)': { fontSize: '1.22rem' },
+          '@media (min-width:1280px)': { fontSize: '1.28rem' },
+          '@media (min-width:1920px)': { fontSize: '1.35rem' },
         },
         contained: {
           background: 'linear-gradient(135deg, #388e3c 0%, #1a5f5a 100%)',

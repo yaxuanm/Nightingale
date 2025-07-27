@@ -58,6 +58,17 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             final_audio = final_audio.append(seg, crossfade=crossfade_ms)
         # 截断到总时长
         final_audio = final_audio[:int(total_duration * 1000)]
+        
+        # 音量标准化：确保音量足够大且统一
+        # 计算目标音量（-12dB 是一个比较标准的音量水平）
+        target_dBFS = -12
+        change_in_dBFS = target_dBFS - final_audio.dBFS
+        final_audio = final_audio + change_in_dBFS
+        
+        # 确保音量不会过载（限制在 -1dB 以内）
+        if final_audio.dBFS > -1:
+            final_audio = final_audio + (-1 - final_audio.dBFS)
+        
         out_path = os.path.join("audio_output", f"stable_long_{uuid.uuid4().hex}.wav")
         final_audio.export(out_path, format="wav")
         print(f"[LONG_AUDIO] Final audio saved: {out_path}")
@@ -278,12 +289,12 @@ async def generate_inspiration_chips(request: InspirationChipsRequest):
     
     # Fallback options
     fallback_chips = [
-        "A cozy cafe on a rainy afternoon",
-        "Gentle forest sounds with a distant waterfall",
-        "The calm before a thunderstorm",
-        "A quiet library with turning pages",
-        "Meditative ocean waves",
-        "Lively city street during rush hour",
+        "Steady rain with distant thunder",
+        "Ocean waves with seagull calls",
+        "Cafe ambience with coffee machine", 
+        "Forest sounds with bird songs",
+        "City traffic with car horns",
+        "Kitchen sounds with water running"
     ]
     return {"chips": fallback_chips}
 
@@ -306,10 +317,41 @@ async def tts_endpoint(request: dict):
 async def generate_audio(request: dict):
     description = request.get("description") or request.get("userInput")
     duration = float(request.get("duration", 20))
+    mode = request.get("mode", "default")  # Added this line
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
-        out_path = generate_long_stable_audio(description, total_duration=duration)
+        # 生成原始音频
+        original_duration = 11.0  # 生成11秒的音频
+        out_path = generate_long_stable_audio(description, total_duration=original_duration)
+
+        # 如果不是Story mode，则重复音频到22秒
+        if mode != "story":
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(out_path)
+
+            # 重复音频到22秒
+            target_duration_ms = 22000  # 22秒
+            repeats_needed = int(target_duration_ms / len(audio)) + 1
+            repeated_audio = audio * repeats_needed
+            repeated_audio = repeated_audio[:target_duration_ms]
+
+            # 音量标准化
+            target_dBFS = -12
+            change_in_dBFS = target_dBFS - repeated_audio.dBFS
+            repeated_audio = repeated_audio + change_in_dBFS
+
+            # 确保音量不会过载
+            if repeated_audio.dBFS > -1:
+                repeated_audio = repeated_audio + (-1 - repeated_audio.dBFS)
+
+            # 保存重复后的音频
+            repeated_filename = f"repeated_{uuid.uuid4().hex}.wav"
+            repeated_path = os.path.join("audio_output", repeated_filename)
+            repeated_audio.export(repeated_path, format="wav")
+            out_path = repeated_path
+            duration = 22.0
+
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_{abs(hash(description))}")
         return {"audio_url": cloud_url, "duration": duration}
@@ -321,10 +363,41 @@ async def generate_audio(request: dict):
 async def generate_music(request: dict):
     description = request.get("description") or request.get("userInput")
     duration = float(request.get("duration", 20))
+    mode = request.get("mode", "default")  # Added this line
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
-        out_path = generate_long_stable_audio(description, total_duration=duration)
+        # 生成原始音频
+        original_duration = 11.0  # 生成11秒的音频
+        out_path = generate_long_stable_audio(description, total_duration=original_duration)
+
+        # 如果不是Story mode，则重复音频到22秒
+        if mode != "story":
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(out_path)
+
+            # 重复音频到22秒
+            target_duration_ms = 22000  # 22秒
+            repeats_needed = int(target_duration_ms / len(audio)) + 1
+            repeated_audio = audio * repeats_needed
+            repeated_audio = repeated_audio[:target_duration_ms]
+
+            # 音量标准化
+            target_dBFS = -12
+            change_in_dBFS = target_dBFS - repeated_audio.dBFS
+            repeated_audio = repeated_audio + change_in_dBFS
+
+            # 确保音量不会过载
+            if repeated_audio.dBFS > -1:
+                repeated_audio = repeated_audio + (-1 - repeated_audio.dBFS)
+
+            # 保存重复后的音频
+            repeated_filename = f"repeated_{uuid.uuid4().hex}.wav"
+            repeated_path = os.path.join("audio_output", repeated_filename)
+            repeated_audio.export(repeated_path, format="wav")
+            out_path = repeated_path
+            duration = 22.0
+
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_music_{abs(hash(description))}")
         return {"audio_url": cloud_url, "duration": duration}
@@ -390,6 +463,16 @@ Narrative script:"""
         tts_audio = tts_audio - 2  # 降低 TTS 音量
         soundscape_audio = soundscape_audio - 4  # 降低 soundscape 音量
         mixed = soundscape_audio.overlay(tts_audio)
+        
+        # 音量标准化：确保混音后的音量足够大且统一
+        target_dBFS = -12
+        change_in_dBFS = target_dBFS - mixed.dBFS
+        mixed = mixed + change_in_dBFS
+        
+        # 确保音量不会过载
+        if mixed.dBFS > -1:
+            mixed = mixed + (-1 - mixed.dBFS)
+        
         mixed_filename = f"story_mix_{uuid.uuid4().hex}.mp3"
         mixed_path = os.path.join("audio_output", mixed_filename)
         mixed.export(mixed_path, format="mp3")
@@ -436,6 +519,16 @@ async def create_story_music(request: dict):
         tts_audio = tts_audio - 2  # 旁白音量降低
         music_audio = music_audio - 4  # 音乐音量降低
         mixed = music_audio.overlay(tts_audio)
+        
+        # 音量标准化：确保混音后的音量足够大且统一
+        target_dBFS = -12
+        change_in_dBFS = target_dBFS - mixed.dBFS
+        mixed = mixed + change_in_dBFS
+        
+        # 确保音量不会过载
+        if mixed.dBFS > -1:
+            mixed = mixed + (-1 - mixed.dBFS)
+        
         mixed_filename = f"story_music_mix_{uuid.uuid4().hex}.mp3"
         mixed_path = os.path.join("audio_output", mixed_filename)
         mixed.export(mixed_path, format="mp3")
@@ -520,6 +613,188 @@ Example chips: Tapping, Brushing, Page turning, Ear cleaning, Gentle rain, Soft 
 
 Example output:
 "A soothing ASMR soundscape with gentle rain tapping on the window, soft brushing sounds, and the subtle footsteps in a quiet room."
+"""
+        elif mode == "focus":
+            llm_prompt = f"""
+You are an expert in soundscape design for productivity and concentration. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a soundscape that enhances focus and mental clarity. 
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "calm" → "steady"
+  * "peaceful" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on background, ambient sounds rather than foreground elements
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize continuous, steady sounds that don't distract
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: focus
+
+Example output:
+"A focused workspace with steady rain in the background, accompanied by smooth city hum."
+"""
+        elif mode == "relax":
+            llm_prompt = f"""
+You are an expert in soundscape design for relaxation and stress relief. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a soothing and peaceful soundscape.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "calm" → "steady"
+  * "peaceful" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on continuous, flowing sounds rather than sudden changes
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize smooth, steady sounds that promote relaxation
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: relax
+
+Example output:
+"A peaceful environment with flowing water sounds, accompanied by steady wind in the background."
+"""
+        elif mode == "story":
+            llm_prompt = f"""
+You are an expert in cinematic soundscape design. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing an immersive, story-driven soundscape.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "distant" → "background"
+  * "mysterious" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on environmental details and atmosphere
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize clear, distinct sounds that create atmosphere
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: story
+
+Example output:
+"A mysterious forest with rustling leaves, accompanied by background animal calls."
+"""
+        elif mode == "music":
+            llm_prompt = f"""
+You are an expert in musical soundscape design. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a musical soundscape.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "melodic" → "clear"
+  * "harmonious" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on melodic and rhythmic elements
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize clear, distinct musical elements
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: music
+
+Example output:
+"A musical atmosphere with clear piano melodies, accompanied by steady string harmonies in the background."
+"""
+        elif mode == "creative":
+            llm_prompt = f"""
+You are an expert in soundscape design for creativity and inspiration. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a soundscape that sparks imagination and creative flow.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "playful" → "clear"
+  * "inspiring" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on varied and inspiring sounds
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize clear, distinct sounds that spark creativity
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: creative
+
+Example output:
+"An inspiring workspace with clear chime sounds, accompanied by steady rhythmic tapping in the background."
+"""
+        elif mode == "mindful":
+            llm_prompt = f"""
+You are an expert in soundscape design for mindfulness and meditation. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a peaceful, meditative soundscape.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "tranquil" → "steady"
+  * "peaceful" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on continuous, flowing sounds
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize smooth, steady sounds that promote mindfulness
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: mindful
+
+Example output:
+"A tranquil meditation space with flowing water sounds, accompanied by steady breathing in the background."
+"""
+        elif mode == "sleep":
+            llm_prompt = f"""
+You are an expert in soundscape design for sleep and relaxation. Given the user's idea, mood, and selected sound elements, write a single, vivid, natural English sentence describing a soothing, sleep-inducing soundscape.
+
+CRITICAL GUIDELINES FOR STABLE AUDIO MODEL:
+- Use only 2-3 core sound elements maximum to avoid compositional failure
+- Replace abstract modifiers with specific, concrete descriptions:
+  * "gentle" → "steady"
+  * "soft" → "smooth" 
+  * "quiet" → "background"
+  * "soothing" → "steady"
+  * "restful" → "steady"
+- Use "with" and "accompanied by" to show clear hierarchy, avoid comma-separated lists
+- Focus on continuous, non-intrusive sounds
+- Avoid any mention of "low volume", "quiet", "subtle" - these cause generation failure
+- Emphasize steady, continuous sounds that help sleep
+- Do not use list format, just a single flowing sentence. Be concise but evocative.
+
+User input: {user_input}
+Mood: {mood}
+Selected elements: {', '.join(elements)}
+Mode: sleep
+
+Example output:
+"A restful bedroom with steady rain sounds, accompanied by background thunder."
 """
         else:
             llm_prompt = f"""

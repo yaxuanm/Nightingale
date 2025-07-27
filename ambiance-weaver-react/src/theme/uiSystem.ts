@@ -4,51 +4,75 @@ export const uiSystem = {
   typography: {
     // 主标题 - 用于页面主要标题
     h1: {
-      fontSize: '2.5rem',
+      fontSize: '2rem',
       fontWeight: 700,
       lineHeight: 1.2,
+      '@media (min-width:900px)': { fontSize: '2.5rem' },
+      '@media (min-width:1280px)': { fontSize: '3rem' },
+      '@media (min-width:1920px)': { fontSize: '3.5rem' },
     },
     // 副标题 - 用于页面次要标题
     h2: {
-      fontSize: '2rem',
+      fontSize: '1.3rem',
       fontWeight: 600,
       lineHeight: 1.3,
+      '@media (min-width:900px)': { fontSize: '2rem' },
+      '@media (min-width:1280px)': { fontSize: '2.4rem' },
+      '@media (min-width:1920px)': { fontSize: '2.8rem' },
     },
     // 卡片标题 - 用于卡片和模块标题
     h3: {
-      fontSize: '1.5rem',
+      fontSize: '1.1rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      '@media (min-width:900px)': { fontSize: '1.5rem' },
+      '@media (min-width:1280px)': { fontSize: '1.8rem' },
+      '@media (min-width:1920px)': { fontSize: '2.2rem' },
     },
     // 小标题 - 用于分组标题
     h4: {
-      fontSize: '1.25rem',
+      fontSize: '1rem',
       fontWeight: 600,
       lineHeight: 1.4,
+      '@media (min-width:900px)': { fontSize: '1.25rem' },
+      '@media (min-width:1280px)': { fontSize: '1.5rem' },
+      '@media (min-width:1920px)': { fontSize: '1.7rem' },
     },
     // 正文大 - 用于重要文本
     body1: {
-      fontSize: '1.125rem',
-      fontWeight: 400,
-      lineHeight: 1.6,
-    },
-    // 正文 - 用于普通文本
-    body2: {
       fontSize: '1rem',
       fontWeight: 400,
       lineHeight: 1.6,
+      '@media (min-width:900px)': { fontSize: '1.2rem' },
+      '@media (min-width:1280px)': { fontSize: '1.3rem' },
+      '@media (min-width:1920px)': { fontSize: '1.5rem' },
+    },
+    // 正文 - 用于普通文本
+    body2: {
+      fontSize: '0.95rem',
+      fontWeight: 400,
+      lineHeight: 1.6,
+      '@media (min-width:900px)': { fontSize: '1.1rem' },
+      '@media (min-width:1280px)': { fontSize: '1.2rem' },
+      '@media (min-width:1920px)': { fontSize: '1.3rem' },
     },
     // 正文小 - 用于辅助文本
     body3: {
-      fontSize: '0.95rem',
+      fontSize: '1rem',
       fontWeight: 400,
       lineHeight: 1.5,
+      '@media (min-width:900px)': { fontSize: '1.1rem' },
+      '@media (min-width:1280px)': { fontSize: '1.2rem' },
+      '@media (min-width:1920px)': { fontSize: '1.3rem' },
     },
     // 标签 - 用于按钮、标签等
     label: {
-      fontSize: '0.95rem',
+      fontSize: '1rem',
       fontWeight: 500,
       lineHeight: 1.4,
+      '@media (min-width:900px)': { fontSize: '1.1rem' },
+      '@media (min-width:1280px)': { fontSize: '1.2rem' },
+      '@media (min-width:1920px)': { fontSize: '1.3rem' },
     },
   },
 
@@ -59,8 +83,8 @@ export const uiSystem = {
       xs: '16px',
       sm: '24px',
       md: '32px',
-      lg: '40px',
-      xl: '48px',
+      lg: '48px',
+      xl: '64px',
     },
     // 组件间距
     section: '32px', // 主要区块间距
@@ -68,6 +92,20 @@ export const uiSystem = {
     medium: '16px',  // 中等间距
     small: '12px',   // 小间距
     tiny: '8px',     // 微小间距
+    '@media (min-width:1280px)': {
+      section: '48px',
+      large: '32px',
+      medium: '24px',
+      small: '16px',
+      tiny: '12px',
+    },
+    '@media (min-width:1920px)': {
+      section: '64px',
+      large: '40px',
+      medium: '32px',
+      small: '20px',
+      tiny: '16px',
+    },
   },
 
   // 按钮系统
@@ -78,11 +116,14 @@ export const uiSystem = {
       color: '#ffffff',
       padding: '12px 32px',
       borderRadius: '25px',
-      fontSize: '1rem',
+      fontSize: '1.15rem',
       fontWeight: 600,
       border: 'none',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
+      '@media (min-width:900px)': { fontSize: '1.22rem' },
+      '@media (min-width:1280px)': { fontSize: '1.28rem' },
+      '@media (min-width:1920px)': { fontSize: '1.35rem' },
       '&:hover': {
         background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)',
         transform: 'translateY(-2px)',
@@ -102,11 +143,14 @@ export const uiSystem = {
       color: '#ffffff',
       padding: '10px 24px',
       borderRadius: '20px',
-      fontSize: '0.95rem',
+      fontSize: '1.08rem',
       fontWeight: 500,
       border: '1px solid rgba(255, 255, 255, 0.2)',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
+      '@media (min-width:900px)': { fontSize: '1.15rem' },
+      '@media (min-width:1280px)': { fontSize: '1.22rem' },
+      '@media (min-width:1920px)': { fontSize: '1.28rem' },
       '&:hover': {
         background: 'rgba(255, 255, 255, 0.1)',
         borderColor: '#2d9c93',

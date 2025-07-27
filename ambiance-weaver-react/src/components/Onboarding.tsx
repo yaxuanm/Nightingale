@@ -78,22 +78,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
           width: '100%',
           display: 'flex',
           justifyContent: 'center',
-          mb: uiSystem.spacing.large,
+          alignItems: 'center',
+          mb: { xs: uiSystem.spacing.large, md: uiSystem.spacing.section },
         }}
       >
         <Box
           sx={{
-            width: 120,
-            height: 120,
-            borderRadius: uiSystem.borderRadius.medium,
+            width: { xs: 120, md: 150, lg: 180, xl: 200 },
+            height: { xs: 120, md: 150, lg: 180, xl: 200 },
+            borderRadius: '50%',
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
-            overflow: 'hidden',
+            background: 'rgba(45,156,147,0.10)',
           }}
         >
-          <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="App Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="App Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </Box>
       </Box>
 
@@ -144,30 +145,31 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
             <Box
               onClick={() => handleModeSelect(mode.id)}
               sx={{
-                p: uiSystem.spacing.large,
+                p: { xs: 3, md: 4, lg: 5 },
                 cursor: 'pointer',
-                height: '200px',
+                height: { xs: 200, md: 220, lg: 260 },
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 background: uiSystem.colors.white05,
                 border: '1px solid',
                 borderColor: uiSystem.colors.white20,
-                borderRadius: uiSystem.borderRadius.medium,
+                borderRadius: uiSystem.borderRadius.large,
                 transition: 'all 0.3s ease',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
+                  transform: 'translateY(-8px)',
                   boxShadow: uiSystem.shadows.medium,
                 }
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: uiSystem.spacing.medium }}>
-                <mode.icon sx={{ color: uiSystem.colors.white, fontSize: 32 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 }, mb: { xs: 2, md: 3 } }}>
+                <mode.icon sx={{ color: uiSystem.colors.white, fontSize: { xs: 32, md: 40, lg: 48 } }} />
                 <Typography 
                   variant="h3" 
                   sx={{ 
                     color: uiSystem.colors.white,
                     ...uiSystem.typography.h3,
+                    fontSize: { xs: '1.3rem', md: '1.5rem', lg: '1.8rem' },
                   }}
                 >
                   {mode.title}
@@ -178,6 +180,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
                 sx={{ 
                   color: uiSystem.colors.white70,
                   ...uiSystem.typography.body2,
+                  fontSize: { xs: '1.1rem', md: '1.15rem', lg: '1.2rem' },
                 }}
               >
                 {mode.description}

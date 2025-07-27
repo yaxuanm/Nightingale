@@ -76,16 +76,16 @@ interface ChatScreenProps {
 }
 
 const AiAvatar = styled(Box)(({ theme }) => ({
-  width: 40, // Increased size
-  height: 40,
+  width: 64,
+  height: 64,
   borderRadius: '50%',
   overflow: 'hidden',
-  flexShrink: 0, // Prevent shrinking
+  flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginRight: theme.spacing(1.5), // Space between avatar and bubble
-  backgroundColor: 'rgba(45, 156, 147, 0.2)', // Background for the avatar if needed
+  marginRight: theme.spacing(2),
+  backgroundColor: 'rgba(45, 156, 147, 0.2)',
 }));
 
 const MessageBubbleContent = styled(Box)(({ theme, sender }: { theme?: any, sender: 'user' | 'ai' }) => ({
@@ -115,6 +115,50 @@ const OptionChip = styled(Chip)(({ theme }) => ({
   color: '#ffffff',
   border: '1px solid rgba(45, 156, 147, 0.2)',
   cursor: 'pointer',
+  fontSize: '1.1rem',
+  fontWeight: 500,
+  letterSpacing: 0.1,
+  lineHeight: 1.5,
+  fontFamily: 'inherit',
+  padding: 0,
+  minHeight: 0,
+  minWidth: '96px',
+  borderRadius: '22px',
+  height: '44px',
+  paddingLeft: '24px',
+  paddingRight: '24px',
+  [theme.breakpoints.up('md')]: {
+    fontSize: '1.3rem',
+    borderRadius: '28px',
+    height: '56px',
+    minWidth: '120px',
+    paddingLeft: '32px',
+    paddingRight: '32px',
+  },
+  [theme.breakpoints.up('lg')]: {
+    fontSize: '1.5rem',
+    borderRadius: '32px',
+    height: '64px',
+    minWidth: '150px',
+    paddingLeft: '40px',
+    paddingRight: '40px',
+  },
+  '& .MuiChip-label': {
+    fontSize: '1.1rem !important',
+    fontWeight: 500,
+    letterSpacing: 0.1,
+    lineHeight: 1.5,
+    fontFamily: 'inherit',
+    padding: 0,
+    minHeight: 0,
+    minWidth: 0,
+    [theme.breakpoints.up('md')]: {
+      fontSize: '1.3rem !important',
+    },
+    [theme.breakpoints.up('lg')]: {
+      fontSize: '1.5rem !important',
+    },
+  },
   '&:hover': {
     background: 'rgba(45, 156, 147, 0.2)',
   },
@@ -460,7 +504,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
         actions,
         scenes,
-        type: selectedType === 'music' ? 'music' : 'audio'
+        type: selectedType === 'music' ? 'music' : 'audio',
+        mode: mode
       });
       const storyPrompt = [
         finalPrompt,
@@ -489,11 +534,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
         ]);
       } else {
+        // 结合用户编辑的prompt和结构化prompt
+        const combinedPrompt = finalPrompt ? `${finalPrompt}, ${structuredPrompt}` : structuredPrompt;
+        
         const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            description: finalPrompt, // 使用用户编辑后的prompt
+            description: combinedPrompt, // 使用结合后的prompt
             duration: 10,
             is_poem: false,
             mode: mode,
@@ -970,7 +1018,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           >
             {msg.sender === 'ai' && (
               <AiAvatar>
-                <img src={`${process.env.PUBLIC_URL}/ai_logo.png`} alt="AI Logo" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+                <img src={`${process.env.PUBLIC_URL}/ai_logo.png`} alt="AI Logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />
               </AiAvatar>
             )}
             <MessageBubbleContent sender={msg.sender}>
@@ -988,7 +1036,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             }}
           >
             <AiAvatar>
-              <img src={`${process.env.PUBLIC_URL}/ai_logo.png`} alt="AI Logo" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+              <img src={`${process.env.PUBLIC_URL}/ai_logo.png`} alt="AI Logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />
             </AiAvatar>
             <MessageBubbleContent sender="ai">
               <motion.div
