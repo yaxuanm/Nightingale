@@ -26,13 +26,13 @@ class AudioGenerationService:
         
         # Mode-specific configurations
         self.mode_prompts = {
-            "focus": """A steady workspace with {description}. The sounds are clear and consistent, with smooth background elements that don't distract.""",
+            "focus": """A quiet workspace with {description}. The sounds are clear and consistent, with gentle background elements that don't distract.""",
             
-            "relax": """A peaceful environment with {description}. The sounds are smooth and natural, creating a steady atmosphere with flowing transitions.""",
+            "relax": """A peaceful environment with {description}. The sounds are soft and natural, creating a calming atmosphere with gentle transitions.""",
             
             "story": """An immersive scene with {description}. The sounds create a rich environment with distinct elements that tell a story through audio.""",
             
-            "music": """A musical atmosphere with {description}. The sounds blend together in a steady way, creating a clear and rhythmic experience."""
+            "music": """A musical atmosphere with {description}. The sounds blend together in a harmonious way, creating a melodic and rhythmic experience."""
         }
         
         self.mode_effects = {

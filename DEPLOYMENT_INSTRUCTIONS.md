@@ -64,7 +64,14 @@ cd Nightingale
 # 等待环境设置完成（约5-10分钟）
 ```
 
-#### 步骤3：启动服务
+#### 步骤3：修复 Stable Audio 兼容性问题
+```bash
+# 修复 stable-audio-tools 中的 int32 溢出问题（Windows 64位系统必需）
+cd backend
+python scripts/stable_audio_fix.py
+```
+
+#### 步骤4：启动服务
 ```bash
 # 启动 Stable Audio 服务（首次运行会下载模型）
 ./start_clean.bat
@@ -155,7 +162,13 @@ cd backend
 python scripts/setup_environments.bat
 ```
 
-#### 步骤3：手动下载模型
+#### 步骤3：修复 Stable Audio 兼容性问题
+```bash
+# 修复 stable-audio-tools 中的 int32 溢出问题（Windows 64位系统必需）
+python scripts/stable_audio_fix.py
+```
+
+#### 步骤4：手动下载模型
 ```bash
 # 激活 Stable Audio 环境
 venv_stableaudio\Scripts\activate
@@ -375,4 +388,15 @@ pip install -r requirements-gemini-utf8.txt --no-cache-dir
 call venv_audio\Scripts\activate.bat
 python -m pip install --upgrade pip setuptools wheel pkg_resources
 pip install -r requirements-audio.txt --no-cache-dir
+```
+
+#### 9. Stable Audio Int32 溢出错误
+```bash
+# 如果出现 "OverflowError: Python int too large to convert to C long" 错误
+# 运行修复脚本
+python scripts/stable_audio_fix.py
+
+# 修复完成后重新启动 Stable Audio 服务
+./start_clean.bat
+# 选择 2 (Start Stable Audio Service)
 ```

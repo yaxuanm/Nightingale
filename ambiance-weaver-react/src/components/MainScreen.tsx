@@ -21,7 +21,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
-import { API_ENDPOINTS } from '../config/api';
 
 interface MainScreenProps {
   usePageLayout?: boolean;
@@ -42,12 +41,12 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
 
   // 默认的fallback选项
   const defaultSuggestedPrompts = [
-    "Steady rain with distant thunder",
-    "Ocean waves with seagull calls",
-    "Cafe ambience with coffee machine",
-    "Forest sounds with bird songs", 
-    "City traffic with car horns",
-    "Kitchen sounds with water running"
+    "The rain falls like silver threads on cobblestone streets",
+    "Grandma's kitchen on Sunday morning, cinnamon in the air",
+    "A library where time stands still, dust motes dance in sunbeams",
+    "The quiet before dawn, when the world holds its breath",
+    "A steampunk workshop where brass gears whisper secrets",
+    "Fresh snow crunching underfoot, breath visible in cold air",
   ];
 
   // Story Mode: custom prompt and UI
@@ -66,7 +65,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const fetchInspirationChips = async (showLoading = false) => {
     if (showLoading) setIsLoadingChips(true);
     try {
-      const response = await fetch(API_ENDPOINTS.GENERATE_INSPIRATION_CHIPS, {
+      const response = await fetch('http://localhost:8000/api/generate-inspiration-chips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +102,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
 
   // 刷新inspiration chips（手动刷新时才显示loading）
   const handleRefreshChips = () => {
-    fetchInspirationChips(true);
+      fetchInspirationChips(true);
   };
 
   const handleHelpClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -226,12 +225,12 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             }}
           />
         </Box>
-        {/* Suggestions Section */}
+          {/* Suggestions Section */}
         <Box sx={{ mb: `calc(${uiSystem.spacing.large} * 1.2)` }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: uiSystem.spacing.small }}>
             <Typography
               variant="subtitle2"
-              sx={{
+              sx={{ 
                 color: uiSystem.colors.white,
                 fontWeight: 600,
                 fontSize: { xs: '1.05rem', md: '1.18rem', xl: '1.25rem' },
@@ -367,16 +366,16 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
         </Popover>
         {/* 按钮区 */}
         <Box sx={{ width: '100%', mt: 4 }}>
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            disabled={!inputValue}
-            onClick={handleChatWithAI}
-            sx={uiSystem.buttons.primary}
-          >
-            Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
-          </Button>
+        <Button
+          variant="contained"
+          fullWidth
+          size="large"
+          disabled={!inputValue}
+          onClick={handleChatWithAI}
+          sx={uiSystem.buttons.primary}
+        >
+          Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
+        </Button>
         </Box>
       </Box>
     </>

@@ -27,7 +27,6 @@ import Player from './Player';
 import PageLayout from '../components/PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 import { buildAudioGenPrompt } from '../utils/promptBuilder';
-import { API_ENDPOINTS } from '../config/api';
 
 // 多mode定制文案
 const moodQuestions: Record<string, string> = {
@@ -365,7 +364,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGenerateStoryScript = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.GENERATE_SCENE, {
+      const res = await fetch('http://localhost:8000/api/generate-scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +392,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       const isStory = mode === 'story';
       const contentType = isStory ? 'narrative' : 'prompt';
       
-      const response = await fetch(API_ENDPOINTS.EDIT_PROMPT, {
+      const response = await fetch('http://localhost:8000/api/edit-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +458,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       const mood = audioChoices.audio_mood || '';
       const elements = audioChoices.audio_elements;
       // 调用后端LLM生成自然语言prompt
-      const res = await fetch(API_ENDPOINTS.GENERATE_PROMPT, {
+      const res = await fetch('http://localhost:8000/api/generate-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -505,8 +504,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
         actions,
         scenes,
-        type: selectedType === 'music' ? 'music' : 'audio',
-        mode: mode
+        type: selectedType === 'music' ? 'music' : 'audio'
       });
       const storyPrompt = [
         finalPrompt,
@@ -514,7 +512,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         structuredPrompt
       ].filter(Boolean).join('\n\n');
       if (mode === 'story') {
-        const storyResponse = await fetch(API_ENDPOINTS.CREATE_STORY, {
+        const storyResponse = await fetch('http://localhost:8000/api/create-story', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -535,14 +533,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
         ]);
       } else {
-        // 结合用户编辑的prompt和结构化prompt
-        const combinedPrompt = finalPrompt ? `${finalPrompt}, ${structuredPrompt}` : structuredPrompt;
-        
-        const audioResponse = await fetch(API_ENDPOINTS.GENERATE_AUDIO, {
+        const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            description: combinedPrompt, // 使用结合后的prompt
+            description: finalPrompt, // 使用用户编辑后的prompt
             duration: 10,
             is_poem: false,
             mode: mode,
@@ -561,7 +556,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       
       // 1.2 自动生成背景图片
       const backgroundDescription = initialInput || 'a beautiful soundscape background';
-      const bgResponse = await fetch(API_ENDPOINTS.GENERATE_BACKGROUND, {
+      const bgResponse = await fetch('http://localhost:8000/api/generate-background', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: backgroundDescription }),
@@ -660,7 +655,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     if (currentStage === 'free_chat') {
       try {
         setIsLoading(true);
-        const aiResponse = await fetch(API_ENDPOINTS.CHAT, { // Replace with your actual chat API endpoint
+        const aiResponse = await fetch('http://localhost:8000/api/chat', { // Replace with your actual chat API endpoint
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -734,7 +729,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   useEffect(() => {
     if (currentStage === 'audio_mood') {
       setIsLoading(true);
-      fetch(API_ENDPOINTS.GENERATE_OPTIONS, {
+      fetch('http://localhost:8000/api/generate-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -750,7 +745,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
     if (currentStage === 'audio_elements') {
       setIsLoading(true);
-      fetch(API_ENDPOINTS.GENERATE_OPTIONS, {
+      fetch('http://localhost:8000/api/generate-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -794,7 +789,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       // 1. 先用musicChoices和initialInput生成music prompt（调用后端）
       let musicPrompt = '';
       try {
-        const res = await fetch(API_ENDPOINTS.MUSIC_PROMPT, {
+        const res = await fetch('http://localhost:8000/api/music-prompt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -812,7 +807,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       }
 
       // 2. 生成story+music
-      const res = await fetch(API_ENDPOINTS.CREATE_STORY_MUSIC, {
+      const res = await fetch('http://localhost:8000/api/create-story-music', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -855,7 +850,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     setIsLoading(true);
     try {
       // 生成音乐描述prompt，usage直接用mode
-              const res = await fetch(API_ENDPOINTS.MUSIC_PROMPT, {
+      const res = await fetch('http://localhost:8000/api/music-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -892,7 +887,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         { sender: 'ai', text: 'Generating your music...', isUser: false },
         { sender: 'ai', text: musicPrompt, isUser: false },
       ]);
-              const res = await fetch(API_ENDPOINTS.GENERATE_MUSIC, {
+      const res = await fetch('http://localhost:8000/api/generate-music', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1493,7 +1488,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                   if (mode === 'story') {
                     setIsLoading(true);
                     try {
-                      const res = await fetch(API_ENDPOINTS.GENERATE_SCENE, {
+                      const res = await fetch('http://localhost:8000/api/generate-scene', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

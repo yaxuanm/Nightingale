@@ -1,0 +1,632 @@
+ÿþfrom google import genai
+import os
+import json
+import re
+import time
+import random
+from typing import List, Dict, Optional
+
+class AIService:
+    def __init__(self):
+        self.client = genai.Client()
+        # ÃñÜ£U%¬Ãñç˜Çëµ¿íÃ§ ï)"]%îµîë˜àì˜ó¥ÃÅ»Äö¿µÇºµÄÆÃQ%Å)"]%êÃ’Q%£Q%Äµa%ï¦»òÄW%ôµ§ £)"]%ë
+        self.models = [
+            "gemini-2.5-flash-lite-preview-06-17",  # µ£ÇÃàV%µêÉµ£¼µòêÄ¢è£U%öµö»µîü˜½ÿÃÉ§ ÃÉÉ˜çÅ “¡É
+            "gemini-2.5-flash",                      # ˜ÇéÃQ%öµÇºµÇ¥ÄW%$%)"]%îµêÉµ£¼µòêÄ¢è “¡É
+            "gemini-1.5-flash",                      # Ã%½˜Ç’¦ÇîÃñÜµáV%ÄÜäµÇº¦â\% “¡É
+            "gemini-2.0-flash-lite",                 # µêÉµ£¼µòêÄ¢èÃÆî£\%ÄÃW%b%¦%’)"]%êÃñçÄö¿)"]%ë
+            "gemini-1.5-pro",                        # Ãñìµ¥éµÄ¿ÄÉå£W%W%Ãèí)"]%êµ£ÇÃÉÄÃñçÄö¿)"]%î˜àì˜ó¥˜ÖÉÃêb%)"]%ë
+        ]
+        self.current_model_index = 0
+
+    def _get_current_model(self):
+        """¦ÄV%ÃÅûÃ\%ôÃëìµ¿íÃ§ ï"""
+        return self.models[self.current_model_index]
+
+    def _switch_to_next_model(self):
+        """ÃêçµìóÃê‘%£U%ï£U%Ç£U%¬µ¿íÃ§ ï"""
+        self.current_model_index = (self.current_model_index + 1) % len(self.models)
+        print(f"a"’öä ÃêçµìóÃê‘%µ¿íÃ§ ï: {self._get_current_model()}")
+        return self._get_current_model()
+
+    async def parse_scene(self, description: str) -> List[Dict]:
+        prompt = f"""
+        Ãêåµ§ É£W%Ñ£U%ïÃ£Q%µÖ»µÅÅ¦%‘%)"]%îµÅÉÃÅûµëÇµ£ëÃÅ»¦â\%ÄÜäÃú‘%˜’%ÃàâÄ$%á)"]%Ü
+        {description}
+        ¦»V%£W%ÑJSONµá]%Ã]%Å¦%öÃ¢§ )"]%îÃîàÃÉ½£W%Ñ£U%ïÃ¡ùµ«a%)"]%Ü
+        - name: Ãú‘%˜’%ÃàâÄ$%áÃÉìÄº‘%
+        - volume: ˜’%˜çÅÃñºÃ‘%Å(0-1)
+        - position: £\%ìÄ\%«("foreground"µêû"background")
+        - duration: µîüÄW%¡µùb%˜ù$%(ÄºÆ)
+        ÄñQ%£[%ï¦[%ôÃçQ%µá]%Ã]%Å)"]%Ü
+        [
+            {{"name": "rain", "volume": 0.7, "position": "background", "duration": 180.0}},
+            {{"name": "cafe_chatter", "volume": 0.5, "position": "foreground", "duration": 180.0}}
+        ]
+        """
+        try:
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw_response_text = response.text or ""
+            json_match = re.search(r'```json\n([\s\S]*?)\n```', raw_response_text)
+            if json_match:
+                json_string = json_match.group(1).strip()
+            else:
+                start = raw_response_text.find('[')
+                end = raw_response_text.rfind(']')
+                if start != -1 and end != -1 and end > start:
+                    json_string = raw_response_text[start:end+1].strip()
+                else:
+                    json_string = raw_response_text.strip()
+            elements = json.loads(json_string)
+            return elements
+        except Exception as e:
+            print(f"Error in parse_scene: {str(e)}")
+            print(f"ORIGINAL RAW: >>>{raw_response_text if 'raw_response_text' in locals() else ''}<<<")
+            raise
+
+    async def generate_options(self, mode: str, user_input: str, stage: str) -> List[str]:
+        # ÃÉêÃc%b%ÃÉÄÄÜä soundscape description prompt
+        fallback_options = {
+            'audio_atmosphere': ["In a large empty warehouse", "Deep in a lush rainforest", "Urban street corner at night", "Inside a cozy cafe", "On a snowy mountain peak"],
+            'audio_elements': ["Rain", "Footsteps", "Birds chirping", "Thunder", "Wind blowing"],
+            'audio_style': ["Natural", "Synthetic", "Mixed", "Organic", "Electronic"],
+            'music_genre': ["Ambient", "Classical", "Jazz", "Electronic", "Folk"],
+            'music_instruments': ["Piano", "Strings", "Synth", "Guitar", "Drums"],
+            'music_tempo': ["Slow", "Medium", "Fast", "Variable", "Steady"],
+            'music_usage': ["Background", "Focus", "Relaxation", "Study", "Sleep"]
+        }
+        if stage in ['mood', 'audio_mood']:
+            prompt = f"""
+List 5 moods for a soundscape. Each should be a single English word or a short phrase (max 2 words), e.g. "Calm", "Mysterious", "Uplifting", "Bittersweet", "Suspenseful". Do not include any scene, sound, or environment words.
+Examples: ["Calm", "Dreamy", "Energetic", "Peaceful", "Tense"]
+Only return a JSON array of strings.
+- mode: {mode}
+- user input: {user_input}
+"""
+        elif stage in ['audio_atmosphere']:
+            prompt = f"""
+Based on the user's input and mode, generate 5 atmosphere options. The first option should be a concise, standardized version of the user's idea. The remaining options should be closely related variations, each with a slight change or added detail. Do not simply repeat the original input. Do not include any specific sound elements (like rain, footsteps, birds, etc.), only describe the overall scene or environment.
+
+User input: "A cozy cafe on a rainy afternoon"
+Examples: [
+  "Cozy cafe, rainy afternoon",
+  "Warm cafe, rain on windows",
+  "Cafe, soft jazz, rainy day",
+  "Cafe, fresh coffee aroma, rain",
+  "Quiet cafe, foggy windows"
+]
+
+Now, for the following user input, generate 5 atmosphere options as above.
+User input: {user_input}
+Only return a JSON array of strings.
+- mode: {mode}
+"""
+        elif stage in ['audio_elements']:
+            prompt = f"""
+Based on the user's input and mode, generate 5 sound element options that are closely related to the user's idea, each with a slight variation or added detail. Do not suggest unrelated sounds or events. Do not simply repeat the original input. Do not include any scene or environment words already mentioned in the atmosphere (such as cafe, rain, afternoon, etc.). Only describe specific sounds or events, not the overall scene or mood.
+
+User input: "A cozy cafe on a rainy afternoon"
+Atmosphere: ["Cozy cafe, rainy afternoon", "Warm cafe, rain on windows", "Cafe, soft jazz, rainy day", "Cafe, fresh coffee aroma, rain", "Quiet cafe, foggy windows"]
+Examples: [
+  "Coffee machine steaming",
+  "Pages turning",
+  "Barista grinding beans",
+  "Distant thunder",
+  "Muffled conversation"
+]
+
+Now, for the following user input, generate 5 similar sound element options as above.
+User input: {user_input}
+Only return a JSON array of strings.
+- mode: {mode}
+"""
+        else:
+            prompt = f"""
+You are an expert in soundscape and music design. The user may input in Chinese or English. Your task is:
+1. Understand the user's intent and context from the following mode and input.
+2. For the stage: {stage}, generate a list of 5 concise, relevant, diverse, and high-quality options in ENGLISH only (even if the user input is in Chinese).
+3. Each option should be a short phrase, no more than 10 English words.
+4. If the user input is in Chinese, you must first understand it, then output the options in English, not Chinese.
+5. Only return a JSON array of strings, e.g. ["option1", "option2", ...]. No extra text.
+- mode: {mode}
+- user input: {user_input}
+"""
+        
+        # Ã‘%¥¦»òµëÇµ£ëÃÅ»Äö¿µ¿íÃ§ ï
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"a"’öº Ã‘%¥¦»òµ¿íÃ§ ï: {current_model}")
+            
+            max_retries = 2  # µ»Å£U%¬µ¿íÃ§ ïµ£ÇÃñÜ˜çì¦»ò2µ¼í
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    options = json.loads(json_string)
+                    if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
+                        return options
+                    return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+                except Exception as e:
+                    print(f"Error in generate_options (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        print(f"“Üá)"U%Å  API ˜àì˜ó¥˜ÖÉÃêb%)"]%îÃ‘%¥¦»ò£U%ï£U%Ç£U%¬µ¿íÃ§ ï...")
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            print(f"“Å% Ä¡ëÃ[%à {wait_time:.1f} ÄºÆÃÉÄ˜çì¦»ò...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            # ÃêçµìóÃê‘%£U%ï£U%Ç£U%¬µ¿íÃ§ ï
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        print(f"“¥î Ãàb%£W%û˜öÖ¦»»)"]%î£\%%Äö¿ fallback ˜Çë˜íc%")
+                        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+            # Ãªéµ§ £Ã\%ôÃëìµ¿íÃ§ ïÃñ’%¦$%Ñ)"]%îÄW%ºÄW%¡Ã‘%¥¦»ò£U%ï£U%Ç£U%¬µ¿íÃ§ ï
+            if model_attempt < len(self.models) - 1:
+                continue
+        # µëÇµ£ëµ¿íÃ§ ï˜â\%Ãñ’%¦$%Ñ£Q%å)"]%î¦%öÃ¢§  fallback
+        print(f"“¥î µëÇµ£ëµ¿íÃ§ ï˜â\%Ãñ’%¦$%Ñ)"]%î£\%%Äö¿ fallback ˜Çë˜íc%")
+        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+
+    async def generate_musicgen_options(self, stage: str, user_input: str = "") -> List[str]:
+        # £U%Q% MusicGen µÅÉ£[%¢ fallback ˜Çë˜íc%
+        fallback_options = {
+            'genre': ["Ambient", "Classical", "Jazz", "Electronic", "Folk"],
+            'instruments': ["Piano", "Strings", "Synth", "Guitar", "Drums"],
+            'tempo': ["Slow", "Medium", "Fast", "Variable", "Steady"],
+            'usage': ["Background", "Focus", "Relaxation", "Study", "Sleep"]
+        }
+        
+        prompt = f"""
+You are an expert in music generation. Generate 5 diverse and creative options for the {stage} stage of music generation.
+Each option should be a single English word or short phrase (max 3 words).
+Only return a JSON array of strings, e.g. ["option1", "option2", ...].
+User input: {user_input}
+"""
+        
+        # Ã‘%¥¦»òµëÇµ£ëÃÅ»Äö¿µ¿íÃ§ ï
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"a"’öº Ã‘%¥¦»òµ¿íÃ§ ï: {current_model}")
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    options = json.loads(json_string)
+                    if isinstance(options, list) and all(isinstance(opt, str) for opt in options):
+                        return options
+                    return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+                except Exception as e:
+                    print(f"Error in generate_musicgen_options (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+            if model_attempt < len(self.models) - 1:
+                continue
+        return fallback_options.get(stage, ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"])
+
+    async def generate_inspiration_chips(self, mode: str, user_input: str = "") -> List[str]:
+        """
+        Äö’µêÉ˜ÜÅµ£Q%ÄÜäinspiration chips)"]%îÄö¿£Q%ÄMainScreenÄÜäµÅÉÄñQ%˜Çë˜íc%
+        """
+        prompt = f"""
+You are an expert in creating atmospheric and emotional soundscapes. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. These should be a mix of different types of inspiration:
+
+**Types of inspiration to include:**
+1. **Poetic verses** - Short, evocative lines from poetry or literature that capture a mood
+2. **Memory fragments** - Personal, nostalgic moments that evoke specific atmospheres
+3. **Atmospheric descriptions** - Rich, sensory descriptions of environments
+4. **Emotional states** - Abstract feelings and moods
+5. **Imaginary scenes** - Creative, fantastical settings
+6. **Sensory experiences** - Multi-sensory descriptions
+
+**Requirements:**
+- Mix different styles: some poetic, some descriptive, some abstract
+- Each prompt should be 5-20 words long
+- Make them creative, inspiring, and diverse
+- Consider the mode: {mode} (focus, relax, story, music, etc.)
+- If user_input is provided, make some prompts related to it
+- Avoid generic phrases, be specific and evocative
+
+**Examples of good prompts:**
+- "The rain falls like silver threads on cobblestone streets" (poetic)
+- "Grandma's kitchen on Sunday morning, cinnamon in the air" (memory)
+- "A library where time stands still, dust motes dance in sunbeams" (atmospheric)
+- "The quiet before dawn, when the world holds its breath" (emotional)
+- "A steampunk workshop where brass gears whisper secrets" (imaginary)
+- "Fresh snow crunching underfoot, breath visible in cold air" (sensory)
+
+**Mode-specific considerations:**
+- For 'focus': Include concentration, productivity, clarity themes
+- For 'relax': Include peace, calm, soothing themes  
+- For 'story': Include narrative, dramatic, cinematic themes
+- For 'music': Include rhythmic, melodic, harmonic themes
+
+User input: {user_input}
+
+Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
+"""
+        
+        # Ã‘%¥¦»òµëÇµ£ëÃÅ»Äö¿µ¿íÃ§ ï
+        for model_attempt in range(len(self.models)):
+            current_model = self._get_current_model()
+            print(f"a"’öº Ã‘%¥¦»òµ¿íÃ§ ï: {current_model}")
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    raw_response_text = response.text or ""
+                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+                    if json_match:
+                        json_string = json_match.group(1).strip()
+                    else:
+                        start = raw_response_text.find('[')
+                        end = raw_response_text.rfind(']')
+                        if start != -1 and end != -1 and end > start:
+                            json_string = raw_response_text[start:end+1].strip()
+                        else:
+                            json_string = raw_response_text.strip()
+                    chips = json.loads(json_string)
+                    if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
+                        return chips
+                    return self._get_fallback_inspiration_chips()
+                except Exception as e:
+                    print(f"Error in generate_inspiration_chips (model: {current_model}, attempt {attempt + 1}): {str(e)}")
+                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                        print(f"“Üá)"U%Å  API ˜àì˜ó¥˜ÖÉÃêb%)"]%îÃ‘%¥¦»ò£U%ï£U%Ç£U%¬µ¿íÃ§ ï...")
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) + random.uniform(1, 3)
+                            print(f"“Å% Ä¡ëÃ[%à {wait_time:.1f} ÄºÆÃÉÄ˜çì¦»ò...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            self._switch_to_next_model()
+                            break
+                    else:
+                        print(f"“¥î Ãàb%£W%û˜öÖ¦»»)"]%î£\%%Äö¿ fallback ˜Çë˜íc%")
+                        return self._get_fallback_inspiration_chips()
+            if model_attempt < len(self.models) - 1:
+                continue
+        print(f"“¥î µëÇµ£ëµ¿íÃ§ ï˜â\%Ãñ’%¦$%Ñ)"]%î£\%%Äö¿ fallback ˜Çë˜íc%")
+        return self._get_fallback_inspiration_chips()
+
+    def _get_fallback_inspiration_chips(self) -> List[str]:
+        """¦ÄV%ÃÅûfallbackÄÜäinspiration chips"""
+        return [
+            "The rain falls like silver threads on cobblestone streets",
+            "Grandma's kitchen on Sunday morning, cinnamon in the air",
+            "A library where time stands still, dust motes dance in sunbeams",
+            "The quiet before dawn, when the world holds its breath",
+            "A steampunk workshop where brass gears whisper secrets",
+            "Fresh snow crunching underfoot, breath visible in cold air",
+        ]
+
+    def analyze_music_prompt_layers(self, user_text: str = '', extra_fields: dict = None) -> dict:
+        """
+        £\%%Äö¿ LLM Ãêåµ§ ÉÄö¿µêV%¦[%ôÃàÑ)"]%îÃêå¦ºú£U%Q% genre, style, mood, feeling, instrumentation, tempo, bpm, production_quality, artist_styleÀÇé
+        £]%ÿÃàêÃÉêÃc%b%ÃëìÄ½»£]%áµ¥ÑÄÜäÄW%ôµ§ äÃîûÃ¡ùµ«a%)"]%êÃªé genre, instruments, tempo, usage)"]%ë)"]%îÃ£¿ LLM prompt Ãêåµ§ Éµùb%Ã‘%å¦%Ö£Q%¢Ã¡ùµ«a%µï]%µÄÑÃê‘% userInput Ãëì˜¥óÀÇé
+        """
+        extra_fields = extra_fields or {}
+        # µï]%µÄÑÄW%ôµ§ äÃîûÃ¡ùµ«a%£U%Q%ÃëìÄ]%Ç
+        prefix_parts = []
+        if extra_fields.get('genre'):
+            prefix_parts.append(f"Genre: {extra_fields['genre']}")
+        if extra_fields.get('instruments'):
+            prefix_parts.append(f"Instruments: {', '.join(extra_fields['instruments'])}")
+        if extra_fields.get('tempo'):
+            prefix_parts.append(f"Tempo: {extra_fields['tempo']}")
+        if extra_fields.get('usage'):
+            prefix_parts.append(f"Usage: {extra_fields['usage']}")
+        prefix = '. '.join(prefix_parts)
+        # µï]%µÄÑÃê‘% user_text Ãëì˜¥ó
+        full_text = (prefix + '. ' if prefix else '') + (user_text or '')
+        prompt = '''
+£\%áµÿ»£U%Ç£\%ì˜íb%ÄQ%ºÄÜä˜’%£c%ÉÄÉå¦«Q%Ã«b%ÃÆîMeta MusicGenµ¿íÃ§ ïÄÜäPromptÃV%ÑÄ¿ïÃU%êÀÇé
+¦»V%Ã‘%å£W%Ñ£U%ïµûçµ£¼¦ºúµ§ ä£U%Q%˜’%£c%ÉÄö’µêÉÄÜäµáU%Ã%âÃàâÄ$%á)"]%î¦[%ôÃçQ%JSON)"]%Ü
+- genre: Ä’%W%Ã§ ï)"]%êÃªé ambient, rock, cinematic, jazz Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- style: ˜úÄµá]%)"]%êÃªé 90s alternative, lo-fi, synthwave Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- mood: µâàÄW%¬)"]%êÃªé melancholy, peaceful, energetic, epic Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- feeling: ÄW%å¦àW%µä’¦ºë)"]%êÃªé lonely, nostalgic, reflective, dreamy Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- instrumentation: £c%ÉÃÖ¿)"]%êÃªé acoustic guitar, synth pads, string orchestra Ä¡ë)"]%î¦ï’%µûç)"]%îµò‘%ÄW%ä)"]%ë
+- tempo: ˜Ç’ÃQ%ªµÅÅ¦%‘%)"]%êÃªé slow tempo, fast tempo, driving beat Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- bpm: BPMµò‘%ÃÇ]%)"]%êÃªé 120, 95 Ä¡ë)"]%îµò‘%Ã¡ù)"]%ë
+- production_quality: Ãêb%£\%£¦$%¿˜çÅ)"]%êÃªé high-quality production, vintage recording, clean mix Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- artist_style: ¦ëQ%µ£»Ã«b%˜úÄµá]%)"]%êÃªé in the style of Taylor Swift, inspired by Hans Zimmer Ä¡ë)"]%î¦ï’%µûç)"]%ë
+ÃÅ¬¦%öÃ¢§ JSON)"]%îµùá˜£Ç¦ºú˜çèÀÇé
+µûçµ£¼)"]%Ü''' + full_text
+        try:
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw = response.text or ""
+            # Ã‘%¥¦»òµÅÉÃÅûJSON
+            json_match = re.search(r'```json\n([\s\S]*?)\n```', raw)
+            if json_match:
+                json_string = json_match.group(1).strip()
+            else:
+                start = raw.find('{')
+                end = raw.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    json_string = raw[start:end+1].strip()
+                else:
+                    json_string = raw.strip()
+            result = json.loads(json_string)
+            # Äö¿ÄW%ôµ§ äÃîûÃ¡ùµ«a%¦íÑÃà¿/¦ªåÄ¢û LLM ÄW%ôµ§ £
+            if extra_fields.get('genre'):
+                result['genre'] = extra_fields['genre']
+            if extra_fields.get('instruments'):
+                result['instrumentation'] = extra_fields['instruments']
+            if extra_fields.get('tempo'):
+                result['tempo'] = extra_fields['tempo']
+            if extra_fields.get('usage'):
+                result['usage'] = extra_fields['usage']
+            return result
+        except Exception as e:
+            print(f"Error in analyze_music_prompt_layers: {e}")
+            print(f"RAW: >>>{raw if 'raw' in locals() else ''}<<<")
+            return {}
+
+    def build_high_fidelity_musicgen_prompt(self, genre: str = None, style: str = None, mood: str = None, feeling: str = None, instrumentation: list = None, tempo: str = None, bpm: int = None, production_quality: str = None, artist_style: str = None) -> str:
+        """
+        µ§ äÃW%Q%˜½ÿ£%¥Ä£’ MusicGen Prompt)"]%îÃêåÃ’%é¦[%ôÃçQ%)"]%î˜ÇùÃÅV%Ãêå˜ÜöÀÇé
+        """
+        parts = []
+        # Ä¼¼£U%ÇÃ’%é)"]%ÜÄ’%W%Ã§ ï£U%Ä˜úÄµá]%
+        if genre:
+            parts.append(genre)
+        if style:
+            parts.append(style)
+        # Ä¼¼£Q%îÃ’%é)"]%ÜµâàÄW%¬£U%Äµä’¦ºë
+        if mood:
+            parts.append(mood)
+        if feeling:
+            parts.append(feeling)
+        # Ä¼¼£U%ëÃ’%é)"]%Ü˜àìÃÖ¿
+        if instrumentation:
+            parts.extend(instrumentation)
+        # Ä¼¼Ã¢¢Ã’%é)"]%Ü˜Ç’ÃQ%ª£U%Ä¦èéÃÑÅ
+        if tempo:
+            parts.append(tempo)
+        if bpm:
+            parts.append(f"{bpm} BPM")
+        # Ä¼¼£Q%öÃ’%é)"]%ÜÃêb%£\%£¦$%¿˜çÅ£U%Ä¦ëQ%µ£»Ã«b%˜úÄµá]%
+        if production_quality:
+            parts.append(production_quality)
+        if artist_style:
+            parts.append(artist_style)
+        # ÄW%ôÃ‘%[%¦íÑÃàà
+        parts.append("high-quality, rich, layered, immersive music")
+        return ", ".join([str(p) for p in parts if p is not None])
+
+    def analyze_audiogen_prompt_layers(self, user_text: str = '', extra_fields: dict = None) -> dict:
+        """
+        £\%%Äö¿ LLM Ãêåµ§ ÉÄö¿µêV%¦[%ôÃàÑ)"]%îÃêå¦ºú£U%Q% AudioGen £Q%öÃñºµö»µ’’%)"]%Üpitch, pattern, intensity, acoustic, locationÀÇé
+        £]%ÿÃàêÃÉêÃc%b%ÃëìÄ½»£]%áµ¥ÑÄÜäÄW%ôµ§ äÃîûÃ¡ùµ«a%)"]%îÃ£¿ LLM prompt Ãêåµ§ Éµùb%Ã‘%å¦%Ö£Q%¢Ã¡ùµ«a%µï]%µÄÑÃê‘% user_text Ãëì˜¥óÀÇé
+        """
+        extra_fields = extra_fields or {}
+        prefix_parts = []
+        if extra_fields.get('pitch'):
+            prefix_parts.append(f"Pitch: {extra_fields['pitch']}")
+        if extra_fields.get('pattern'):
+            prefix_parts.append(f"Pattern: {extra_fields['pattern']}")
+        if extra_fields.get('intensity'):
+            prefix_parts.append(f"Intensity: {extra_fields['intensity']}")
+        if extra_fields.get('acoustic'):
+            prefix_parts.append(f"Acoustic: {extra_fields['acoustic']}")
+        if extra_fields.get('location'):
+            prefix_parts.append(f"Location: {extra_fields['location']}")
+        prefix = '. '.join(prefix_parts)
+        full_text = (prefix + '. ' if prefix else '') + (user_text or '')
+        prompt = '''
+£\%áµÿ»£U%Ç£\%ì£U%ûÄòî˜íb%ÄQ%ºÄÜä˜’%µòêµÅÉÄñQ%¦»ìÃV%ÑÄ¿ïÃU%ê)"]%î£U%ô£U%Q%Meta AudioGenµ£ìÃèíÀÇé¦»V%Ã‘%å£W%Ñ£U%ïµûçµ£¼¦ºúµ§ ä£U%Q%£Q%öÃñºµö»µ’’%)"]%Ü
+- pitch: Ãú‘%˜’%ÄÜä˜óæÄÄç)"]%êÃªé high-pitched, deep rumble, low growl Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- pattern: ¦èéÃÑÅ/˜çìÃñìµÇº)"]%êÃªé intermittent beeping, continuous hum, rhythmic tapping Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- intensity: ˜’%˜çÅ/Ãè¢ÃQ%ª)"]%êÃªé faint, distant explosion, deafening roar, gradually increasing in volume Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- acoustic: Ãú‘%Ã¡ªÄëc%µÇº)"]%êÃªé muffled sound, crisp and clear, metallic echo, hollow wooden knock Ä¡ë)"]%î¦ï’%µûç)"]%ë
+- location: £\%ìÄ\%«/ÄÄ»Ãóâ)"]%êÃªé in a vast, empty cavern, on a busy city street, inside a small wooden box Ä¡ë)"]%î¦ï’%µûç)"]%ë
+ÃÅ¬¦%öÃ¢§ JSON)"]%îµùá˜£Ç¦ºú˜çèÀÇé
+µûçµ£¼)"]%Ü''' + full_text
+        try:
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            raw = response.text or ""
+            json_match = re.search(r'```json\n([\s\S]*?)\n```', raw)
+            if json_match:
+                json_string = json_match.group(1).strip()
+            else:
+                start = raw.find('{')
+                end = raw.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    json_string = raw[start:end+1].strip()
+                else:
+                    json_string = raw.strip()
+            result = json.loads(json_string)
+            # Äö¿ÄW%ôµ§ äÃîûÃ¡ùµ«a%¦íÑÃà¿/¦ªåÄ¢û LLM ÄW%ôµ§ £
+            for k in ['pitch','pattern','intensity','acoustic','location']:
+                if extra_fields.get(k):
+                    result[k] = extra_fields[k]
+            return result
+        except Exception as e:
+            print(f"Error in analyze_audiogen_prompt_layers: {e}")
+            print(f"RAW: >>>{raw if 'raw' in locals() else ''}<<<")
+            return {}
+
+    def build_high_fidelity_audiogen_prompt(
+        self,
+        pitch: str = None,
+        pattern: str = None,
+        intensity: str = None,
+        acoustic: str = None,
+        location: str = None,
+        extra: str = None
+    ) -> str:
+        """
+        µ§ äÃW%Q%˜½ÿ£%¥Ä£’ AudioGen Prompt)"]%îÃêåÃ’%é¦[%ôÃçQ%)"]%î˜ÇùÃÅV%Ãêå˜ÜöÀÇé
+        """
+        parts = []
+        if pitch:
+            parts.append(pitch)
+        if pattern:
+            parts.append(pattern)
+        if intensity:
+            parts.append(intensity)
+        if acoustic:
+            parts.append(acoustic)
+        if location:
+            parts.append(location)
+        if extra:
+            parts.append(extra)
+        return ', '.join([str(p) for p in parts if p])
+
+    async def edit_prompt(self, current_prompt: str, edit_instruction: str, mode: str = "default", is_story: bool = False) -> str:
+        """
+        £\%%Äö¿AIÄ]%û¦[%æpromptµêûnarrative
+        """
+        try:
+            content_type = "narrative" if is_story else "audio description"
+            prompt = f"""
+You are an expert in {content_type} and storytelling. The user wants to edit their current {content_type} based on their instruction.
+
+Current {content_type}: "{current_prompt}"
+User's edit instruction: "{edit_instruction}"
+Mode: {mode}
+
+Please edit the {content_type} according to the user's instruction. Keep the core meaning but apply the requested changes. Return only the edited {content_type}, no explanations.
+
+Examples for {content_type} editing:
+- If user says "make it shorter", condense the {content_type}
+- If user says "add more details", expand with more atmospheric elements
+- If user says "make it more poetic", add lyrical language
+- If user says "make it more dramatic", add intensity and emotion
+- If user says "add more emotion", enhance emotional elements
+- If user says "make it more intense", add dramatic tension
+
+Edited {content_type}:"""
+            
+            response = self.client.models.generate_content(
+                model=self._get_current_model(),
+                contents=prompt
+            )
+            
+            edited_prompt = response.text.strip() if response and response.text else current_prompt
+            return edited_prompt
+            
+        except Exception as e:
+            print(f"Error in edit_prompt: {e}")
+            # Ãªéµ§ £AIÄ]%û¦[%æÃñ’%¦$%Ñ)"]%î¦%öÃ¢§ ÃÄ’Ãºïprompt
+            return current_prompt
+
+def get_instruments_from_ai(atmosphere: Optional[str], mood: Optional[str], elements: Optional[List[str]], user_input: Optional[str], reference_era: Optional[str]) -> List[str]:
+    """
+    ¦‘%âÄö¿ AI ¦íÑÃà¿£c%ÉÃÖ¿)"]%êµ¡ñÃñä£U%Q% mock)"]%îÃÅ»Ã»c%µÄÑ Gemini/GPT/OpenAI)"]%ëÀÇé
+    """
+    # TODO: Ã«§ ˜ÖàÃÅ»Äö¿ OpenAI/Gemini API ¦‘%âÄö¿
+    # prompt = f"""
+    # Given the following user preferences for a music generation model:
+    # - Atmosphere: {atmosphere}
+    # - Mood: {mood}
+    # - Elements: {', '.join(elements or [])}
+    # - User input: {user_input}
+    # - Reference era: {reference_era}
+    # Suggest a suitable combination of 2-4 musical instruments (in English, comma separated, no extra words).
+    # """
+    # ...
+    # return instruments_list
+    return ["acoustic guitar", "piano", "soft synth pad"]
+
+def build_musicgen_prompt(
+    atmosphere: Optional[str],
+    mood: Optional[str],
+    elements: Optional[List[str]],
+    user_input: Optional[str],
+    instruments: Optional[List[str]],
+    tempo: Optional[str] = None,
+    reference_era: Optional[str] = None
+) -> str:
+    parts = []
+    if atmosphere:
+        parts.append(atmosphere)
+    if mood:
+        parts.append(mood)
+    if elements:
+        parts.append("with elements like " + ", ".join(elements))
+    if instruments:
+        parts.append("featuring " + ", ".join(instruments))
+    if tempo:
+        parts.append(f"tempo: {tempo}")
+    if reference_era:
+        parts.append(f"in the style of {reference_era}")
+    if user_input:
+        parts.append(user_input)
+    parts.append("high-quality, rich, layered, immersive music")
+    return ", ".join(parts)
+
+def build_audiogen_prompt(
+    subject: str,
+    action: str,
+    details: str = "",
+    environment: str = "",
+    extra: str = ""
+) -> str:
+    """
+    ÄW%ôµ§ äÃîûµï]%µÄÑ AudioGen prompt)"]%î˜ÇéÄö¿£Q%Ä˜’%µòê/ÄÄ»Ãóâ˜’%Äö’µêÉÀÇé
+    """
+    prompt = ""
+    if details:
+        prompt += f"{details} "
+    prompt += f"{subject} {action}"
+    if environment:
+        prompt += f" {environment}"
+    if extra:
+        prompt += f", {extra}"
+    prompt = prompt.strip().capitalize() + "."
+    return prompt
+
+# Create singleton instance
+ai_service = AIService() 

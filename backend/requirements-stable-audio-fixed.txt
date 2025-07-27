@@ -1,0 +1,28 @@
+# Stable Audio Environment Requirements (Python 3.13 Compatible)
+# Updated for Python 3.13 compatibility
+
+# Core dependencies
+fastapi==0.116.0
+uvicorn==0.35.0
+python-dotenv==1.1.1
+requests==2.32.4
+
+# Audio processing
+pydub==0.25.1
+soundfile==0.13.1
+librosa==0.11.0
+
+# AI/ML
+torch==2.7.1
+numpy==2.2.6
+pillow==11.3.0
+tqdm==4.67.1
+
+# Stable Audio specific
+stable-audio-tools==0.0.19
+
+# Database
+supabase==2.16.0
+
+# Protocol buffers (compatible version)
+protobuf==4.25.8 

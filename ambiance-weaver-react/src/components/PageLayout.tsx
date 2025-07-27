@@ -97,8 +97,8 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           minHeight,
           ...(isPlayerPage && {
             padding: {
-              xs: '16px !important',
-              md: '20px !important',
+              xs: '20px !important',
+              md: '24px !important',
             },
             fontSize: {
               xs: '0.7rem !important',
@@ -107,15 +107,15 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             minHeight: 'auto !important',
             maxHeight: 'none !important',
             width: {
-              xs: '280px !important',
-              md: '360px !important',
+              xs: '320px !important',
+              md: '420px !important',
             },
             maxWidth: {
-              xs: '280px !important',
-              md: '360px !important',
+              xs: '320px !important',
+              md: '420px !important',
             },
             height: 'auto !important',
-            overflow: 'hidden !important',
+            overflow: 'visible !important',
           }),
         }}
       >
