@@ -301,6 +301,23 @@ ren "%APPDATA%\nvm" "nvm_backup"
 ren "%APPDATA%\nvm_backup" "nvm"
 ```
 
+#### 7. setuptools 安装错误
+```bash
+# 如果出现 "Cannot import 'setuptools.build_meta'" 错误
+# 运行修复脚本
+./backend/scripts/fix_setuptools.bat
+
+# 或者手动修复
+cd backend
+call venv_stableaudio\Scripts\activate.bat
+python -m pip install --upgrade setuptools wheel
+pip install -r requirements-stable-audio.txt
+
+call venv_gemini\Scripts\activate.bat
+python -m pip install --upgrade setuptools wheel
+pip install -r requirements-gemini-utf8.txt
+```
+
 #### 2. 模型下载失败
 ```bash
 # 清理缓存重新下载
@@ -334,4 +351,28 @@ set DEBUG=True
 set LOG_LEVEL=DEBUG
 
 # 重新启动服务
+```
+
+#### 8. Python 3.12 兼容性错误
+```bash
+# 如果出现 "AttributeError: module 'pkgutil' has no attribute 'ImpImporter'" 错误
+# 运行修复脚本
+./backend/scripts/fix_python312_compatibility.bat
+
+# 或者手动修复
+cd backend
+# 修复 venv_stableaudio
+call venv_stableaudio\Scripts\activate.bat
+python -m pip install --upgrade pip setuptools wheel pkg_resources
+pip install -r requirements-stable-audio.txt --no-cache-dir
+
+# 修复 venv_gemini
+call venv_gemini\Scripts\activate.bat
+python -m pip install --upgrade pip setuptools wheel pkg_resources
+pip install -r requirements-gemini-utf8.txt --no-cache-dir
+
+# 修复 venv_audio
+call venv_audio\Scripts\activate.bat
+python -m pip install --upgrade pip setuptools wheel pkg_resources
+pip install -r requirements-audio.txt --no-cache-dir
 ```

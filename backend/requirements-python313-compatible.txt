@@ -1,0 +1,48 @@
+# Python 3.13 兼容性依赖文件
+# 强制使用新版本的 setuptools 和相关工具
+
+# 核心工具 - 强制使用最新版本
+setuptools>=69.0.0
+wheel>=0.42.0
+pip>=23.3.0
+
+# 基础 Web 框架
+fastapi==0.116.0
+uvicorn==0.35.0
+python-multipart==0.0.20
+python-dotenv==1.1.1
+starlette==0.46.2
+
+# 数据库和存储
+supabase==2.16.0
+gotrue==2.12.3
+httpx==0.28.1
+postgrest==1.1.1
+storage3==0.12.0
+realtime==2.5.3
+supafunc==0.10.1
+
+# AI 和音频处理
+stable-audio-tools==0.0.19
+google-generativeai==0.8.5
+google-genai==1.24.0
+
+# 音频处理
+pydub==0.25.1
+soundfile==0.13.1
+numpy==1.23.5
+
+# 图像处理
+pillow==11.3.0
+
+# 工具库
+tqdm==4.67.1
+requests==2.32.4
+protobuf==3.19.6
+
+# 测试工具
+pytest==7.4.3
+
+# 其他依赖
+typing-extensions==4.14.1
+pydantic==2.11.7 

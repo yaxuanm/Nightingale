@@ -20,6 +20,7 @@ if %errorlevel% neq 0 (
 )
 
 python -m pip install --upgrade pip
+python -m pip install --upgrade setuptools wheel
 pip install -r requirements-stable-audio.txt
 if %errorlevel% neq 0 (
     echo Error: Failed to install requirements-stable-audio.txt
