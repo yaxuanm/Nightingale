@@ -2,9 +2,19 @@ import argparse
 import os
 import sys
 
-# 将 backend 目录加入 sys.path，便于绝对导入 app.services
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from app.services.stable_audio_service import stable_audio_service
+# 强制设置编码为 UTF-8
+import locale
+import codecs
+
+# 设置环境变量
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+
+# 强制设置 stdout 和 stderr 编码
+try:
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+except Exception:
+    pass
 
 # 兼容 Windows 控制台中文输出，Python 3.7+ 支持 reconfigure
 try:
@@ -21,6 +31,10 @@ try:
     sys.stderr.reconfigure(encoding='utf-8')
 except Exception:
     pass
+
+# 将 backend 目录加入 sys.path，便于绝对导入 app.services
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from app.services.stable_audio_service import stable_audio_service
 
 def main():
     
