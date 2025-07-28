@@ -309,7 +309,10 @@ async def generate_audio(request: dict):
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
+        print(f"[AUDIO] 开始生成音频 - 描述: {description[:50]}...")
+        print(f"[AUDIO] 调用 generate_long_stable_audio...")
         out_path = generate_long_stable_audio(description, total_duration=duration)
+        print(f"[AUDIO] 音频生成完成: {out_path}")
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_{abs(hash(description))}")
         return {"audio_url": cloud_url, "duration": duration}
@@ -324,7 +327,10 @@ async def generate_music(request: dict):
     if not description:
         raise HTTPException(status_code=400, detail="Missing 'description' parameter")
     try:
+        print(f"[MUSIC] 开始生成音乐 - 描述: {description[:50]}...")
+        print(f"[MUSIC] 调用 generate_long_stable_audio...")
         out_path = generate_long_stable_audio(description, total_duration=duration)
+        print(f"[MUSIC] 音乐生成完成: {out_path}")
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(out_path, f"stable_music_{abs(hash(description))}")
         return {"audio_url": cloud_url, "duration": duration}
