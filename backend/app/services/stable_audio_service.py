@@ -27,17 +27,17 @@ class StableAudioService:
         if hf_token:
             os.environ['HF_TOKEN'] = hf_token
             os.environ['HUGGING_FACE_HUB_TOKEN'] = hf_token
-            print(f"[OK] Hugging Face token 已设置 (长度: {len(hf_token)})")
+            print(f"[OK] Hugging Face token set (length: {len(hf_token)})")
             
             # 在初始化时就登录
             try:
                 from huggingface_hub import login
                 login(token=hf_token, write_permission=False)
-                print("[OK] Hugging Face 登录成功")
+                print("[OK] Hugging Face login successful")
             except Exception as e:
-                print(f"[WARN] Hugging Face 登录失败: {e}")
+                print(f"[WARN] Hugging Face login failed: {e}")
         else:
-            print("[WARN] 警告: 未设置HF_TOKEN环境变量")
+            print("[WARN] Warning: HF_TOKEN environment variable not set")
         
         print(f"StableAudioService initialized on device: {self.device}")
     
@@ -119,10 +119,10 @@ class StableAudioService:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed(42)
             
-            print("[INFO] 模型加载前已设置随机种子")
+            print("[INFO] Random seed set before model loading")
             # === END ===
             
-            # 确保Hugging Face token已设置
+            # Ensure Hugging Face token is set
             hf_token = os.environ.get('HF_TOKEN') or os.environ.get('HUGGING_FACE_HUB_TOKEN')
             if not hf_token:
                 print("⚠️  警告: 未设置HF_TOKEN环境变量")
@@ -206,7 +206,7 @@ class StableAudioService:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed(42)
             
-            print("[INFO] 已设置随机种子，避免 int32 溢出错误")
+            print("[INFO] Random seed set to avoid int32 overflow error")
             # === END ===
             
             # 设置文本和时间条件
@@ -226,10 +226,10 @@ class StableAudioService:
                     sampler_type=sampler_type,
                     device=self.device
                 )
-                print("[OK] 音频生成成功")
+                print("[OK] Audio generation successful")
             except Exception as e:
                 if "high is out of bounds for int32" in str(e):
-                    print("[WARN] 检测到 int32 溢出错误，尝试修复...")
+                    print("[WARN] Detected int32 overflow error, attempting fix...")
                     # 重新设置随机种子
                     np.random.seed(123)
                     random.seed(123)
@@ -247,7 +247,7 @@ class StableAudioService:
                         sampler_type=sampler_type,
                         device=self.device
                     )
-                    print("[OK] 修复后音频生成成功")
+                    print("[OK] Audio generation successful after fix")
                 else:
                     raise e
             
