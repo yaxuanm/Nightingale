@@ -22,6 +22,23 @@ class StableAudioService:
         self.output_dir = os.path.join(self.base_dir, "audio_output")
         os.makedirs(self.output_dir, exist_ok=True)
         
+        # 设置Hugging Face token
+        hf_token = os.environ.get('HF_TOKEN') or os.environ.get('HUGGING_FACE_HUB_TOKEN')
+        if hf_token:
+            os.environ['HF_TOKEN'] = hf_token
+            os.environ['HUGGING_FACE_HUB_TOKEN'] = hf_token
+            print(f"[OK] Hugging Face token 已设置 (长度: {len(hf_token)})")
+            
+            # 在初始化时就登录
+            try:
+                from huggingface_hub import login
+                login(token=hf_token, write_permission=False)
+                print("[OK] Hugging Face 登录成功")
+            except Exception as e:
+                print(f"[WARN] Hugging Face 登录失败: {e}")
+        else:
+            print("[WARN] 警告: 未设置HF_TOKEN环境变量")
+        
         print(f"StableAudioService initialized on device: {self.device}")
     
     def _optimize_prompt_for_stable_audio(self, prompt: str) -> str:
@@ -104,6 +121,17 @@ class StableAudioService:
             
             print("[INFO] 模型加载前已设置随机种子")
             # === END ===
+            
+            # 确保Hugging Face token已设置
+            hf_token = os.environ.get('HF_TOKEN') or os.environ.get('HUGGING_FACE_HUB_TOKEN')
+            if not hf_token:
+                print("⚠️  警告: 未设置HF_TOKEN环境变量")
+                print("请运行: python set_hf_token.py 来设置token")
+                raise Exception("Hugging Face token not set. Please set HF_TOKEN environment variable.")
+            
+            # 确保环境变量设置正确
+            os.environ['HF_TOKEN'] = hf_token
+            os.environ['HUGGING_FACE_HUB_TOKEN'] = hf_token
             
             # 下载并加载模型
             self.model, self.model_config = get_pretrained_model("stabilityai/stable-audio-open-small")
@@ -198,10 +226,10 @@ class StableAudioService:
                     sampler_type=sampler_type,
                     device=self.device
                 )
-                print("✅ 音频生成成功")
+                print("[OK] 音频生成成功")
             except Exception as e:
                 if "high is out of bounds for int32" in str(e):
-                    print("⚠️  检测到 int32 溢出错误，尝试修复...")
+                    print("[WARN] 检测到 int32 溢出错误，尝试修复...")
                     # 重新设置随机种子
                     np.random.seed(123)
                     random.seed(123)
@@ -219,7 +247,7 @@ class StableAudioService:
                         sampler_type=sampler_type,
                         device=self.device
                     )
-                    print("✅ 修复后音频生成成功")
+                    print("[OK] 修复后音频生成成功")
                 else:
                     raise e
             
