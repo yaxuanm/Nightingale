@@ -43,14 +43,14 @@ class StableAudioService:
     
     def _optimize_prompt_for_stable_audio(self, prompt: str) -> str:
         """
-        根据 Stable Audio 模型的弱点优化 prompt：
-        1. 多元素组合失败 - 简化元素数量
-        2. 语义修饰词理解失败 - 用具体描述替代抽象修饰词
-        3. 低音量声音生成失败 - 避免要求低音量
+        Optimize prompt based on Stable Audio model weaknesses:
+        1. Multi-element combination failure - simplify element count
+        2. Semantic modifier understanding failure - replace abstract modifiers with concrete descriptions
+        3. Low volume sound generation failure - avoid requesting low volume
         """
         import re
         
-        # 1. 移除或替换模型不理解的抽象修饰词
+        # 1. Remove or replace abstract modifiers that the model doesn't understand
         abstract_modifiers = {
             r'\bgentle\b': 'steady',
             r'\bsoft\b': 'smooth',
@@ -72,35 +72,35 @@ class StableAudioService:
         for pattern, replacement in abstract_modifiers.items():
             optimized = re.sub(pattern, replacement, optimized, flags=re.IGNORECASE)
         
-        # 2. 简化多元素组合 - 限制到2-3个核心元素
-        # 用 "with" 和 "accompanied by" 替代逗号分隔的列表
+        # 2. Simplify multi-element combinations - limit to 2-3 core elements
+        # Use "with" and "accompanied by" to replace comma-separated lists
         optimized = re.sub(r',\s*([^,]+),\s*([^,]+)', r' with \1, accompanied by \2', optimized)
         optimized = re.sub(r',\s*([^,]+),\s*([^,]+),\s*([^,]+)', r' with \1, accompanied by \2', optimized)
         
-        # 3. 避免要求低音量，强调声音的存在性
+        # 3. Avoid requesting low volume, emphasize sound presence
         optimized = re.sub(r'\bbackground\s+noise\b', 'ambient sounds', optimized, flags=re.IGNORECASE)
         optimized = re.sub(r'\bquiet\s+atmosphere\b', 'steady atmosphere', optimized, flags=re.IGNORECASE)
         
-        # 4. 确保有明确的主次关系
+        # 4. Ensure clear primary-secondary relationship
         if 'with' not in optimized.lower() and 'accompanied by' not in optimized.lower():
-            # 如果没有任何主次关系词，添加一个
+            # If there are no primary-secondary relationship words, add one
             parts = optimized.split(',')
             if len(parts) > 1:
                 optimized = f"{parts[0].strip()} with {parts[1].strip()}"
         
-        # 5. 移除多余的修饰词
+        # 5. Remove redundant modifiers
         optimized = re.sub(r'\bvery\b', '', optimized, flags=re.IGNORECASE)
         optimized = re.sub(r'\bquite\b', '', optimized, flags=re.IGNORECASE)
         optimized = re.sub(r'\bextremely\b', '', optimized, flags=re.IGNORECASE)
         
-        # 6. 清理多余的空格和标点
+        # 6. Clean up extra spaces and punctuation
         optimized = re.sub(r'\s+', ' ', optimized)
         optimized = optimized.strip()
         
         return optimized
     
     def load_model(self):
-        """加载 Stable Audio Open Small 模型"""
+        """Load Stable Audio Open Small model"""
         if self.is_loaded:
             return
             
@@ -108,11 +108,11 @@ class StableAudioService:
             print("Loading Stable Audio Open Small model...")
             start_time = time.time()
             
-            # === 修复：在模型加载前设置随机种子 ===
+            # === Fix: Set random seed before model loading ===
             import numpy as np
             import random
             
-            # 设置固定的随机种子，避免 int32 溢出
+            # Set fixed random seed to avoid int32 overflow
             np.random.seed(42)
             random.seed(42)
             torch.manual_seed(42)
@@ -230,7 +230,7 @@ class StableAudioService:
             except Exception as e:
                 if "high is out of bounds for int32" in str(e):
                     print("[WARN] Detected int32 overflow error, attempting fix...")
-                    # 重新设置随机种子
+                    # Reset random seed
                     np.random.seed(123)
                     random.seed(123)
                     torch.manual_seed(123)
@@ -340,7 +340,7 @@ class StableAudioService:
         Returns:
             生成的音频文件路径
         """
-        # 根据音效配置调整生成参数
+        # Adjust generation parameters based on effects configuration
         steps = 8
         cfg_scale = 1.0
         sampler_type = "pingpong"
