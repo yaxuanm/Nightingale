@@ -1,21 +1,128 @@
 # Nightingale 项目启动说明（2024年新版）
 
+## 🎵 项目总览
+
+Nightingale 是一个现代化的跨平台音频生成和混音工具包，包含 Web 前端、React Native 移动应用和 Python FastAPI 后端。支持实时音频播放、AI 驱动的音频生成（使用 Stability AI Stable Audio）和分享功能。
+
+### 主要功能
+- 实时音频播放和混音
+- **AI 驱动的音频生成（通过 Stability AI Stable Audio 实现文本转音频）**
+- 音频效果和可视化
+- 多平台支持：Web、Native（React Native）、后端 API
+- 音频和图像分享导出
+- 现代化响应式 UI
+
+### 技术栈
+- **Web**: React 18, TypeScript, Material-UI, Framer Motion
+- **Native**: React Native, Expo, TypeScript
+- **后端**: Python 3, FastAPI, Uvicorn, HuggingFace, Google Generative AI, **Stability AI Stable Audio**
+
+### 项目结构
+```
+Nightingale/
+├── ambiance-weaver-react/        # Web 前端 (React)
+│   ├── src/
+│   │   ├── components/           # UI 组件 (Player, Chat, 等)
+│   │   ├── utils/                # 工具和上下文
+│   │   ├── theme/                # 主题和样式
+│   │   └── ...
+│   ├── public/                   # 静态资源
+│   └── package.json
+│
+├── ambiance-weaver-native/       # React Native 应用 (移动端)
+│   ├── app/                      # 应用入口和导航
+│   │   ├── (tabs)/               # 标签页 (explore, main, 等)
+│   │   └── _layout.tsx, +not-found.tsx
+│   ├── components/               # 共享和 UI 组件
+│   │   └── ui/                   # Icon, TabBar, 等
+│   ├── assets/                   # 图片、字体
+│   ├── hooks/                    # 自定义 hooks
+│   ├── constants/                # 颜色和配置
+│   ├── src/
+│   │   ├── screens/              # MainScreen, PlayerScreen, 等
+│   │   └── services/             # AudioService, NotificationService
+│   ├── ambiance-weaver-native-new/ # (实验性新结构)
+│   └── package.json
+│
+├── backend/                      # 后端 API (Python FastAPI)
+│   ├── app/
+│   │   ├── main.py               # 主 FastAPI 应用
+│   │   ├── services/             # 音频、图像、AI 服务
+│   │   └── ...
+│   ├── requirements.txt          # Python 依赖
+│   ├── scripts/                  # 批处理/测试/工具脚本
+│   └── .env.example              # 环境变量模板
+│
+├── docs/                         # 文档
+├── scripts/                      # 项目级脚本
+└── start_instructions.txt        # 完整环境和启动指南
+```
+
+---
+
 ## 🚀 快速开始
 
 > **推荐在 PowerShell 下运行所有命令！**
 
-### 1. 一键环境设置（首次使用）
+### 1. 环境要求
+
+**Python 版本要求**：
+- 必须使用 **Python 3.11**
+- 不支持 Python 3.12 或 3.13（存在兼容性问题）
+
+**系统要求**：
+- Windows 10/11
+- 至少 8GB RAM
+- 稳定的网络连接
+
+### 2. 一键环境设置（首次使用）
 ```powershell
 # 只需运行一次，自动安装后端和前端依赖
-./start_clean.bat
+./start_clean_new.bat
 # 选择 5 设置环境
 ```
 
-### 2. 启动服务
+### 3. Hugging Face Token 设置
+
+**重要**：使用 Stable Audio 服务前必须先设置 Hugging Face Token！
+
+#### 步骤1：获取 Hugging Face Token
+1. 访问 https://huggingface.co/settings/tokens
+2. 登录你的 Hugging Face 账户
+3. 点击 "New token" 创建新 token
+4. 选择 "Read" 权限
+5. 复制生成的 token
+
+#### 步骤2：设置 Token
+```powershell
+cd backend
+python set_hf_token.py
+```
+- 按提示输入你的 Hugging Face token
+- 脚本会自动验证 token 有效性
+- Token 会保存到 `backend/.env` 文件中
+
+#### 步骤3：验证设置
+```powershell
+# 检查 token 是否正确设置
+python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('HF_TOKEN:', '已设置' if os.getenv('HF_TOKEN') else '未设置')"
+```
+
+### 4. Stable Audio int32 溢出修复
+
+**重要**：Stable Audio 包在 Windows 下可能因 int32 溢出报错。**必须在 stable_audio 虚拟环境激活后运行一次修复脚本**：
+
+```powershell
+cd backend
+.\venv_stableaudio\Scripts\activate
+python scripts/stable_audio_fix.py
+```
+
+### 5. 启动服务
 
 **统一入口脚本**：
 ```powershell
-./start_clean.bat
+./start_clean_new.bat
 ```
 
 - 选择 1 启动 Gemini API 服务（端口 8000）
@@ -29,9 +136,54 @@
 
 | 服务 | 端口 | 功能 | 启动方式 |
 |------|------|------|----------|
-| Gemini API | 8000 | AI文本处理 | `start_clean.bat` 选 1/4 |
-| Stable Audio | 8001 | AI音频生成 | `start_clean.bat` 选 2/4 |
-| React 前端 | 3000 | 用户界面 | `start_clean.bat` 选 3/4 |
+| Gemini API | 8000 | AI文本处理 | `start_clean_new.bat` 选 1/4 |
+| Stable Audio | 8001 | AI音频生成 | `start_clean_new.bat` 选 2/4 |
+| React 前端 | 3000 | 用户界面 | `start_clean_new.bat` 选 3/4 |
+
+---
+
+## 🔧 环境变量配置
+
+### 前端环境变量
+在 `ambiance-weaver-react` 目录下创建 `.env` 文件：
+
+```env
+# API 服务地址
+REACT_APP_GEMINI_API_URL=http://localhost:8000
+REACT_APP_STABLE_AUDIO_API_URL=http://localhost:8001
+REACT_APP_FRONTEND_URL=http://localhost:3000
+
+# 环境标识
+REACT_APP_ENV=development
+REACT_APP_DEBUG=true
+```
+
+### 后端环境变量
+在 `backend` 目录下创建 `.env` 文件：
+
+```env
+# Hugging Face Token（必需）
+HF_TOKEN=your_huggingface_token_here
+
+# API 配置
+GEMINI_API_URL=http://localhost:8000
+STABLE_AUDIO_API_URL=http://localhost:8001
+
+# 其他配置
+DEBUG=true
+LOG_LEVEL=INFO
+```
+
+### 环境变量验证
+```powershell
+# 检查前端环境变量
+cd ambiance-weaver-react
+npm start
+
+# 检查后端环境变量
+cd backend
+python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('HF_TOKEN:', '已设置' if os.getenv('HF_TOKEN') else '未设置')"
+```
 
 ---
 
@@ -48,7 +200,7 @@ python scripts/batch_test_web.py
 - 如未自动打开，可手动访问：http://127.0.0.1:8010/
 
 ### 使用说明
-1. 打开页面后，点击“Generate 5 Test Cases”按钮。
+1. 打开页面后，点击"Generate 5 Test Cases"按钮。
 2. 等待进度条完成，自动进入评测界面。
 3. 每个音频显示 prompt、duration、file size。
 4. 可直接在网页上进行人工打分，并保存结果。
@@ -77,45 +229,59 @@ gitpage: https://yaxuanm.github.io/Nightingale/
 
 ---
 
-## 🧪 测试
-
-### 测试环境设置
-```powershell
-cd backend
-# 环境测试脚本已移除，可直接启动服务测试
-```
-
-### 测试音频生成
-```powershell
-cd backend
-python test_stable_audio_save.py
-```
-
----
-
 ## 🚨 故障排除
 
-### 1. 环境问题
-- 重新运行 `./start_clean.bat` 选择 5 设置环境
-- 检查 Python 版本 (建议 3.8+)
+### 1. Python 版本问题
+```powershell
+# 检查 Python 版本
+python --version
 
-### 2. 依赖冲突
+# 如果版本不是 3.11，请安装 Python 3.11
+# 下载地址：https://www.python.org/downloads/release/python-3119/
+```
+
+### 2. Hugging Face Token 问题
+```powershell
+# 重新设置 token
+cd backend
+python set_hf_token.py
+
+# 检查 token 是否有效
+python -c "from huggingface_hub import HfApi; import os; from dotenv import load_dotenv; load_dotenv(); api = HfApi(token=os.getenv('HF_TOKEN')); print('Token 有效' if api.whoami() else 'Token 无效')"
+```
+
+### 3. Stable Audio int32 溢出问题
+```powershell
+# 重新运行修复脚本
+cd backend
+.\venv_stableaudio\Scripts\activate
+python scripts/stable_audio_fix.py
+```
+
+### 4. 环境问题
+- 重新运行 `./start_clean_new.bat` 选择 5 设置环境
+- 确保使用 Python 3.11
+
+### 5. 依赖冲突
 - 确保使用正确的虚拟环境
 - 检查端口是否被占用
 
-### 3. 服务启动失败
+### 6. 服务启动失败
 - 查看错误日志
 - 确保虚拟环境已激活
+- 检查环境变量是否正确设置
 
-### 4. 服务切换问题
+### 7. 服务切换问题
 - 确保目标服务已启动
 - 检查前端API地址配置
 - 验证端口是否可访问
 
 ---
 
-## 📖 详细文档
+## 📖 贡献指南
 
-- `backend/README_ENVIRONMENTS.md` - 分环境部署详细说明
-- `backend/scripts/setup_environments.bat` - 环境设置脚本
-- `CLEANUP_GUIDE.md` - 环境清理与结构建议 
+欢迎贡献！请为错误修复、新功能或文档改进提交 issue 或 pull request。
+
+## �� 许可证
+
+MIT License 

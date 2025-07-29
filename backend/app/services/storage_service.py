@@ -6,7 +6,11 @@ import json
 
 class SupabaseStorageService:
     def __init__(self):
-        load_dotenv()
+        # 获取项目根目录的 .env 文件路径
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        env_path = project_root / ".env"
+        load_dotenv(env_path)
         
         # 从环境变量获取 Supabase 配置
         supabase_url = os.getenv("SUPABASE_URL")

@@ -87,7 +87,7 @@ Examples: ["Tapping", "Brushing", "Page turning", "Ear cleaning", "Gentle rain"]
 - user input: {user_input}
 """
             else:
-            prompt = f"""
+                prompt = f"""
 List 5 moods for a soundscape. Each should be a single English word or a short phrase (max 2 words), e.g. "Calm", "Mysterious", "Uplifting", "Bittersweet", "Suspenseful". Do not include any scene, sound, or environment words.
 Examples: ["Calm", "Dreamy", "Energetic", "Peaceful", "Tense"]
 Only return a JSON array of strings.
@@ -125,7 +125,7 @@ User input: {user_input}
 Only return a JSON array of 5 strings.
 """
             else:
-            prompt = f"""
+                prompt = f"""
 Based on the user's input and mode, generate 5 sound element options that are closely related to the user's idea, each with a slight variation or added detail. Do not suggest unrelated sounds or events. Do not simply repeat the original input. Do not include any scene or environment words already mentioned in the atmosphere (such as cafe, rain, afternoon, etc.). Only describe specific sounds or events, not the overall scene or mood.
 
 User input: "A cozy cafe on a rainy afternoon"
@@ -294,7 +294,7 @@ User input: {user_input}
 Only return a JSON array of 6 strings.
 """
         else:
-        prompt = f"""
+            prompt = f"""
 You are an expert in creating atmospheric and emotional soundscapes. Generate 6 diverse and inspiring prompts that users can click to get started with sound generation. These should be a mix of different types of inspiration:
 
 **Types of inspiration to include:**
@@ -326,24 +326,24 @@ User input: {user_input}
 Only return a JSON array of 6 strings, e.g. ["prompt1", "prompt2", ...].
 """
         # LLM采样参数提升多样性（已移除generationConfig，避免API报错）
-                    response = self.client.models.generate_content(
+        response = self.client.models.generate_content(
             model=self._get_current_model(),
-                        contents=prompt
-                    )
-                    raw_response_text = response.text or ""
-                    json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
-                    if json_match:
-                        json_string = json_match.group(1).strip()
-                    else:
-                        start = raw_response_text.find('[')
-                        end = raw_response_text.rfind(']')
-                        if start != -1 and end != -1 and end > start:
-                            json_string = raw_response_text[start:end+1].strip()
-                        else:
-                            json_string = raw_response_text.strip()
-                    chips = json.loads(json_string)
-                    if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
-                        return chips
+            contents=prompt
+        )
+        raw_response_text = response.text or ""
+        json_match = re.search(r'```json\\n([\s\S]*?)\\n```', raw_response_text)
+        if json_match:
+            json_string = json_match.group(1).strip()
+        else:
+            start = raw_response_text.find('[')
+            end = raw_response_text.rfind(']')
+            if start != -1 and end != -1 and end > start:
+                json_string = raw_response_text[start:end+1].strip()
+            else:
+                json_string = raw_response_text.strip()
+        chips = json.loads(json_string)
+        if isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
+            return chips
         return self._get_fallback_inspiration_chips()
 
     def _get_fallback_inspiration_chips(self) -> List[str]:

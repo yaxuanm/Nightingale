@@ -32,21 +32,21 @@ def fix_stable_audio_tools():
     
     # 修复第33行：添加 dtype=np.int64
     content = re.sub(
-        r'seed = seed if seed != -1 else np\.random\.randint\(0, 2\*\*32 - 1, dtype=np\.uint32\)',
+        r'seed = seed if seed != -1 else np\\.random\\.randint\\(0, 2\\*\\*32 - 1, dtype=np\\.uint32\\)',
         'seed = seed if seed != -1 else np.random.randint(0, 2**32 - 1, dtype=np.int64)',
         content
     )
     
     # 修复第137行：添加 dtype=np.int64
     content = re.sub(
-        r'seed = seed if seed != -1 else np\.random\.randint\(0, 2\*\*32 - 1\)',
+        r'seed = seed if seed != -1 else np\\.random\\.randint\\(0, 2\\*\\*32 - 1\\)',
         'seed = seed if seed != -1 else np.random.randint(0, 2**32 - 1, dtype=np.int64)',
         content
     )
     
     # 修复第271行：添加 dtype=np.int64
     content = re.sub(
-        r'seed = seed if seed != -1 else np\.random\.randint\(0, 2\*\*32 - 1\)',
+        r'seed = seed if seed != -1 else np\\.random\\.randint\\(0, 2\\*\\*32 - 1\\)',
         'seed = seed if seed != -1 else np.random.randint(0, 2**32 - 1, dtype=np.int64)',
         content
     )
