@@ -1,5 +1,9 @@
 import os
+import warnings
 from dotenv import load_dotenv
+
+# 忽略 ffmpeg 警告
+warnings.filterwarnings("ignore", message="Couldn't find ffprobe or avprobe")
 # 指定 .env 路径，始终加载 backend/.env
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
 if os.path.exists(env_path):
@@ -39,15 +43,24 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
         while remaining > 0:
             seg_dur = min(segment_duration, remaining, 11.0)
             seg_path = os.path.join(tmpdir, f"seg_{segment_idx}.wav")
-            worker_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "../scripts/run_stable_audio_worker.py"))
-            # 修正虚拟环境路径，指向 backend/venv_stableaudio/Scripts/python.exe（回退到上一级目录）
-            venv_python = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv_stableaudio", "Scripts", "python.exe"))
+            # 使用绝对路径
+            base_dir = "C:\\Users\\mengru\\workspace\\Nightingale\\backend"
+            worker_script = os.path.join(base_dir, "scripts", "run_stable_audio_worker.py")
+            venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
+            
+            # 检查文件是否存在
+            if not os.path.exists(worker_script):
+                raise Exception(f"Worker script not found: {worker_script}")
+            if not os.path.exists(venv_python):
+                raise Exception(f"Python executable not found: {venv_python}")
             cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
             print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
             result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             if result.returncode != 0:
                 print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
-                raise Exception("Stable Audio worker failed")
+                print(f"[ERROR] Command was: {' '.join(cmd)}")
+                print(f"[ERROR] Return code: {result.returncode}")
+                raise Exception(f"Stable Audio worker failed: {result.stderr}")
             print(f"[LONG_AUDIO] Segment {segment_idx} generated: {seg_path}")
             segments.append(AudioSegment.from_file(seg_path))
             remaining -= seg_dur
