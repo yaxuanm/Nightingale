@@ -36,6 +36,8 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
     多段 Stable Audio worker 生成音频，拼接并做淡入淡出混合，导出总时长音频
     """
     import uuid, os, subprocess
+    print(f"[LONG_AUDIO] Starting generate_long_stable_audio with prompt: {prompt[:50]}...")
+    print(f"[LONG_AUDIO] Current working directory: {os.getcwd()}")
     segments = []
     remaining = total_duration
     segment_idx = 0
@@ -405,7 +407,13 @@ Narrative script:"""
         print(f"[STORY] TTS duration: {tts_duration_seconds:.2f} seconds (target: {duration}s)")
         
         # 4. 用 Stable Audio worker 生成 soundscape（总时长为 duration）
-        stable_audio_out = generate_long_stable_audio(prompt, total_duration=duration)
+        print(f"[STORY] About to call generate_long_stable_audio with prompt: {prompt[:50]}...")
+        try:
+            stable_audio_out = generate_long_stable_audio(prompt, total_duration=duration)
+            print(f"[STORY] generate_long_stable_audio completed: {stable_audio_out}")
+        except Exception as e:
+            print(f"[STORY] generate_long_stable_audio failed: {e}")
+            raise e
         
         # 5. 混音
         soundscape_audio = AudioSegment.from_file(stable_audio_out)
