@@ -58,7 +58,10 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             final_audio = final_audio.append(seg, crossfade=crossfade_ms)
         # 截断到总时长
         final_audio = final_audio[:int(total_duration * 1000)]
-        out_path = os.path.join("audio_output", f"stable_long_{uuid.uuid4().hex}.wav")
+        # 使用绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
+        os.makedirs(audio_output_dir, exist_ok=True)
+        out_path = os.path.join(audio_output_dir, f"stable_long_{uuid.uuid4().hex}.wav")
         final_audio.export(out_path, format="wav")
         print(f"[LONG_AUDIO] Final audio saved: {out_path}")
         return out_path
@@ -293,8 +296,10 @@ async def tts_endpoint(request: dict):
     if not text or not isinstance(text, str):
         raise HTTPException(status_code=400, detail="Missing or invalid 'text' parameter")
     filename = f"tts_{uuid.uuid4().hex}.mp3"
-    output_path = os.path.join("audio_output", filename)
-    os.makedirs("audio_output", exist_ok=True)
+    # 使用绝对路径
+    audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
+    os.makedirs(audio_output_dir, exist_ok=True)
+    output_path = os.path.join(audio_output_dir, filename)
     # 使用更柔和的 JennyNeural
     await tts_to_audio(text, output_path, voice="en-US-JennyNeural")
     # 上传到 Supabase
@@ -373,7 +378,10 @@ Narrative script:"""
         
         # 2. TTS 生成旁白音频
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
-        tts_path = os.path.join("audio_output", tts_filename)
+        # 使用绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
+        os.makedirs(audio_output_dir, exist_ok=True)
+        tts_path = os.path.join(audio_output_dir, tts_filename)
         await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
         
         # 3. 获取 TTS 音频长度
@@ -397,7 +405,7 @@ Narrative script:"""
         soundscape_audio = soundscape_audio - 4  # 降低 soundscape 音量
         mixed = soundscape_audio.overlay(tts_audio)
         mixed_filename = f"story_mix_{uuid.uuid4().hex}.mp3"
-        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed_path = os.path.join(audio_output_dir, mixed_filename)
         mixed.export(mixed_path, format="mp3")
         
         # 6. 上传合成音频到 Supabase
@@ -425,7 +433,10 @@ async def create_story_music(request: dict):
     try:
         # 1. 生成旁白音频
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
-        tts_path = os.path.join("audio_output", tts_filename)
+        # 使用绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
+        os.makedirs(audio_output_dir, exist_ok=True)
+        tts_path = os.path.join(audio_output_dir, tts_filename)
         await tts_to_audio(narrative, tts_path, voice="en-US-JennyNeural")
 
         # 2. 用Stable Audio生成音乐
@@ -443,7 +454,7 @@ async def create_story_music(request: dict):
         music_audio = music_audio - 4  # 音乐音量降低
         mixed = music_audio.overlay(tts_audio)
         mixed_filename = f"story_music_mix_{uuid.uuid4().hex}.mp3"
-        mixed_path = os.path.join("audio_output", mixed_filename)
+        mixed_path = os.path.join(audio_output_dir, mixed_filename)
         mixed.export(mixed_path, format="mp3")
 
         # 4. 上传合成音频
