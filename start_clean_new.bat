@@ -32,32 +32,28 @@ goto invalid_choice
 :start_gemini
 echo.
 echo Starting Gemini API Service...
-cd backend
-if exist "venv_gemini\Scripts\Activate.ps1" (
+if exist "backend\venv_gemini\Scripts\Activate.ps1" (
     echo Found venv_gemini environment (powershell)
     echo Starting Gemini API Service in new window...
-    start powershell -NoExit -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='%GEMINI_API_KEY%'; $env:GOOGLE_API_KEY='%GOOGLE_API_KEY%'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    start powershell -NoExit -Command "cd '%CD%\backend'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='%GEMINI_API_KEY%'; $env:GOOGLE_API_KEY='%GOOGLE_API_KEY%'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
 ) else (
     echo Error: venv_gemini environment not found
     echo Please run option 5 to setup environment first
 )
-cd ..
 goto end
 
 :start_stable_audio
 echo.
 echo Starting Stable Audio Service...
-cd backend
-if exist "venv_stableaudio\Scripts\Activate.ps1" (
+if exist "backend\venv_stableaudio\Scripts\Activate.ps1" (
     echo Found venv_stableaudio environment (powershell)
-    start powershell -NoExit -Command "cd '%CD%'; .\venv_stableaudio\Scripts\Activate.ps1; $env:HF_TOKEN='%HF_TOKEN%'; $env:HUGGING_FACE_HUB_TOKEN='%HF_TOKEN%'; python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001 --reload"
+    start powershell -NoExit -Command "cd '%CD%\backend'; .\venv_stableaudio\Scripts\Activate.ps1; $env:HF_TOKEN='%HF_TOKEN%'; $env:HUGGING_FACE_HUB_TOKEN='%HF_TOKEN%'; python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001 --reload"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
 ) else (
     echo Error: venv_stableaudio environment not found
     echo Please run option 5 to setup environment first
 )
-cd ..
 goto end
 
 :start_frontend
@@ -90,27 +86,23 @@ if "%HF_TOKEN%"=="" (
 )
 
 REM Gemini API Service
-cd backend
-if exist "venv_gemini\Scripts\Activate.ps1" (
+if exist "backend\venv_gemini\Scripts\Activate.ps1" (
     echo Found venv_gemini environment (powershell)
     echo Starting Gemini API Service with PowerShell...
-    start powershell -NoExit -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='%GEMINI_API_KEY%'; $env:GOOGLE_API_KEY='%GOOGLE_API_KEY%'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    start powershell -NoExit -Command "cd '%CD%\backend'; .\venv_gemini\Scripts\Activate.ps1; $env:GEMINI_API_KEY='%GEMINI_API_KEY%'; $env:GOOGLE_API_KEY='%GOOGLE_API_KEY%'; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     echo Gemini API Service started in new window (http://127.0.0.1:8000)
 ) else (
     echo Warning: venv_gemini environment not found, skipping Gemini service
 )
-cd ..
 
 REM Stable Audio Service
-cd backend
-if exist "venv_stableaudio\Scripts\Activate.ps1" (
+if exist "backend\venv_stableaudio\Scripts\Activate.ps1" (
     echo Found venv_stableaudio environment (powershell)
-    start powershell -NoExit -Command "cd '%CD%'; .\venv_stableaudio\Scripts\Activate.ps1; $env:HF_TOKEN='%HF_TOKEN%'; $env:HUGGING_FACE_HUB_TOKEN='%HF_TOKEN%'; python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001 --reload"
+    start powershell -NoExit -Command "cd '%CD%\backend'; .\venv_stableaudio\Scripts\Activate.ps1; $env:HF_TOKEN='%HF_TOKEN%'; $env:HUGGING_FACE_HUB_TOKEN='%HF_TOKEN%'; python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001 --reload"
     echo Stable Audio Service started in new window (http://127.0.0.1:8001)
 ) else (
     echo Warning: venv_stableaudio environment not found, skipping Stable Audio service
 )
-cd ..
 
 REM Frontend React App
 cd ambiance-weaver-react
@@ -133,9 +125,10 @@ goto end
 echo.
 echo Setting up environment...
 echo.
+
+echo Creating virtual environments in backend directory...
 cd backend
 
-echo Creating virtual environments...
 if not exist "venv_gemini" (
     echo Creating venv_gemini...
     py -3.11 -m venv venv_gemini
@@ -151,6 +144,8 @@ echo Upgrading tools in virtual environments...
 if exist "venv_gemini\Scripts\Activate.ps1" (
     echo Upgrading Gemini environment tools...
     powershell -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; python -m pip install --upgrade pip setuptools wheel"
+    echo Installing Gemini environment dependencies...
+    powershell -Command "cd '%CD%'; .\venv_gemini\Scripts\Activate.ps1; pip install -r requirements-gemini-working.txt"
     echo Gemini environment updated
 )
 
@@ -158,6 +153,8 @@ if exist "venv_stableaudio\Scripts\activate.bat" (
     echo Upgrading Stable Audio environment tools...
     call venv_stableaudio\Scripts\activate.bat
     python -m pip install --upgrade pip setuptools wheel
+    echo Installing Stable Audio environment dependencies...
+    pip install -r requirements-stable-audio.txt
     call venv_stableaudio\Scripts\deactivate.bat
     echo Stable Audio environment updated
 )

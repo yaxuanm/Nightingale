@@ -42,7 +42,22 @@ def set_hf_token():
     
     # 测试token
     try:
-        from huggingface_hub import HfApi
+        # 尝试导入 huggingface_hub
+        try:
+            from huggingface_hub import HfApi
+        except ImportError:
+            print("⚠️  huggingface_hub 模块未安装，正在尝试安装...")
+            import subprocess
+            import sys
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "huggingface_hub"])
+                from huggingface_hub import HfApi
+                print("✅ huggingface_hub 安装成功")
+            except Exception as install_error:
+                print(f"❌ 安装失败: {install_error}")
+                print("请手动安装: pip install huggingface_hub")
+                return
+        
         api = HfApi(token=token)
         user = api.whoami()
         print(f"✅ 认证成功! 用户: {user['name']}")

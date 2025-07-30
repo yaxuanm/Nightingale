@@ -7,23 +7,25 @@ from typing import Optional
 from PIL import Image
 from io import BytesIO
 from .storage_service import storage_service
+from .stability_key_manager import stability_key_manager
 
 class StabilityImageService:
     def __init__(self):
-        self.api_key = os.getenv("STABILITY_API_KEY")
         self.api_host = "https://api.stability.ai"
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.output_dir = os.path.join(self.base_dir, "image_output")
         os.makedirs(self.output_dir, exist_ok=True)
         
-        if not self.api_key:
-            print("[WARNING] STABILITY_API_KEY not found in environment variables")
+        # 使用 key 管理器
+        self.key_manager = stability_key_manager
+        if not self.key_manager.get_current_key():
+            print("[WARNING] No Stability AI API key found in environment variables")
     
     async def generate_background(self, description: str, max_retries: int = 3) -> Optional[str]:
         """
         使用 Stability AI 生成背景图片，使用和 Gemini 相同的 prompt 格式
         """
-        if not self.api_key:
+        if not self.key_manager.get_current_key():
             print("[ERROR] Stability AI API key not configured")
             return None
             
@@ -103,7 +105,7 @@ class StabilityImageService:
             headers = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.key_manager.get_current_key()}"
             }
             
             data = {
@@ -134,12 +136,26 @@ class StabilityImageService:
                     return None
             elif response.status_code == 402:
                 print("[ERROR] Stability AI: Payment required - insufficient balance")
-                raise Exception("Insufficient balance")
+                # 尝试切换到备用 key
+                if self.key_manager.switch_to_backup():
+                    print("[RETRY] Switched to backup key, retrying...")
+                    return await self._call_stability_api(prompt)  # 递归重试
+                else:
+                    raise Exception("Insufficient balance and no backup key available")
             elif response.status_code == 429:
                 print("[ERROR] Stability AI: Rate limit exceeded")
-                raise Exception("Rate limit exceeded")
+                # 尝试切换到备用 key
+                if self.key_manager.switch_to_backup():
+                    print("[RETRY] Switched to backup key, retrying...")
+                    return await self._call_stability_api(prompt)  # 递归重试
+                else:
+                    raise Exception("Rate limit exceeded and no backup key available")
             else:
                 print(f"[ERROR] Stability AI API error: {response.status_code} - {response.text}")
+                # 尝试处理其他错误
+                if self.key_manager.handle_api_error({"status_code": response.status_code, "text": response.text}):
+                    print("[RETRY] Switched key due to API error, retrying...")
+                    return await self._call_stability_api(prompt)  # 递归重试
                 return None
                 
         except requests.exceptions.RequestException as e:

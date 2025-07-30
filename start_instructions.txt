@@ -86,6 +86,8 @@ Nightingale/
 
 **重要**：使用 Stable Audio 服务前必须先设置 Hugging Face Token！
 
+**⚠️ 注意**：所有 HF_TOKEN 相关操作都必须在 `venv_stableaudio` 虚拟环境中进行！
+
 #### 步骤1：获取 Hugging Face Token
 1. 访问 https://huggingface.co/settings/tokens
 2. 登录你的 Hugging Face 账户
@@ -96,6 +98,8 @@ Nightingale/
 #### 步骤2：设置 Token
 ```powershell
 cd backend
+# 重要：必须在 stable_audio 虚拟环境中设置 token
+.\venv_stableaudio\Scripts\activate
 python set_hf_token.py
 ```
 - 按提示输入你的 Hugging Face token
@@ -104,7 +108,8 @@ python set_hf_token.py
 
 #### 步骤3：验证设置
 ```powershell
-# 检查 token 是否正确设置
+# 检查 token 是否正确设置（在 stable_audio 环境中）
+.\venv_stableaudio\Scripts\activate
 python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('HF_TOKEN:', '已设置' if os.getenv('HF_TOKEN') else '未设置')"
 ```
 
@@ -242,8 +247,9 @@ python --version
 
 ### 2. Hugging Face Token 问题
 ```powershell
-# 重新设置 token
+# 重新设置 token（必须在 stable_audio 环境中）
 cd backend
+.\venv_stableaudio\Scripts\activate
 python set_hf_token.py
 
 # 检查 token 是否有效

@@ -5,6 +5,7 @@ import random
 from typing import Optional
 from .storage_service import storage_service
 from .stability_image_service import stability_image_service
+from .stability_key_manager import stability_key_manager
 from google import genai
 from google.genai import types
 from PIL import Image

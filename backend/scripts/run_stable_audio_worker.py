@@ -33,7 +33,12 @@ except Exception:
     pass
 
 # 将 backend 目录加入 sys.path，便于绝对导入 app.services
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(backend_dir)
+
+# 设置环境变量，确保使用 backend 目录的虚拟环境
+os.environ['PYTHONPATH'] = backend_dir
+
 from app.services.stable_audio_service import stable_audio_service
 
 def main():

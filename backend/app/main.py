@@ -33,47 +33,59 @@ from datetime import datetime
 
 def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segment_duration: float = 10.0, crossfade_ms: int = 1000) -> str:
     """
-    多段 Stable Audio worker 生成音频，拼接并做淡入淡出混合，导出总时长音频
+    生成单段音频，然后循环播放达到目标时长
     """
     import uuid, os, subprocess
     print(f"[LONG_AUDIO] Starting generate_long_stable_audio with prompt: {prompt[:50]}...")
     print(f"[LONG_AUDIO] Current working directory: {os.getcwd()}")
-    segments = []
-    remaining = total_duration
-    segment_idx = 0
+    
     with tempfile.TemporaryDirectory() as tmpdir:
-        while remaining > 0:
-            seg_dur = min(segment_duration, remaining, 11.0)
-            seg_path = os.path.join(tmpdir, f"seg_{segment_idx}.wav")
-            # 使用绝对路径
-            base_dir = "C:\\Users\\mengru\\workspace\\Nightingale\\backend"
-            worker_script = os.path.join(base_dir, "scripts", "run_stable_audio_worker.py")
-            venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
-            
-            # 检查文件是否存在
-            if not os.path.exists(worker_script):
-                raise Exception(f"Worker script not found: {worker_script}")
-            if not os.path.exists(venv_python):
-                raise Exception(f"Python executable not found: {venv_python}")
-            cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
-            print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            if result.returncode != 0:
-                print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
-                print(f"[ERROR] Command was: {' '.join(cmd)}")
-                print(f"[ERROR] Return code: {result.returncode}")
-                raise Exception(f"Stable Audio worker failed: {result.stderr}")
-            print(f"[LONG_AUDIO] Segment {segment_idx} generated: {seg_path}")
-            segments.append(AudioSegment.from_file(seg_path))
-            remaining -= seg_dur
-            segment_idx += 1
-        # 拼接并做淡入淡出混合
-        final_audio = segments[0]
-        for seg in segments[1:]:
-            final_audio = final_audio.append(seg, crossfade=crossfade_ms)
-        # 截断到总时长
-        final_audio = final_audio[:int(total_duration * 1000)]
-        # 使用绝对路径
+        # 只生成一次10秒的音频
+        seg_dur = min(segment_duration, 11.0)  # 最大11秒
+        seg_path = os.path.join(tmpdir, "single_segment.wav")
+        
+        # 使用动态路径 - 指向 backend 目录的虚拟环境
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(current_dir)  # backend 目录
+        worker_script = os.path.join(base_dir, "scripts", "run_stable_audio_worker.py")
+        venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
+        
+        # 检查文件是否存在
+        if not os.path.exists(worker_script):
+            raise Exception(f"Worker script not found: {worker_script}")
+        if not os.path.exists(venv_python):
+            raise Exception(f"Python executable not found: {venv_python}")
+        
+        # 设置环境变量
+        env = os.environ.copy()
+        env['PYTHONPATH'] = base_dir
+        
+        cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
+        print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env, cwd=base_dir)
+        if result.returncode != 0:
+            print(f"[ERROR] Stable Audio worker failed: {result.stderr}")
+            print(f"[ERROR] Command was: {' '.join(cmd)}")
+            print(f"[ERROR] Return code: {result.returncode}")
+            raise Exception(f"Stable Audio worker failed: {result.stderr}")
+        print(f"[LONG_AUDIO] Single segment generated: {seg_path}")
+        
+        # 加载音频并循环播放达到目标时长
+        segment_audio = AudioSegment.from_file(seg_path)
+        segment_duration_ms = len(segment_audio)
+        target_duration_ms = int(total_duration * 1000)
+        
+        # 计算需要重复多少次
+        repeats_needed = int(target_duration_ms / segment_duration_ms) + 1
+        print(f"[LONG_AUDIO] Segment duration: {segment_duration_ms}ms, target: {target_duration_ms}ms, repeats: {repeats_needed}")
+        
+        # 重复音频片段
+        final_audio = segment_audio * repeats_needed
+        
+        # 截断到目标时长
+        final_audio = final_audio[:target_duration_ms]
+        
+        # 使用绝对路径保存
         audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
         os.makedirs(audio_output_dir, exist_ok=True)
         out_path = os.path.join(audio_output_dir, f"stable_long_{uuid.uuid4().hex}.wav")
@@ -392,12 +404,16 @@ Narrative script:"""
             raise Exception("Failed to generate narrative script")
         
         # 2. TTS 生成旁白音频
+        print(f"[STORY] Starting TTS generation...")
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
         # 使用绝对路径
         audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
+        print(f"[STORY] audio_output_dir: {audio_output_dir}")
         os.makedirs(audio_output_dir, exist_ok=True)
         tts_path = os.path.join(audio_output_dir, tts_filename)
+        print(f"[STORY] tts_path: {tts_path}")
         await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
+        print(f"[STORY] TTS generation completed")
         
         # 3. 获取 TTS 音频长度
         from pydub import AudioSegment
