@@ -471,7 +471,6 @@ Narrative script:"""
         print(f"[DEBUG] About to load TTS file: {tts_path}")
         try:
             # 检查 PATH 环境变量
-            import os
             print(f"[DEBUG] Current PATH: {os.environ.get('PATH', 'Not set')}")
             
             # 测试 ffmpeg 是否可以从 Python 访问
@@ -487,7 +486,6 @@ Narrative script:"""
                 print(f"[DEBUG] ffmpeg test exception: {e}")
             
             # 检查文件详细信息
-            import os
             stat_info = os.stat(tts_path)
             print(f"[DEBUG] File size: {stat_info.st_size} bytes")
             print(f"[DEBUG] File permissions: {oct(stat_info.st_mode)}")
