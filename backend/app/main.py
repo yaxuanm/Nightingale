@@ -389,6 +389,14 @@ async def create_story(request: dict):
     print(f"[PATH_TEST] Audio output dir: {audio_output_dir}")
     print(f"[PATH_TEST] Audio output exists: {os.path.exists(audio_output_dir)}")
     
+    # edge_tts 测试
+    try:
+        import edge_tts
+        print(f"[EDGE_TTS_TEST] edge_tts imported successfully")
+    except Exception as e:
+        print(f"[EDGE_TTS_TEST] edge_tts import failed: {e}")
+        raise
+    
     prompt = request.get("prompt")
     original_description = request.get("original_description", "")
     duration = float(request.get("duration", 20))
@@ -428,8 +436,15 @@ Narrative script:"""
         tts_path = os.path.join(audio_output_dir, tts_filename)
         print(f"[STORY] tts_path: {tts_path}")
         print(f"[STORY] tts_path absolute: {os.path.abspath(tts_path)}")
-        await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
-        print(f"[STORY] TTS generation completed")
+        print(f"[STORY] About to call tts_to_audio with path: {tts_path}")
+        try:
+            await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
+            print(f"[STORY] TTS generation completed")
+        except Exception as e:
+            print(f"[ERROR] TTS generation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
         
         # 检查文件是否存在
         print(f"[DEBUG] Checking if TTS file exists: {os.path.exists(tts_path)}")
