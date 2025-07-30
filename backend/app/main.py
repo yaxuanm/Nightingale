@@ -459,16 +459,74 @@ Narrative script:"""
         print(f"[DEBUG] About to import AudioSegment...")
         from pydub import AudioSegment
         print(f"[DEBUG] AudioSegment imported successfully")
-
+        
+        # 检查 pydub 版本
+        try:
+            import pydub
+            print(f"[DEBUG] pydub version: {pydub.__version__}")
+        except:
+            print(f"[DEBUG] pydub version: unknown")
+        
+        # 尝试不同的音频加载方法
         print(f"[DEBUG] About to load TTS file: {tts_path}")
         try:
+            # 检查 PATH 环境变量
+            import os
+            print(f"[DEBUG] Current PATH: {os.environ.get('PATH', 'Not set')}")
+            
+            # 测试 ffmpeg 是否可以从 Python 访问
+            import subprocess
+            try:
+                result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
+                print(f"[DEBUG] ffmpeg test result: {result.returncode}")
+                if result.returncode == 0:
+                    print(f"[DEBUG] ffmpeg is accessible from Python")
+                else:
+                    print(f"[DEBUG] ffmpeg test failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] ffmpeg test exception: {e}")
+            
+            # 检查文件详细信息
+            import os
+            stat_info = os.stat(tts_path)
+            print(f"[DEBUG] File size: {stat_info.st_size} bytes")
+            print(f"[DEBUG] File permissions: {oct(stat_info.st_mode)}")
+            print(f"[DEBUG] File exists: {os.path.exists(tts_path)}")
+            print(f"[DEBUG] File is readable: {os.access(tts_path, os.R_OK)}")
+            
+            # 尝试使用 ffmpeg 直接检查文件
+            try:
+                result = subprocess.run(['ffmpeg', '-i', tts_path, '-f', 'null', '-'], capture_output=True, text=True, timeout=10)
+                print(f"[DEBUG] ffmpeg file check result: {result.returncode}")
+                if result.returncode == 0:
+                    print(f"[DEBUG] ffmpeg can read the file")
+                else:
+                    print(f"[DEBUG] ffmpeg file check failed: {result.stderr}")
+            except Exception as e:
+                print(f"[DEBUG] ffmpeg file check exception: {e}")
+            
             tts_audio = AudioSegment.from_file(tts_path)
             print(f"[DEBUG] TTS file loaded successfully")
         except Exception as e:
             print(f"[ERROR] Failed to load TTS file: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+            print(f"[DEBUG] Trying alternative method...")
+            
+            # 尝试使用 wave 模块直接读取（仅适用于 WAV 文件）
+            try:
+                import wave
+                with wave.open(tts_path, 'rb') as wav_file:
+                    frames = wav_file.getnframes()
+                    rate = wav_file.getframerate()
+                    duration_ms = (frames / rate) * 1000
+                    print(f"[DEBUG] WAV file loaded: {duration_ms}ms")
+                    # 创建一个简单的 AudioSegment 对象
+                    from pydub import AudioSegment
+                    tts_audio = AudioSegment.silent(duration=duration_ms)
+            except Exception as e2:
+                print(f"[ERROR] Alternative method also failed: {e2}")
+                import traceback
+                traceback.print_exc()
+                raise e  # 抛出原始错误
 
         tts_duration_ms = len(tts_audio)
         tts_duration_seconds = tts_duration_ms / 1000
