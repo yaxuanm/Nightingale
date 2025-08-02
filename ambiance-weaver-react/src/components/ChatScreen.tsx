@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  LinearProgress,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -200,25 +201,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
 
   // 1. 在 useState 区域增加 isPromptGenerated 状态
   const [isPromptGenerated, setIsPromptGenerated] = useState(false);
+  
+
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const loadingMessages = [
-    "Composing unique sound elements...",
-    "Enhancing your soundscape with AI...",
-    "Fine-tuning audio effects...",
-    "Almost ready to play!",
-    "Did you know ambient sounds can improve focus?",
-    "Preparing your personalized soundscape...",
-    "Did you know certain frequencies can calm your mind?",
-    "Our AI learns and adapts to your unique preferences.",
-    "Exploring a world of sound just for you...",
-    "Relax, your personalized soundscape is nearly complete.",
-    "Discovering the perfect blend of elements.",
-  ];
 
-  const [currentLoadingMessageIndex, setCurrentLoadingMessageIndex] = useState(0);
 
   const [atmosphereOptions, setAtmosphereOptions] = useState<string[]>([]);
   const [moodOptions, setMoodOptions] = useState<string[]>([]);
@@ -265,6 +254,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [finalPrompt, setFinalPrompt] = useState<string>('');
   const [showPromptEdit, setShowPromptEdit] = useState(false);
   const [aiEditInput, setAiEditInput] = useState('');
+  
+  // 新增：当前任务ID，用于cancel功能
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
 
   // 2. 修改 handleOptionSelect，移除 setShowPromptEdit、setFinalPrompt、setIsPromptGenerated
   const handleOptionSelect = (
@@ -449,6 +441,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
+
+
+  // handleGenerate 只在 narrative 编辑弹窗点击后调用，生成音频，生成后只显示 Enter Player/Regenerate 按钮
   // 非story模式下生成prompt的函数
   const handleGeneratePrompt = async () => {
     setIsLoading(true);
@@ -483,105 +478,287 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
-  // handleGenerate 只在 narrative 编辑弹窗点击后调用，生成音频，生成后只显示 Enter Player/Regenerate 按钮
   const handleGenerate = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setShowPromptEdit(false); // 关闭编辑弹窗
-      abortControllerRef.current = new AbortController();
-      let audioOrMusicUrl = null;
-      let prompt = '';
-      const subjects = audioChoices.audio_elements;
-      const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
-      const scenes = [
-        ...(audioChoices.audio_atmosphere ? [audioChoices.audio_atmosphere] : []),
-        ...(mode && mode !== 'default' ? [`for ${mode}`] : [])
-      ];
-      const extraInputs = audioChoices.extraInputs && audioChoices.extraInputs.length > 0 ? audioChoices.extraInputs : [];
-      const allSubjects = [...subjects, ...extraInputs];
-      const structuredPrompt = buildAudioGenPrompt({
-        subjects: allSubjects.length > 0 ? allSubjects : [initialInput],
-        actions,
-        scenes,
-        type: selectedType === 'music' ? 'music' : 'audio'
-      });
-      const storyPrompt = [
-        finalPrompt,
-        initialInput,
-        structuredPrompt
-      ].filter(Boolean).join('\n\n');
-      if (mode === 'story') {
-        const storyResponse = await fetch('http://localhost:8000/api/create-story', {
+    // 立即关闭编辑框
+    setShowPromptEdit(false);
+    
+    // 立即设置一个临时状态来隐藏选择选项
+    setCurrentTaskId('temp');
+    
+    // 立即显示进度提示
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        sender: 'ai' as Message['sender'],
+        text: 'Processing your soundscape...',
+        isUser: false
+      },
+    ]);
+    
+    if (mode === 'story') {
+      try {
+        const response = await fetch('http://localhost:8000/api/queue/story-generation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: storyPrompt,
-            original_description: initialInput || ''
+            prompt: finalPrompt,
+            original_description: initialInput,
           }),
-          signal: abortControllerRef.current.signal,
         });
-        if (!storyResponse.ok) {
-          const errorData = await storyResponse.json();
-          throw new Error(errorData.detail || 'Failed to create story');
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const storyData = await storyResponse.json();
-        audioOrMusicUrl = storyData.audio_url;
-        setCurrentAudioUrl(storyData.audio_url);
+
+        const storyData = await response.json();
+        const taskId = storyData.task_id;
+
+        setCurrentTaskId(taskId);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
+          {
+            sender: 'ai' as Message['sender'],
+            text: `Task submitted! Queue position: ${storyData.queue_position || 'Unknown'}${storyData.estimated_wait_time ? `, estimated wait: ${storyData.estimated_wait_time} min` : ''}`,
+            isUser: false
+          },
         ]);
-      } else {
-        const audioResponse = await fetch('http://localhost:8001/api/generate-audio', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: finalPrompt, // 使用用户编辑后的prompt
-            duration: 10,
-            is_poem: false,
-            mode: mode,
-            effects_config: null,
+
+        // 开始轮询状态
+        const pollStatus = async () => {
+          try {
+            const statusResponse = await fetch(`http://localhost:8000/api/queue/status/${taskId}`);
+            if (!statusResponse.ok) {
+              throw new Error(`Status check failed: ${statusResponse.status}`);
+            }
+            const statusData = await statusResponse.json();
+            
+            // 添加调试信息
+            console.log('Polling status for story task:', taskId);
+            console.log('Story status data:', statusData);
+
+            if (statusData.status === 'completed') {
+              console.log('Story task completed, setting results...');
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
+              ]);
+              setCurrentAudioUrl(statusData.result?.audio_url);
+              setCurrentBackgroundImageUrl(statusData.result?.background_image_url);
+              setCurrentMusicUrl(statusData.result?.music_url);
+              setShowPlaybackButtons(true);
+              setCurrentTaskId(null);
+              // 确保编辑框完全关闭，并防止重新显示
+              setShowPromptEdit(false);
+              // 设置完成状态，防止其他逻辑重新显示编辑框
+              setCurrentStage('complete');
+            } else if (statusData.status === 'failed') {
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: `Generation failed: ${statusData.error || 'Unknown error'}`, isUser: false },
+              ]);
+              setCurrentTaskId(null);
+              setShowPromptEdit(false);
+            } else if (statusData.status === 'cancelled') {
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: 'Task cancelled. You can start a new generation.', isUser: false },
+              ]);
+              setCurrentTaskId(null);
+              setShowPromptEdit(false);
+            } else if (statusData.status === 'running') {
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                {
+                  sender: 'ai' as Message['sender'],
+                  text: `Processing your story... ${statusData.progress}% complete`,
+                  isUser: false
+                },
+              ]);
+              setTimeout(pollStatus, 1000);
+            } else if (statusData.status === 'pending') {
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                {
+                  sender: 'ai' as Message['sender'],
+                  text: `Still in queue... Position: ${statusData.queue_position || 'Unknown'}${statusData.estimated_wait_time ? `, estimated wait: ${statusData.estimated_wait_time} min` : ''}`,
+                  isUser: false
+                },
+              ]);
+              setTimeout(pollStatus, 3000);
+            }
+          } catch (error) {
+            console.error('Error polling status:', error);
+            setMessages((prevMessages) => [
+              ...prevMessages.slice(0, -1),
+              { sender: 'ai' as Message['sender'], text: 'Error checking generation status. Please try again.', isUser: false },
+            ]);
+            setCurrentTaskId(null);
+            setShowPromptEdit(false);
+          }
+        };
+
+        pollStatus();
+      } catch (error) {
+        console.error('Error generating story:', error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai' as Message['sender'], text: 'Failed to start generation. Please try again.', isUser: false },
+        ]);
+        setCurrentTaskId(null);
+        setShowPromptEdit(false);
+      }
+    } else {
+      // 非story模式（ASMR, Default等）
+      try {
+        // 同时调用音频和图片生成任务
+        const [audioResponse, imageResponse] = await Promise.all([
+          fetch('http://localhost:8000/api/queue/audio-generation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: finalPrompt,
+              mode: mode,
+              duration: 20,
+            }),
           }),
-          signal: abortControllerRef.current.signal,
-        });
+          fetch('http://localhost:8000/api/queue/image-generation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: finalPrompt,
+            }),
+          })
+        ]);
+
         if (!audioResponse.ok) {
-          const errorData = await audioResponse.json();
-          throw new Error(errorData.detail || 'Failed to generate audio');
+          throw new Error(`Audio generation HTTP error! status: ${audioResponse.status}`);
         }
+        if (!imageResponse.ok) {
+          throw new Error(`Image generation HTTP error! status: ${imageResponse.status}`);
+        }
+
         const audioData = await audioResponse.json();
-        audioOrMusicUrl = audioData.audio_url;
-        setCurrentAudioUrl(audioData.audio_url);
-      }
-      
-      // 1.2 自动生成背景图片
-      const backgroundDescription = initialInput || 'a beautiful soundscape background';
-      const bgResponse = await fetch('http://localhost:8000/api/generate-background', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: backgroundDescription }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (bgResponse.ok) {
-        const bgData = await bgResponse.json();
-        setCurrentBackgroundImageUrl(bgData.image_url);
-      }
-      // 1.3 完成后显示播放/再生成按钮
-      setShowPlaybackButtons(true); // 只显示 Enter Player/Regenerate 按钮
-      setCurrentStage('complete');
-    } catch (err) {
-      if (err && typeof err === 'object' && 'name' in err && (err as any).name === 'AbortError') {
-        setMessages((prev) => [...prev, { sender: 'ai', text: 'Generation cancelled.', isUser: false }]);
-      } else {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        const imageData = await imageResponse.json();
+        const audioTaskId = audioData.task_id;
+        const imageTaskId = imageData.task_id;
+
+        // 使用音频任务ID作为主要任务ID
+        setCurrentTaskId(audioTaskId);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { sender: 'ai' as Message['sender'], text: `Error generating content: ${err instanceof Error ? err.message : 'An unknown error occurred'}.`, isUser: false },
+          {
+            sender: 'ai' as Message['sender'],
+            text: `Task submitted! Queue position: ${audioData.queue_position || 'Unknown'}${audioData.estimated_wait_time ? `, estimated wait: ${audioData.estimated_wait_time} min` : ''}`,
+            isUser: false
+          },
         ]);
-        console.error("Error generating content:", err);
+
+        // 开始轮询状态 - 同时检查音频和图片任务
+        const pollStatus = async () => {
+          try {
+            const [audioStatusResponse, imageStatusResponse] = await Promise.all([
+              fetch(`http://localhost:8000/api/queue/status/${audioTaskId}`),
+              fetch(`http://localhost:8000/api/queue/status/${imageTaskId}`)
+            ]);
+            
+            if (!audioStatusResponse.ok) {
+              throw new Error(`Audio status check failed: ${audioStatusResponse.status}`);
+            }
+            if (!imageStatusResponse.ok) {
+              throw new Error(`Image status check failed: ${imageStatusResponse.status}`);
+            }
+            
+            const audioStatusData = await audioStatusResponse.json();
+            const imageStatusData = await imageStatusResponse.json();
+            
+            // 添加调试信息
+            console.log('Polling status for audio task:', audioTaskId);
+            console.log('Audio status data:', audioStatusData);
+            console.log('Polling status for image task:', imageTaskId);
+            console.log('Image status data:', imageStatusData);
+
+            // 检查两个任务是否都完成
+            if (audioStatusData.status === 'completed' && imageStatusData.status === 'completed') {
+              console.log('Both tasks completed, setting results...');
+              console.log('Audio URL:', audioStatusData.result?.audio_url);
+              console.log('Image URL:', imageStatusData.result?.image_url);
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: 'Your soundscape is ready! What would you like to do?', isUser: false },
+              ]);
+              setCurrentAudioUrl(audioStatusData.result?.audio_url);
+              setCurrentBackgroundImageUrl(imageStatusData.result?.image_url);
+              setCurrentMusicUrl(null); // 非story模式没有音乐
+              setShowPlaybackButtons(true);
+              setCurrentTaskId(null);
+              setShowPromptEdit(false);
+              setCurrentStage('complete');
+              console.log('Set showPlaybackButtons to true, showPromptEdit to false');
+            } else if (audioStatusData.status === 'failed' || imageStatusData.status === 'failed') {
+              const errorMsg = audioStatusData.status === 'failed' 
+                ? `Audio generation failed: ${audioStatusData.error || 'Unknown error'}`
+                : `Image generation failed: ${imageStatusData.error || 'Unknown error'}`;
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: errorMsg, isUser: false },
+              ]);
+              setCurrentTaskId(null);
+              setShowPromptEdit(false);
+            } else if (audioStatusData.status === 'cancelled' || imageStatusData.status === 'cancelled') {
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                { sender: 'ai' as Message['sender'], text: 'Task cancelled. You can start a new generation.', isUser: false },
+              ]);
+              setCurrentTaskId(null);
+              setShowPromptEdit(false);
+            } else {
+              // 显示进度信息
+              const audioProgress = audioStatusData.progress || 0;
+              const imageProgress = imageStatusData.progress || 0;
+              const avgProgress = Math.round((audioProgress + imageProgress) / 2);
+              
+              let statusText = '';
+              if (audioStatusData.status === 'running' || imageStatusData.status === 'running') {
+                statusText = `Processing your soundscape... ${avgProgress}% complete`;
+              } else if (audioStatusData.status === 'pending' || imageStatusData.status === 'pending') {
+                const audioQueue = audioStatusData.queue_position || 'Unknown';
+                const imageQueue = imageStatusData.queue_position || 'Unknown';
+                statusText = `Still in queue... Audio: ${audioQueue}, Image: ${imageQueue}`;
+              }
+              
+              setMessages((prevMessages) => [
+                ...prevMessages.slice(0, -1),
+                {
+                  sender: 'ai' as Message['sender'],
+                  text: statusText,
+                  isUser: false
+                },
+              ]);
+              
+              // 继续轮询
+              setTimeout(pollStatus, 1000);
+            }
+          } catch (error) {
+            console.error('Error polling status:', error);
+            setMessages((prevMessages) => [
+              ...prevMessages.slice(0, -1),
+              { sender: 'ai' as Message['sender'], text: 'Error checking generation status. Please try again.', isUser: false },
+            ]);
+            setCurrentTaskId(null);
+            setShowPromptEdit(false);
+          }
+        };
+
+        pollStatus();
+      } catch (error) {
+        console.error('Error generating audio:', error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'ai' as Message['sender'], text: 'Failed to start generation. Please try again.', isUser: false },
+        ]);
+        setCurrentTaskId(null);
+        setShowPromptEdit(false);
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -598,10 +775,42 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
 
   const handleRegenerate = () => {
     setShowPlaybackButtons(false);
-    setCurrentStage('selectType');
-    setMessages([]);
+    setCurrentStage('audio_atmosphere');
+    setMessages([
+      { sender: 'ai', text: `Welcome to Nightingale! And you've started with the idea: "${initialInput}". What do you want to generate?`, isUser: false },
+      { sender: 'ai', text: "Let's build your perfect soundscape! What kind of atmosphere are you looking for?", isUser: false }
+    ]);
     setAudioChoices({ audio_elements: [], extraInputs: [] });
     setMusicChoices({ instruments: [] });
+    setCurrentAudioUrl(null);
+    setCurrentBackgroundImageUrl(null);
+    setCurrentMusicUrl(null);
+    setError(null);
+  };
+
+  const handleCancel = async () => {
+    if (currentTaskId) {
+      try {
+        // 取消当前任务
+        const cancelResponse = await fetch(`http://localhost:8000/api/queue/cancel/${currentTaskId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (cancelResponse.ok) {
+          setMessages((prevMessages) => [
+            ...prevMessages.slice(0, -1), // 移除最后一条进度消息
+            { sender: 'ai', text: 'Task cancelled. You can start a new generation.', isUser: false },
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to cancel task:', error);
+      }
+    }
+    
+    // 重置状态
+    setCurrentTaskId(null);
+    setShowPlaybackButtons(false);
     setCurrentAudioUrl(null);
     setCurrentBackgroundImageUrl(null);
     setCurrentMusicUrl(null);
@@ -846,6 +1055,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
+
+
   const handleGenerateMusicPrompt = async () => {
     setIsLoading(true);
     try {
@@ -1022,39 +1233,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             </MessageBubbleContent>
           </Box>
         ))}
-        {isLoading && (
-          <Box
-            sx={{
-              alignSelf: 'flex-start',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 1.5,
-            }}
-          >
-            <AiAvatar>
-              <img src={`${process.env.PUBLIC_URL}/ai_logo.png`} alt="AI Logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />
-            </AiAvatar>
-            <MessageBubbleContent sender="ai">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0.5 }}
-                animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.5, 1, 0.5] }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  backgroundColor: '#2d9c93',
-                  marginRight: '8px', // Adjust spacing
-                }}
-              />
-              <Typography sx={{ color: 'white', ml: 1 }}>{loadingMessages[currentLoadingMessageIndex]}</Typography>
-            </MessageBubbleContent>
-          </Box>
-        )}
+
         <div ref={messagesEndRef} />
       </Stack>
       {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && mode !== 'asmr' && (
@@ -1123,7 +1302,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {currentStage === 'audio_elements' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
+      {currentStage === 'audio_elements' && !isLoading && !showPlaybackButtons && !showPromptEdit && !currentTaskId && (
         <OptionMessageBubbleContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>
             {elementQuestions[mode] || elementQuestions.default}
@@ -1154,7 +1333,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         </OptionMessageBubbleContent>
       )}
       {/* story mode 下，audio_elements 阶段显示"Generate Story Script"按钮 */}
-      {mode === 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && audioChoices.audio_elements.length > 0 && (
+      {mode === 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && !currentTaskId && audioChoices.audio_elements.length > 0 && (
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
           <Button
             variant="contained"
@@ -1167,20 +1346,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {/* 非story模式下，audio_elements 阶段显示"Generate Prompt"按钮 */}
-      {mode !== 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && audioChoices.audio_elements.length > 0 && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleGeneratePrompt}
-            disabled={isLoading}
-            sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
-          >
-            Generate Prompt
-          </Button>
-        </Box>
-      )}
+
       {/* Story模式下的AI编辑弹窗 */}
       {mode === 'story' && showPromptEdit && (
         <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
@@ -1288,6 +1454,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
+
+      {/* 非story模式下，audio_elements 阶段显示"Generate Prompt"按钮 */}
+      {mode !== 'story' && currentStage === 'audio_elements' && !showPromptEdit && !showPlaybackButtons && !isLoading && !currentTaskId && audioChoices.audio_elements.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleGeneratePrompt}
+            disabled={isLoading}
+            sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
+          >
+            Generate Prompt
+          </Button>
+        </Box>
+      )}
+
       {/* 非story模式下的AI编辑弹窗 */}
       {mode !== 'story' && showPromptEdit && (
         <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
@@ -1387,24 +1569,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
               disableUnderline: true,
             }}
           />
-          <Button
-            variant="contained"
-            onClick={
-              mode === 'story' && selectedType === 'music'
-                ? handleGenerateStoryMusic
+
+          
+          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setShowPromptEdit(false);
+                handleGenerate();
+              }}
+              sx={{ flex: 1, color: 'white', fontWeight: 700, background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)', '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' } }}
+            >
+              {mode === 'story' && selectedType === 'music'
+                ? 'Generate Story + Music'
                 : selectedType === 'music'
-                  ? handleGenerateMusic
-                  : handleGenerate
-            }
-            sx={{ mt: 2, color: 'white', fontWeight: 700, background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)', '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' } }}
-            fullWidth
-          >
-            {mode === 'story' && selectedType === 'music'
-              ? 'Generate Story + Music'
-              : selectedType === 'music'
-                ? 'Generate Music'
-                : 'Generate Soundscape'}
-          </Button>
+                  ? 'Generate Music'
+                  : 'Generate Soundscape'}
+            </Button>
+          </Box>
         </Box>
       )}
 
@@ -1424,7 +1606,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             onClick={handleRegenerate}
             sx={{ minWidth: 140, fontWeight: 600 }}
           >
-            Regenerate
+            Start Over
           </Button>
           <Button
             variant="contained"
@@ -1442,142 +1624,128 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-      {currentStage === 'music_genre' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
-        <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>What genre or style do you want?</Typography>
-          <Stack direction="row" flexWrap="wrap" spacing={1}>
-            {musicGenreOptions.map((option) => (
-              <OptionChip
-                key={option}
-                label={option}
-                onClick={() => handleOptionSelect(option, 'music_genre')}
-                variant={musicChoices.genre === option ? 'filled' : 'outlined'}
-                color={musicChoices.genre === option ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </OptionMessageBubbleContent>
+      {console.log('Render condition check:', { showPromptEdit, showPlaybackButtons, currentTaskId, currentStage })}
+      
+      {/* 生成过程中显示Cancel按钮 */}
+      {currentTaskId && !showPromptEdit && !showPlaybackButtons && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleCancel}
+            sx={{ minWidth: 100, fontWeight: 600, borderColor: '#ff6b6b', color: '#ff6b6b', '&:hover': { borderColor: '#ff5252', color: '#ff5252' } }}
+          >
+            Cancel
+          </Button>
+        </Box>
       )}
-      {currentStage === 'music_instruments' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
+      
+      {/* 确保在生成完成后，编辑框不会重新显示 */}
+      {!showPromptEdit && !showPlaybackButtons && !currentTaskId && currentStage !== 'complete' && (
         <>
-          <OptionMessageBubbleContent sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 1 }}>Pick up to 3 instruments:</Typography>
-            <Stack direction="row" flexWrap="wrap" spacing={1}>
-              {musicInstrumentOptions.map((option) => {
-                const selected = musicChoices.instruments.includes(option);
-                const disabled = !selected && musicChoices.instruments.length >= 3;
-                return (
+          {currentStage === 'music_genre' && !isLoading && (
+            <OptionMessageBubbleContent sx={{ mt: 2 }}>
+              <Typography variant="body1" sx={{ mb: 1 }}>What genre or style do you want?</Typography>
+              <Stack direction="row" flexWrap="wrap" spacing={1}>
+                {musicGenreOptions.map((option) => (
                   <OptionChip
                     key={option}
                     label={option}
-                    onClick={() => !disabled && handleOptionSelect(option, 'music_instruments')}
-                    variant={selected ? 'filled' : 'outlined'}
-                    color={selected ? 'primary' : 'default'}
-                    disabled={disabled}
-                    sx={disabled ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+                    onClick={() => handleOptionSelect(option, 'music_genre')}
+                    variant={musicChoices.genre === option ? 'filled' : 'outlined'}
+                    color={musicChoices.genre === option ? 'primary' : 'default'}
                   />
-                );
-              })}
-            </Stack>
-          </OptionMessageBubbleContent>
-          {musicChoices.instruments.length > 0 && (
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-              <Button
-                variant="contained"
-                onClick={async () => {
-                  if (mode === 'story') {
-                    setIsLoading(true);
-                    try {
-                      const res = await fetch('http://localhost:8000/api/generate-scene', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          prompt: initialInput,
-                          mode: 'story',
-                          // 这里可以根据需要传musicChoices参数
-                          genre: musicChoices.genre,
-                          tempo: musicChoices.tempo,
-                          instruments: musicChoices.instruments,
-                        }),
-                      });
-                      const data = await res.json();
-                      setFinalPrompt(data.narrative_script || '');
-                      setShowPromptEdit(true);
-                    } catch (e) {
-                      setFinalPrompt('');
-                      setShowPromptEdit(true);
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  } else {
-                    handleGenerateMusicPrompt(); // 非story模式走原逻辑
-                  }
-                }}
-                disabled={isLoading || musicChoices.instruments.length === 0}
-                sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
-              >
-                Generate
-              </Button>
-            </Box>
+                ))}
+              </Stack>
+            </OptionMessageBubbleContent>
+          )}
+          {currentStage === 'music_instruments' && !isLoading && (
+            <>
+              <OptionMessageBubbleContent sx={{ mt: 2 }}>
+                <Typography variant="body1" sx={{ mb: 1 }}>Pick up to 3 instruments:</Typography>
+                <Stack direction="row" flexWrap="wrap" spacing={1}>
+                  {musicInstrumentOptions.map((option) => {
+                    const selected = musicChoices.instruments.includes(option);
+                    const disabled = !selected && musicChoices.instruments.length >= 3;
+                    return (
+                      <OptionChip
+                        key={option}
+                        label={option}
+                        onClick={() => handleOptionSelect(option, 'music_instruments')}
+                        variant={selected ? 'filled' : 'outlined'}
+                        color={selected ? 'primary' : 'default'}
+                        disabled={disabled}
+                        sx={{
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          opacity: disabled ? 0.5 : 1,
+                          transition: 'all 0.2s',
+                          fontWeight: selected ? 700 : 400,
+                          boxShadow: selected ? '0 2px 8px rgba(45,156,147,0.15)' : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
+              </OptionMessageBubbleContent>
+              {musicChoices.instruments.length > 0 && (
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={async () => {
+                      if (mode === 'story') {
+                        setIsLoading(true);
+                        try {
+                          const res = await fetch('http://localhost:8000/api/generate-scene', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              prompt: initialInput,
+                              mode: 'story',
+                              // 这里可以根据需要传musicChoices参数
+                              genre: musicChoices.genre,
+                              tempo: musicChoices.tempo,
+                              instruments: musicChoices.instruments,
+                            }),
+                          });
+                          const data = await res.json();
+                          setFinalPrompt(data.narrative_script || '');
+                          setShowPromptEdit(true);
+                        } catch (e) {
+                          setFinalPrompt('');
+                          setShowPromptEdit(true);
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      } else {
+                        handleGenerateMusicPrompt(); // 非story模式走原逻辑
+                      }
+                    }}
+                    disabled={isLoading || musicChoices.instruments.length === 0}
+                    sx={{ minWidth: 180, fontWeight: 700, fontSize: 18 }}
+                  >
+                    Generate
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
+          {currentStage === 'music_tempo' && !isLoading && (
+            <OptionMessageBubbleContent sx={{ mt: 2 }}>
+              <Typography variant="body1" sx={{ mb: 1 }}>What tempo do you prefer?</Typography>
+              <Stack direction="row" flexWrap="wrap" spacing={1}>
+                {musicTempoOptions.map((option) => (
+                  <OptionChip
+                    key={option}
+                    label={option}
+                    onClick={() => handleOptionSelect(option, 'music_tempo')}
+                    variant={musicChoices.tempo === option ? 'filled' : 'outlined'}
+                    color={musicChoices.tempo === option ? 'primary' : 'default'}
+                  />
+                ))}
+              </Stack>
+            </OptionMessageBubbleContent>
           )}
         </>
-      )}
-      {currentStage === 'music_tempo' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
-        <OptionMessageBubbleContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>What tempo do you prefer?</Typography>
-          <Stack direction="row" flexWrap="wrap" spacing={1}>
-            {musicTempoOptions.map((option) => (
-              <OptionChip
-                key={option}
-                label={option}
-                onClick={() => handleOptionSelect(option, 'music_tempo')}
-                variant={musicChoices.tempo === option ? 'filled' : 'outlined'}
-                color={musicChoices.tempo === option ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </OptionMessageBubbleContent>
-      )}
-      {/* 移除music_usage相关UI和逻辑 */}
-      {/* story_script_edit 阶段渲染 */}
-      {/* 删除 story_script_edit 阶段的编辑弹窗，只保留 showPromptEdit 的弹窗 */}
-      {false && currentStage === 'story_script_edit' && (
-        <Box sx={{ mt: 4, p: 3, background: 'rgba(45,156,147,0.06)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.10)' }}>
-          <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Edit your story script</Typography>
-          <TextField
-            multiline
-            minRows={5}
-            fullWidth
-            value={finalPrompt}
-            onChange={e => setFinalPrompt(e.target.value)}
-            variant="standard"
-            sx={{
-              mb: 2,
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 2,
-              color: 'white',
-              '& .MuiInputBase-input': { color: 'white' },
-            }}
-            InputProps={{
-              style: { color: 'white' },
-              disableUnderline: true,
-            }}
-          />
-          <Button
-            variant="contained"
-            onClick={() => { setShowPromptEdit(false); setCurrentStage('confirm'); }}
-            sx={{
-              mt: 2,
-              color: 'white',
-              fontWeight: 700,
-              background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)',
-              '&:hover': { background: 'linear-gradient(90deg, #2d9c93 80%, #3be584 100%)' }
-            }}
-            fullWidth
-          >
-            Confirm and continue
-          </Button>
-        </Box>
       )}
    
       {/* 删除底部聊天框 - 不再需要 */}

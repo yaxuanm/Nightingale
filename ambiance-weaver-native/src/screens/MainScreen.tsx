@@ -99,7 +99,7 @@ const MainScreen = () => {
           disabled={!selectedTag && !inputValue}
           style={styles.button}
         >
-          Chat with Ambiance AI
+          Chat with Nightingale
         </Button>
       </ScrollView>
     </SafeAreaView>

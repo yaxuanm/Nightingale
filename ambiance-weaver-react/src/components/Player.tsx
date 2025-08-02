@@ -109,6 +109,7 @@ const Player: React.FC<PlayerProps> = ({
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     if (currentAudioUrl && audioRef.current) {
@@ -121,6 +122,30 @@ const Player: React.FC<PlayerProps> = ({
       musicRef.current.src = musicUrl;
     }
   }, [musicUrl]);
+
+  // 文本截断函数
+  const truncateDescription = (text: string, maxLength: number = 300) => {
+    if (text.length <= maxLength) return { truncated: text, isLong: false };
+    // 找到最后一个完整的句子或单词边界
+    const truncated = text.substring(0, maxLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastSpace = truncated.lastIndexOf(' ');
+    const cutPoint = Math.max(lastPeriod, lastSpace);
+    
+    if (cutPoint > maxLength * 0.8) { // 如果截断点太靠前，就用空格
+      return { 
+        truncated: truncated.substring(0, lastSpace) + '...', 
+        isLong: true,
+        full: text 
+      };
+    } else {
+      return { 
+        truncated: truncated.substring(0, cutPoint) + '...', 
+        isLong: true,
+        full: text 
+      };
+    }
+  };
 
   const handlePlayPause = () => {
     if (audioRef.current && currentAudioUrl) {
@@ -287,22 +312,56 @@ const Player: React.FC<PlayerProps> = ({
           
           {/* Prompt */}
           {currentDescription && (
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: '#ffffff',
-                fontSize: '0.7rem',
-                lineHeight: 1.3,
-                maxHeight: '100px',
-                overflow: 'visible',
-                flexGrow: 1,
-                wordWrap: 'break-word',
-                whiteSpace: 'pre-wrap',
-                padding: '4px 0',
-              }}
-            >
-              {currentDescription}
-            </Typography>
+            <Box sx={{ flexGrow: 1 }}>
+              {(() => {
+                const textInfo = truncateDescription(currentDescription);
+                const displayText = isDescriptionExpanded ? textInfo.full : textInfo.truncated;
+                
+                return (
+                  <Box sx={{ position: 'relative', mb: 1 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#ffffff',
+                        fontSize: '0.7rem',
+                        lineHeight: 1.3,
+                        maxHeight: isDescriptionExpanded ? 'none' : '75px',
+                        overflow: 'hidden',
+                        wordWrap: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        padding: '4px 0',
+                        paddingRight: textInfo.isLong && !isDescriptionExpanded ? '24px' : '0',
+                      }}
+                    >
+                      {displayText}
+                    </Typography>
+                    {textInfo.isLong && (
+                      <Box
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        sx={{
+                          position: 'absolute',
+                          right: 0,
+                          top: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          width: '20px',
+                          height: '20px',
+                          color: 'rgba(255,255,255,0.6)',
+                          fontSize: '14px',
+                          '&:hover': {
+                            color: 'rgba(255,255,255,0.8)',
+                          },
+                        }}
+                      >
+                        {isDescriptionExpanded ? '−' : '+'}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })()}
+            </Box>
           )}
         </Box>
 

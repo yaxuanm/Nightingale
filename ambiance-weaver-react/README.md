@@ -1,46 +1,61 @@
-# Getting Started with Create React App
+# Nightingale - AI音效生成平台
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Nightingale是一个基于AI的音效生成平台，能够将用户的文字描述转换为沉浸式的音频体验。该平台集成了多种AI模型，支持音效生成、音乐创作、TTS语音合成等功能。
 
-## Available Scripts
+## 功能特色
 
-In the project directory, you can run:
+- **智能音效生成**：将自然语言描述转换为高质量的环境音效
+- **多模态AI集成**：结合Stable Audio、MusicGen、AudioGen等多种AI模型
+- **沉浸式体验**：支持背景图片生成，创造完整的视听体验
+- **多场景适配**：支持专注、放松、故事、音乐等多种使用模式
+- **实时生成**：快速响应用户需求，支持实时音频生成和播放
 
-### `npm start`
+## 技术栈
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **前端**：React 18 + TypeScript + Material-UI
+- **后端**：FastAPI + Google Gemini AI + Stable Audio Tools
+- **AI模型**：Stable Audio、MusicGen、AudioGen、Edge TTS
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 快速开始
 
-### `npm test`
+### 安装依赖
+```bash
+npm install
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 启动开发服务器
+```bash
+npm start
+```
 
-### `npm run build`
+应用将在 [http://localhost:3000](http://localhost:3000) 启动。
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 构建生产版本
+```bash
+npm run build
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 项目结构
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+src/
+├── components/          # React组件
+├── theme/              # 主题配置
+├── utils/              # 工具函数
+└── config/             # 配置文件
+```
 
-### `npm run eject`
+## 部署
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+项目支持多种部署方式：
+- 静态文件部署
+- Docker容器化部署
+- 云平台部署
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 贡献
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+欢迎提交Issue和Pull Request来改进项目。
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+---
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+*Nightingale - 让AI为您的音频内容创作赋能*

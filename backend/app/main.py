@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from .services.ai_service import ai_service, get_instruments_from_ai, build_musicgen_prompt, build_audiogen_prompt
 from .services.image_service import ImageGenerationService
 from .services.audio_service import tts_to_audio
+from .services.async_task_service import async_task_service, TaskType, TaskPriority
 from fastapi import APIRouter
 import subprocess
 import uuid
@@ -298,15 +299,17 @@ async def generate_inspiration_chips(request: InspirationChipsRequest):
     """
     生成随机的inspiration chips，用于MainScreen的提示选项
     """
+    print(f"[INSPIRATION_CHIPS] Received request - mode: {request.mode}, user_input: {request.user_input}")
     try:
         chips = await ai_service.generate_inspiration_chips(
             mode=request.mode,
             user_input=request.user_input
         )
+        print(f"[INSPIRATION_CHIPS] Generated chips: {chips}")
         if chips and isinstance(chips, list) and all(isinstance(chip, str) for chip in chips):
             return {"chips": chips}
     except Exception as e:
-        print(f"Inspiration chips generation failed: {e}")
+        print(f"[INSPIRATION_CHIPS] Generation failed: {e}")
     
     # Fallback options
     fallback_chips = [
@@ -317,6 +320,7 @@ async def generate_inspiration_chips(request: InspirationChipsRequest):
         "Meditative ocean waves",
         "Lively city street during rush hour",
     ]
+    print(f"[INSPIRATION_CHIPS] Using fallback chips: {fallback_chips}")
     return {"chips": fallback_chips}
 
 @app.post("/api/tts")
@@ -471,7 +475,6 @@ Narrative script:"""
         print(f"[DEBUG] About to load TTS file: {tts_path}")
         try:
             # 检查 PATH 环境变量
-            import os
             print(f"[DEBUG] Current PATH: {os.environ.get('PATH', 'Not set')}")
             
             # 测试 ffmpeg 是否可以从 Python 访问
@@ -487,7 +490,6 @@ Narrative script:"""
                 print(f"[DEBUG] ffmpeg test exception: {e}")
             
             # 检查文件详细信息
-            import os
             stat_info = os.stat(tts_path)
             print(f"[DEBUG] File size: {stat_info.st_size} bytes")
             print(f"[DEBUG] File permissions: {oct(stat_info.st_mode)}")
@@ -820,6 +822,220 @@ async def get_share(share_id: str):
         
     except Exception as e:
         print(f"[ERROR] /api/share/{share_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 队列API端点 ====================
+
+@app.post("/api/queue/audio-generation")
+async def queue_audio_generation(request: dict):
+    """
+    将音频生成任务加入队列
+    输入: { "description": "...", "duration": 20, "mode": "default", "user_id": "...", "priority": "normal" }
+    输出: { "task_id": "...", "status": "pending", "queue_position": 1, "estimated_wait_time": 2 }
+    """
+    description = request.get("description") or request.get("userInput")
+    duration = float(request.get("duration", 20))
+    mode = request.get("mode", "default")
+    user_id = request.get("user_id", "anonymous")
+    priority = request.get("priority", "normal")
+    
+    if not description:
+        raise HTTPException(status_code=400, detail="Missing 'description' parameter")
+    
+    try:
+        task_data = {
+            "description": description,
+            "duration": duration,
+            "mode": mode
+        }
+        
+        # 转换优先级
+        priority_map = {
+            "low": TaskPriority.LOW,
+            "normal": TaskPriority.NORMAL,
+            "high": TaskPriority.HIGH,
+            "urgent": TaskPriority.URGENT
+        }
+        task_priority = priority_map.get(priority.lower(), TaskPriority.NORMAL)
+        
+        result = async_task_service.create_task(
+            TaskType.AUDIO_GENERATION, 
+            task_data, 
+            user_id=user_id,
+            priority=task_priority
+        )
+        
+        # 检查是否队列已满
+        if "error" in result:
+            raise HTTPException(status_code=503, detail=result["error"])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] /api/queue/audio-generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/queue/music-generation")
+async def queue_music_generation(request: dict):
+    """
+    将音乐生成任务加入队列
+    输入: { "description": "...", "duration": 30 }
+    输出: { "task_id": "...", "status": "pending" }
+    """
+    description = request.get("description") or request.get("userInput")
+    duration = float(request.get("duration", 30))
+    
+    if not description:
+        raise HTTPException(status_code=400, detail="Missing 'description' parameter")
+    
+    try:
+        task_data = {
+            "description": description,
+            "duration": duration
+        }
+        
+        result = async_task_service.create_task(TaskType.MUSIC_GENERATION, task_data)
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] /api/queue/music-generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/queue/story-generation")
+async def queue_story_generation(request: dict):
+    """
+    将故事生成任务加入队列
+    输入: { "prompt": "...", "original_description": "...", "user_id": "...", "priority": "normal" }
+    输出: { "task_id": "...", "status": "pending" }
+    """
+    prompt = request.get("prompt")
+    original_description = request.get("original_description", "")
+    user_id = request.get("user_id", "anonymous")
+    priority = request.get("priority", "normal")
+    
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Missing 'prompt' parameter")
+    
+    try:
+        task_data = {
+            "prompt": prompt,
+            "original_description": original_description
+        }
+        
+        # 转换优先级
+        priority_map = {
+            "low": TaskPriority.LOW,
+            "normal": TaskPriority.NORMAL,
+            "high": TaskPriority.HIGH,
+            "urgent": TaskPriority.URGENT
+        }
+        task_priority = priority_map.get(priority.lower(), TaskPriority.NORMAL)
+        
+        result = async_task_service.create_task(
+            TaskType.STORY_GENERATION, 
+            task_data, 
+            user_id=user_id,
+            priority=task_priority
+        )
+        
+        # 检查是否队列已满
+        if "error" in result:
+            raise HTTPException(status_code=503, detail=result["error"])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] /api/queue/story-generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/queue/image-generation")
+async def queue_image_generation(request: dict):
+    """
+    将图片生成任务加入队列
+    输入: { "description": "..." }
+    输出: { "task_id": "...", "status": "pending" }
+    """
+    description = request.get("description")
+    
+    if not description:
+        raise HTTPException(status_code=400, detail="Missing 'description' parameter")
+    
+    try:
+        task_data = {
+            "description": description
+        }
+        
+        result = async_task_service.create_task(TaskType.IMAGE_GENERATION, task_data)
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] /api/queue/image-generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/queue/status/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    获取任务状态
+    输出: { "task_id": "...", "status": "...", "progress": 0-100, "result": {...}, "error": "..." }
+    """
+    try:
+        result = async_task_service.get_task_status(task_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] /api/queue/status/{task_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/queue/cancel/{task_id}")
+async def cancel_task(task_id: str, user_id: str = None):
+    """
+    取消任务
+    输入: ?user_id=xxx (可选，用于权限验证)
+    输出: { "success": true, "message": "Task cancelled successfully" }
+    """
+    try:
+        result = async_task_service.cancel_task(task_id, user_id)
+        if not result.get("success", False):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to cancel task"))
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] /api/queue/cancel/{task_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/queue/stats")
+async def get_queue_stats():
+    """
+    获取队列统计信息
+    输出: { "total": 0, "pending": 0, "running": 0, "completed": 0, "failed": 0, "queue_size": 0, "estimated_wait_time": 0 }
+    """
+    try:
+        return async_task_service.get_queue_stats()
+        
+    except Exception as e:
+        print(f"[ERROR] /api/queue/stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/queue/user/{user_id}/tasks")
+async def get_user_tasks(user_id: str):
+    """
+    获取用户的所有任务
+    输出: [{ "task_id": "...", "status": "...", "progress": 0-100, ... }]
+    """
+    try:
+        result = async_task_service.get_user_tasks(user_id)
+        return {"tasks": result}
+        
+    except Exception as e:
+        print(f"[ERROR] /api/queue/user/{user_id}/tasks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")

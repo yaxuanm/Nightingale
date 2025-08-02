@@ -12,6 +12,8 @@ import ChatScreen from './components/ChatScreen';
 import AllScreensShowcase from './components/AllScreensShowcase';
 import VideoIntro from './components/VideoIntro';
 import SharePage from './components/SharePage';
+import QueueTest from './components/QueueTest';
+import MultiUserQueueTest from './components/MultiUserQueueTest';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
           <Route path="/share/:shareId" element={<SharePage />} />
           <Route path="/video-intro" element={<VideoIntro />} />
           <Route path="/showcase" element={<AllScreensShowcase />} />
+          <Route path="/queue-test" element={<QueueTest />} />
+          <Route path="/multi-user-test" element={<MultiUserQueueTest />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

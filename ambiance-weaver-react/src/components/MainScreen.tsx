@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 
+
 interface MainScreenProps {
   usePageLayout?: boolean;
 }
@@ -29,6 +30,7 @@ interface MainScreenProps {
 const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [inputValue, setInputValue] = useState('');
+
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = (location.state as { mode: string } | null) || { mode: 'default' };
@@ -65,22 +67,32 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const fetchInspirationChips = async (showLoading = false) => {
     if (showLoading) setIsLoadingChips(true);
     try {
+      console.log('Fetching inspiration chips for mode:', mode);
+      const requestBody = {
+        mode: mode,
+        user_input: inputValue,
+      };
+      console.log('Request body:', requestBody);
+      
       const response = await fetch('http://localhost:8000/api/generate-inspiration-chips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          mode: mode,
-          user_input: inputValue,
-        }),
+        body: JSON.stringify(requestBody),
       });
+      
+      console.log('Response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Response data:', data);
         if (data.chips && Array.isArray(data.chips)) {
           setInspirationChips(data.chips);
+          console.log('Set inspiration chips:', data.chips);
         }
+      } else {
+        console.error('Response not ok:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch inspiration chips:', error);
@@ -116,8 +128,11 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const open = Boolean(anchorEl);
 
   const handleChatWithAI = () => {
+    // 恢复原来的流程：跳转到 ChatScreen
     navigate('/chat', { state: { initialInput: inputValue, mode: mode } });
   };
+
+
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputValue(suggestion);
@@ -183,7 +198,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
         {/* Input Section */}
         <Box sx={{ mb: `calc(${uiSystem.spacing.large} * 1.5)` }}>
           {/* Toolbar */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: `calc(${uiSystem.spacing.small} * 1.5)` }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: `calc(${uiSystem.spacing.small} * 1.5)` }}>
+            {/* Help Button */}
             <IconButton onClick={handleHelpClick} sx={uiSystem.buttons.icon}>
               <HelpIcon />
             </IconButton>
@@ -364,19 +380,19 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             </Typography>
           </Box>
         </Popover>
-        {/* 按钮区 */}
-        <Box sx={{ width: '100%', mt: 4 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
-          disabled={!inputValue}
-          onClick={handleChatWithAI}
-          sx={uiSystem.buttons.primary}
-        >
-          Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
-        </Button>
-        </Box>
+                 {/* 按钮区 */}
+         <Box sx={{ width: '100%', mt: 4 }}>
+           <Button
+             variant="contained"
+             fullWidth
+             size="large"
+             disabled={!inputValue}
+             onClick={handleChatWithAI}
+             sx={uiSystem.buttons.primary}
+           >
+             Start with {mode.charAt(0).toUpperCase() + mode.slice(1)}
+           </Button>
+         </Box>
       </Box>
     </>
   );
