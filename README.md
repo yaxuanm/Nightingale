@@ -163,12 +163,22 @@ For production deployment, see [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instr
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License for the application code.
+
+**AI Model Licenses:**
+- **Stable Audio**: Uses Stability AI Community License Agreement
+  - Free for research, non-commercial, and limited commercial use (organizations with <$1M annual revenue)
+  - Commercial licensing required for organizations with >$1M annual revenue
+  - See [Stability AI License](https://huggingface.co/stabilityai/stable-audio-open-small/blob/main/LICENSE) for full terms
+
+- **Google Gemini**: Subject to Google's API Terms of Service
+  - Requires valid Google API key
+  - Usage subject to Google's rate limits and terms
 
 ## 🙏 Acknowledgments
 
-- Google Gemini AI for text processing
-- Stability AI for audio generation
+- [Google Gemini AI](https://ai.google.dev/) for text processing
+- [Stability AI](https://stability.ai/) for audio generation
 - React and FastAPI communities
 - All contributors and testers
 
