@@ -86,9 +86,7 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
         final_audio = final_audio[:target_duration_ms]
         
         # 使用绝对路径保存
-        current_file_dir = os.path.dirname(os.path.abspath(__file__))
-        audio_output_dir = os.path.join(current_file_dir, "..", "audio_output")
-        audio_output_dir = os.path.abspath(audio_output_dir)  # 解析绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
         os.makedirs(audio_output_dir, exist_ok=True)
         out_path = os.path.join(audio_output_dir, f"stable_long_{uuid.uuid4().hex}.wav")
         final_audio.export(out_path, format="wav")
@@ -326,9 +324,7 @@ async def tts_endpoint(request: dict):
         raise HTTPException(status_code=400, detail="Missing or invalid 'text' parameter")
     filename = f"tts_{uuid.uuid4().hex}.mp3"
     # 使用绝对路径
-    current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    audio_output_dir = os.path.join(current_file_dir, "..", "audio_output")
-    audio_output_dir = os.path.abspath(audio_output_dir)  # 解析绝对路径
+    audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
     os.makedirs(audio_output_dir, exist_ok=True)
     output_path = os.path.join(audio_output_dir, filename)
     # 使用更柔和的 JennyNeural
@@ -381,22 +377,6 @@ async def create_story(request: dict):
     输入: { "prompt": "完整的故事描述+soundscape选择", "original_description": "原始故事描述", "duration": 20 }
     输出: { "narrative_script": ..., "audio_url": ... }
     """
-    # 路径测试
-    current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    audio_output_dir = os.path.join(current_file_dir, "..", "audio_output")
-    audio_output_dir = os.path.abspath(audio_output_dir)
-    print(f"[PATH_TEST] Current file dir: {current_file_dir}")
-    print(f"[PATH_TEST] Audio output dir: {audio_output_dir}")
-    print(f"[PATH_TEST] Audio output exists: {os.path.exists(audio_output_dir)}")
-    
-    # edge_tts 测试
-    try:
-        import edge_tts
-        print(f"[EDGE_TTS_TEST] edge_tts imported successfully")
-    except Exception as e:
-        print(f"[EDGE_TTS_TEST] edge_tts import failed: {e}")
-        raise
-    
     prompt = request.get("prompt")
     original_description = request.get("original_description", "")
     duration = float(request.get("duration", 20))
@@ -426,108 +406,18 @@ Narrative script:"""
         # 2. TTS 生成旁白音频
         print(f"[STORY] Starting TTS generation...")
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
-        # 使用更可靠的绝对路径
-        current_file_dir = os.path.dirname(os.path.abspath(__file__))
-        audio_output_dir = os.path.join(current_file_dir, "..", "audio_output")
-        audio_output_dir = os.path.abspath(audio_output_dir)  # 解析绝对路径
+        # 使用绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
         print(f"[STORY] audio_output_dir: {audio_output_dir}")
-        print(f"[STORY] audio_output_dir exists: {os.path.exists(audio_output_dir)}")
         os.makedirs(audio_output_dir, exist_ok=True)
         tts_path = os.path.join(audio_output_dir, tts_filename)
         print(f"[STORY] tts_path: {tts_path}")
-        print(f"[STORY] tts_path absolute: {os.path.abspath(tts_path)}")
-        print(f"[STORY] About to call tts_to_audio with path: {tts_path}")
-        try:
-            await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
-            print(f"[STORY] TTS generation completed")
-        except Exception as e:
-            print(f"[ERROR] TTS generation failed: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
-        
-        # 检查文件是否存在
-        print(f"[DEBUG] Checking if TTS file exists: {os.path.exists(tts_path)}")
-        if os.path.exists(tts_path):
-            print(f"[DEBUG] TTS file size: {os.path.getsize(tts_path)} bytes")
-            print(f"[DEBUG] TTS file absolute path: {os.path.abspath(tts_path)}")
-        else:
-            print(f"[ERROR] TTS file does not exist!")
-            print(f"[DEBUG] Directory contents: {os.listdir(audio_output_dir)}")
+        await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
+        print(f"[STORY] TTS generation completed")
         
         # 3. 获取 TTS 音频长度
-        print(f"[DEBUG] About to import AudioSegment...")
         from pydub import AudioSegment
-        print(f"[DEBUG] AudioSegment imported successfully")
-        
-        # 检查 pydub 版本
-        try:
-            import pydub
-            print(f"[DEBUG] pydub version: {pydub.__version__}")
-        except:
-            print(f"[DEBUG] pydub version: unknown")
-        
-        # 尝试不同的音频加载方法
-        print(f"[DEBUG] About to load TTS file: {tts_path}")
-        try:
-            # 检查 PATH 环境变量
-            import os
-            print(f"[DEBUG] Current PATH: {os.environ.get('PATH', 'Not set')}")
-            
-            # 测试 ffmpeg 是否可以从 Python 访问
-            import subprocess
-            try:
-                result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
-                print(f"[DEBUG] ffmpeg test result: {result.returncode}")
-                if result.returncode == 0:
-                    print(f"[DEBUG] ffmpeg is accessible from Python")
-                else:
-                    print(f"[DEBUG] ffmpeg test failed: {result.stderr}")
-            except Exception as e:
-                print(f"[DEBUG] ffmpeg test exception: {e}")
-            
-            # 检查文件详细信息
-            import os
-            stat_info = os.stat(tts_path)
-            print(f"[DEBUG] File size: {stat_info.st_size} bytes")
-            print(f"[DEBUG] File permissions: {oct(stat_info.st_mode)}")
-            print(f"[DEBUG] File exists: {os.path.exists(tts_path)}")
-            print(f"[DEBUG] File is readable: {os.access(tts_path, os.R_OK)}")
-            
-            # 尝试使用 ffmpeg 直接检查文件
-            try:
-                result = subprocess.run(['ffmpeg', '-i', tts_path, '-f', 'null', '-'], capture_output=True, text=True, timeout=10)
-                print(f"[DEBUG] ffmpeg file check result: {result.returncode}")
-                if result.returncode == 0:
-                    print(f"[DEBUG] ffmpeg can read the file")
-                else:
-                    print(f"[DEBUG] ffmpeg file check failed: {result.stderr}")
-            except Exception as e:
-                print(f"[DEBUG] ffmpeg file check exception: {e}")
-            
-            tts_audio = AudioSegment.from_file(tts_path)
-            print(f"[DEBUG] TTS file loaded successfully")
-        except Exception as e:
-            print(f"[ERROR] Failed to load TTS file: {e}")
-            print(f"[DEBUG] Trying alternative method...")
-            
-            # 尝试使用 wave 模块直接读取（仅适用于 WAV 文件）
-            try:
-                import wave
-                with wave.open(tts_path, 'rb') as wav_file:
-                    frames = wav_file.getnframes()
-                    rate = wav_file.getframerate()
-                    duration_ms = (frames / rate) * 1000
-                    print(f"[DEBUG] WAV file loaded: {duration_ms}ms")
-                    # 创建一个简单的 AudioSegment 对象
-                    from pydub import AudioSegment
-                    tts_audio = AudioSegment.silent(duration=duration_ms)
-            except Exception as e2:
-                print(f"[ERROR] Alternative method also failed: {e2}")
-                import traceback
-                traceback.print_exc()
-                raise e  # 抛出原始错误
-
+        tts_audio = AudioSegment.from_file(tts_path)
         tts_duration_ms = len(tts_audio)
         tts_duration_seconds = tts_duration_ms / 1000
         print(f"[STORY] TTS duration: {tts_duration_seconds:.2f} seconds (target: {duration}s)")
@@ -581,9 +471,7 @@ async def create_story_music(request: dict):
         # 1. 生成旁白音频
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
         # 使用绝对路径
-        current_file_dir = os.path.dirname(os.path.abspath(__file__))
-        audio_output_dir = os.path.join(current_file_dir, "..", "audio_output")
-        audio_output_dir = os.path.abspath(audio_output_dir)  # 解析绝对路径
+        audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
         os.makedirs(audio_output_dir, exist_ok=True)
         tts_path = os.path.join(audio_output_dir, tts_filename)
         await tts_to_audio(narrative, tts_path, voice="en-US-JennyNeural")

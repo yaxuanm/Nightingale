@@ -29,20 +29,6 @@ Nightingale/
 │   ├── public/                   # 静态资源
 │   └── package.json
 │
-├── ambiance-weaver-native/       # React Native 应用 (移动端)
-│   ├── app/                      # 应用入口和导航
-│   │   ├── (tabs)/               # 标签页 (explore, main, 等)
-│   │   └── _layout.tsx, +not-found.tsx
-│   ├── components/               # 共享和 UI 组件
-│   │   └── ui/                   # Icon, TabBar, 等
-│   ├── assets/                   # 图片、字体
-│   ├── hooks/                    # 自定义 hooks
-│   ├── constants/                # 颜色和配置
-│   ├── src/
-│   │   ├── screens/              # MainScreen, PlayerScreen, 等
-│   │   └── services/             # AudioService, NotificationService
-│   ├── ambiance-weaver-native-new/ # (实验性新结构)
-│   └── package.json
 │
 ├── backend/                      # 后端 API (Python FastAPI)
 │   ├── app/
@@ -113,13 +99,33 @@ python set_hf_token.py
 python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('HF_TOKEN:', '已设置' if os.getenv('HF_TOKEN') else '未设置')"
 ```
 
-### 4. Stable Audio int32 溢出修复
+### 4. Stable Audio 虚拟环境配置
 
-**重要**：Stable Audio 包在 Windows 下可能因 int32 溢出报错。**必须在 stable_audio 虚拟环境激活后运行一次修复脚本**：
+**重要**：每次重新配置环境时，都需要在 stable_audio 虚拟环境中运行修复脚本。
 
+#### 步骤1：激活 Stable Audio 虚拟环境
 ```powershell
 cd backend
 .\venv_stableaudio\Scripts\activate
+```
+
+#### 步骤2：运行 Stable Audio 修复脚本
+```powershell
+# 修复 int32 溢出问题（每次重新配置环境都需要运行）
+python scripts/stable_audio_fix.py
+```
+
+#### 步骤3：验证 Stable Audio 环境
+```powershell
+# 检查 Stable Audio 包是否正确安装
+python -c "import stable_audio_tools; print('Stable Audio 环境配置成功')"
+```
+
+**注意**：如果遇到 `stable_audio_fix.py` 脚本不存在，请确保在正确的虚拟环境中运行：
+```powershell
+# 确保在 stable_audio 虚拟环境中
+.\venv_stableaudio\Scripts\activate
+# 然后运行修复脚本
 python scripts/stable_audio_fix.py
 ```
 
@@ -256,13 +262,20 @@ python set_hf_token.py
 python -c "from huggingface_hub import HfApi; import os; from dotenv import load_dotenv; load_dotenv(); api = HfApi(token=os.getenv('HF_TOKEN')); print('Token 有效' if api.whoami() else 'Token 无效')"
 ```
 
-### 3. Stable Audio int32 溢出问题
+### 3. Stable Audio 环境配置问题
 ```powershell
-# 重新运行修复脚本
+# 重新配置 Stable Audio 环境
 cd backend
 .\venv_stableaudio\Scripts\activate
 python scripts/stable_audio_fix.py
+
+# 验证环境配置
+python -c "import stable_audio_tools; print('Stable Audio 环境配置成功')"
 ```
+
+**常见问题**：
+- 如果 `stable_audio_fix.py` 脚本不存在，请确保在正确的虚拟环境中
+- 如果导入 `stable_audio_tools` 失败，请重新安装依赖：`pip install -r requirements-stable-audio.txt`
 
 ### 4. 环境问题
 - 重新运行 `./start_clean_new.bat` 选择 5 设置环境
