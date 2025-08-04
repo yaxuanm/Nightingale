@@ -41,17 +41,20 @@ Nightingale采用微服务架构，分为以下几个核心组件：
 - **部署**: 静态文件服务，可部署到CDN
 - **端口**: 3000 (开发环境)
 
-#### 2. **API网关层 (API Gateway Layer)**
-- **技术栈**: FastAPI (Gemini API)
+#### 2. **主API服务层 (Main API Service Layer)**
+- **技术栈**: FastAPI + Gemini AI
 - **功能**: 
-  - 用户输入处理
+  - 用户输入处理和场景生成
   - 提示词生成和优化
-  - 图片生成
-  - 任务协调
+  - 图片生成 (Gemini Image Generation)
+  - 文本转语音 (TTS)
+  - 音乐生成
+  - 故事创建
+  - 分享功能
 - **部署**: 独立服务，负载均衡
 - **端口**: 8000
 
-#### 3. **AI音频服务层 (AI Audio Service Layer)**
+#### 3. **Stable Audio服务层 (Stable Audio Service Layer)**
 - **技术栈**: FastAPI + Stable Audio
 - **功能**: 
   - 高质量音频生成
@@ -72,34 +75,37 @@ Nightingale采用微服务架构，分为以下几个核心组件：
 
 ```mermaid
 graph TD
-    A[用户] --> B[前端 React]
-    B --> C[API网关 FastAPI:8000]
-    C --> D[Gemini AI]
-    C --> E[图片生成]
-    C --> F[AI音频服务:8001]
-    F --> G[Stable Audio]
-    E --> H[Supabase存储]
-    F --> H
-    H --> I[CDN分发]
-    I --> B
+    A[用户] --> B[前端 React:3000]
+    B --> C[主API服务 FastAPI:8000]
+    B --> D[Stable Audio服务:8001]
+    C --> E[Gemini AI]
+    C --> F[图片生成]
+    C --> G[TTS服务]
+    C --> H[音乐生成]
+    D --> I[Stable Audio模型]
+    F --> J[Supabase存储]
+    D --> J
+    J --> K[CDN分发]
+    K --> B
 ```
 
 #### 交互流程：
 
 1. **用户输入处理**
    ```
-   用户 → 前端 → API网关 → Gemini AI → 优化提示词
+   用户 → 前端 → 主API服务 → Gemini AI → 优化提示词
    ```
 
 2. **并行生成**
    ```
-   API网关 → 图片生成 (并行)
-   API网关 → 音频服务 → Stable Audio (并行)
+   主API服务 → 图片生成 (并行)
+   主API服务 → TTS/音乐生成 (并行)
+   前端 → Stable Audio服务 → 音频生成 (并行)
    ```
 
 3. **结果整合**
    ```
-   图片/音频 → Supabase存储 → CDN → 前端播放器
+   图片/音频/音乐 → Supabase存储 → CDN → 前端播放器
    ```
 
 ### Deployment Architecture
@@ -107,9 +113,12 @@ graph TD
 #### 开发环境 (Development)
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Gemini API    │    │  Stable Audio   │
+│   Frontend      │    │   主API服务      │    │  Stable Audio   │
 │   (Port 3000)   │◄──►│   (Port 8000)   │◄──►│   (Port 8001)   │
 │   React Dev     │    │   FastAPI       │    │   FastAPI       │
+│                 │    │   + Gemini      │    │   + Stable      │
+│                 │    │   + Image Gen   │    │   + TTS         │
+│                 │    │   + Music         │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -117,7 +126,7 @@ graph TD
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   CDN/Static    │    │   Load Balancer │    │   GPU Cluster   │
-│   Frontend      │◄──►│   API Gateway   │◄──►│   Audio Service │
+│   Frontend      │◄──►│   主API服务      │◄──►│   Stable Audio  │
 │   (Nginx)       │    │   (Nginx)       │    │   (Docker)      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
@@ -129,12 +138,28 @@ graph TD
                        └─────────────────┘
 ```
 
+### API Endpoints
+
+#### 主API服务 (Port 8000)
+- `POST /api/generate-scene` - 场景生成
+- `POST /api/generate-background` - 图片生成
+- `POST /api/generate-options` - 选项生成
+- `POST /api/create-story` - 故事创建
+- `POST /api/generate-music` - 音乐生成
+- `POST /api/create-share` - 分享创建
+- `POST /api/edit-prompt` - 提示词编辑
+- `GET /api/share/{share_id}` - 获取分享
+
+#### Stable Audio服务 (Port 8001)
+- `POST /api/generate-audio` - 音频生成
+- `GET /health` - 健康检查
+
 ### Scalability Considerations
 
 #### 1. **水平扩展**
 - **前端**: 静态文件，CDN分发
-- **API网关**: 多实例，负载均衡
-- **音频服务**: GPU集群，任务队列
+- **主API服务**: 多实例，负载均衡
+- **Stable Audio服务**: GPU集群，任务队列
 
 #### 2. **性能优化**
 - **缓存策略**: Redis缓存热点数据
