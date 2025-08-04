@@ -25,8 +25,7 @@ Nightingale/
 │   ├── app/                  # Main application code
 │   ├── scripts/              # Utility scripts
 │   ├── venv_gemini/         # Gemini AI virtual environment
-│   ├── venv_stableaudio/    # Stable Audio virtual environment
-│   └── venv_audio/          # Audio processing virtual environment
+│   └── venv_stableaudio/    # Stable Audio virtual environment
 ├── docs/                     # Documentation
 ├── scripts/                  # Project scripts
 └── venv_stableaudio/        # Root level Stable Audio environment
