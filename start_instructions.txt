@@ -2,19 +2,19 @@
 
 ## 🎵 项目总览
 
-Nightingale 是一个现代化的跨平台音频生成和混音工具包，包含 Web 前端、React Native 移动应用和 Python FastAPI 后端。支持实时音频播放、AI 驱动的音频生成（使用 Stability AI Stable Audio）和分享功能。
+Nightingale 是一个现代化的音频生成和混音工具包，包含 Web 前端和 Python FastAPI 后端。支持实时音频播放、AI 驱动的音频生成（使用 Stability AI Stable Audio）、批量测试和分享功能。
 
 ### 主要功能
 - 实时音频播放和混音
 - **AI 驱动的音频生成（通过 Stability AI Stable Audio 实现文本转音频）**
 - 音频效果和可视化
-- 多平台支持：Web、Native（React Native）、后端 API
+- 多平台支持：Web、后端 API
 - 音频和图像分享导出
 - 现代化响应式 UI
+- 批量音频测试和评测
 
 ### 技术栈
 - **Web**: React 18, TypeScript, Material-UI, Framer Motion
-- **Native**: React Native, Expo, TypeScript
 - **后端**: Python 3, FastAPI, Uvicorn, HuggingFace, Google Generative AI, **Stability AI Stable Audio**
 
 ### 项目结构
@@ -29,7 +29,6 @@ Nightingale/
 │   ├── public/                   # 静态资源
 │   └── package.json
 │
-│
 ├── backend/                      # 后端 API (Python FastAPI)
 │   ├── app/
 │   │   ├── main.py               # 主 FastAPI 应用
@@ -39,8 +38,10 @@ Nightingale/
 │   ├── scripts/                  # 批处理/测试/工具脚本
 │   └── .env.example              # 环境变量模板
 │
-├── docs/                         # 文档
+├── docs/                         # 文档和测试页面
 ├── scripts/                      # 项目级脚本
+├── DEPLOYMENT.md                 # 部署说明文档
+├── start_clean_new.bat           # 一键启动脚本
 └── start_instructions.txt        # 完整环境和启动指南
 ```
 
