@@ -160,9 +160,10 @@ graph TD
 #### Production Environment
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   CDN/Static    │    │   Load Balancer │    │   Stable Audio  │
+│   Static Files  │    │   Load Balancer │    │   Stable Audio  │
 │   Frontend      │◄──►│   Main API      │◄──►│   Service       │
-│   (Nginx)       │    │   (Nginx)       │    │   (GPU)         │
+│   (Web Server)  │    │   (Reverse      │    │   (CPU)         │
+│                 │    │   Proxy)        │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
                                 ▼
