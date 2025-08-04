@@ -1,15 +1,15 @@
 # Nightingale - Let Sound Touch the Soul
 
-> AI-powered ambient sound generation platform that creates immersive audio experiences
+> AI-powered personalized soundscape platform that transforms emotions and inspirations into immersive audio experiences
 
 ## 🌟 Overview
 
-Nightingale is an innovative AI-powered platform that generates ambient soundscapes based on user descriptions. Using advanced AI models including Gemini and Stable Audio, it creates immersive audio experiences that can help with relaxation, focus, and meditation.
+Nightingale is an innovative AI-powered platform that generates highly personalized, real-time soundscapes based on user descriptions. Using advanced AI models including Gemini and Stable Audio, it creates immersive audio experiences for focus, creativity, meditation, and relaxation.
 
 ## ✨ Features
 
-- **AI-Powered Generation**: Uses Gemini AI for prompt understanding and Stable Audio for high-quality sound generation
-- **Multiple Modes**: Support for different generation modes including story, focus, and ambient
+- **AI-Powered Generation**: Uses Gemini AI for text processing and Stable Audio for high-quality sound generation
+- **Multiple Modes**: Support for Focus, Creative Flow, Mindful Escape, Sleep, Story, and ASMR modes
 - **Real-time Processing**: Fast audio generation with progress tracking
 - **Interactive UI**: Modern React-based interface with intuitive controls
 - **Audio Player**: Built-in player with background image support
@@ -33,101 +33,134 @@ Nightingale/
 
 ### System Components
 
-Nightingale采用微服务架构，分为以下几个核心组件：
+Nightingale uses a microservices architecture with the following core components:
 
-#### 1. **前端层 (Frontend Layer)**
-- **技术栈**: React + TypeScript + Material-UI
-- **功能**: 用户界面、交互逻辑、状态管理
-- **部署**: 静态文件服务，可部署到CDN
-- **端口**: 3000 (开发环境)
+#### 1. **Frontend Layer**
+- **Tech Stack**: React 18 + TypeScript + Material-UI v5.15.11
+- **Function**: User interface, interaction logic, state management
+- **Deployment**: Static file service, deployable to CDN
+- **Port**: 3000 (development)
 
-#### 2. **主API服务层 (Main API Service Layer)**
-- **技术栈**: FastAPI + Gemini AI
-- **功能**: 
-  - 用户输入处理和场景生成
-  - 提示词生成和优化
-  - 图片生成 (Gemini Image Generation)
-  - 文本转语音 (TTS)
-  - 音乐生成
-  - 故事创建
-  - 分享功能
-- **部署**: 独立服务，负载均衡
-- **端口**: 8000
+#### 2. **Main API Service Layer**
+- **Tech Stack**: FastAPI v0.116.0 + Gemini AI
+- **Function**: 
+  - User input processing and scene generation
+  - Prompt generation and optimization
+  - Image generation (Stability AI)
+  - Text-to-Speech (Edge TTS)
+  - Music generation
+  - Story creation
+  - Sharing functionality
+- **Deployment**: Independent service, load balanced
+- **Port**: 8000
 
-#### 3. **Stable Audio服务层 (Stable Audio Service Layer)**
-- **技术栈**: FastAPI + Stable Audio
-- **功能**: 
-  - 高质量音频生成
-  - 音频处理和优化
-  - 音频格式转换
-- **部署**: 独立服务，GPU加速
-- **端口**: 8001
+#### 3. **Stable Audio Service Layer**
+- **Tech Stack**: FastAPI + Stable Audio Tools v0.0.19
+- **Function**: 
+  - High-quality audio generation
+  - Audio processing and optimization
+  - Audio format conversion
+- **Deployment**: Independent service, GPU accelerated
+- **Port**: 8001
 
-#### 4. **存储层 (Storage Layer)**
-- **技术栈**: Supabase
-- **功能**: 
-  - 音频文件存储
-  - 图片文件存储
-  - 用户数据管理
-- **部署**: 云服务，自动扩展
+#### 4. **Storage Layer**
+- **Tech Stack**: Supabase v2.16.0
+- **Function**: 
+  - Audio file storage
+  - Image file storage
+  - User data management
+- **Deployment**: Cloud service, auto-scaling
 
-### Component Interactions
+### Data Flow
 
 ```mermaid
 graph TD
-    A[用户] --> B[前端 React:3000]
-    B --> C[主API服务 FastAPI:8000]
-    B --> D[Stable Audio服务:8001]
-    C --> E[Gemini AI]
-    C --> F[图片生成]
-    C --> G[TTS服务]
-    C --> H[音乐生成]
-    D --> I[Stable Audio模型]
-    F --> J[Supabase存储]
+    A[User Input] --> B[Frontend React:3000]
+    B --> C[Main API Service FastAPI:8000]
+    B --> D[Stable Audio Service:8001]
+    C --> E[Gemini AI Text Processing]
+    C --> F[Image Generation]
+    C --> G[TTS Service]
+    C --> H[Music Generation]
+    D --> I[Stable Audio Model]
+    F --> J[Supabase Storage]
     D --> J
-    J --> K[CDN分发]
+    J --> K[CDN Distribution]
     K --> B
 ```
 
-#### 交互流程：
+#### Data Flow Process:
 
-1. **用户输入处理**
+1. **User Input Processing**
    ```
-   用户 → 前端 → 主API服务 → Gemini AI → 优化提示词
-   ```
-
-2. **并行生成**
-   ```
-   主API服务 → 图片生成 (并行)
-   主API服务 → TTS/音乐生成 (并行)
-   前端 → Stable Audio服务 → 音频生成 (并行)
+   User → Frontend → Main API Service → Gemini AI → Optimized Prompts
    ```
 
-3. **结果整合**
+2. **Parallel Generation**
    ```
-   图片/音频/音乐 → Supabase存储 → CDN → 前端播放器
+   Main API Service → Image Generation (parallel)
+   Main API Service → TTS/Music Generation (parallel)
+   Frontend → Stable Audio Service → Audio Generation (parallel)
    ```
+
+3. **Result Integration**
+   ```
+   Images/Audio/Music → Supabase Storage → CDN → Frontend Player
+   ```
+
+### API Endpoints
+
+#### Main API Service (Port 8000)
+- `POST /api/generate-scene` - Scene generation
+- `POST /api/generate-background` - Image generation
+- `POST /api/generate-options` - Option generation
+- `POST /api/create-story` - Story creation with TTS
+- `POST /api/generate-music` - Music generation
+- `POST /api/create-share` - Share creation
+- `POST /api/edit-prompt` - Prompt editing
+- `GET /api/share/{share_id}` - Get shared content
+
+#### Stable Audio Service (Port 8001)
+- `POST /api/generate-audio` - Audio generation
+- `GET /health` - Health check
+
+### Technical Stack
+
+#### Frontend
+- React 18, TypeScript, Material-UI v5.15.11
+- Framer Motion v11.18.2, React Router DOM v6.22.1
+
+#### Backend
+- Python 3.11, FastAPI v0.116.0, Uvicorn v0.35.0
+- Pydub v0.25.1, Supabase v2.16.0
+
+#### AI Models & Services
+- **Text Processing**: Google Gemini (gemini-2.5-flash, gemini-1.5-flash)
+- **Audio Generation**: Stable Audio Tools v0.0.19, stable-audio-open-small
+- **Text-to-Speech**: Edge TTS
+- **Image Generation**: Stability AI
+- **Deep Learning**: PyTorch v2.7.1, TorchAudio v2.7.1, Transformers v4.53.1
 
 ### Deployment Architecture
 
-#### 开发环境 (Development)
+#### Development Environment
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   主API服务      │    │  Stable Audio   │
+│   Frontend      │    │   Main API      │    │  Stable Audio   │
 │   (Port 3000)   │◄──►│   (Port 8000)   │◄──►│   (Port 8001)   │
 │   React Dev     │    │   FastAPI       │    │   FastAPI       │
 │                 │    │   + Gemini      │    │   + Stable      │
-│                 │    │   + Image Gen   │    │   + TTS         │
-│                 │    │   + Music         │    │                 │
+│                 │    │   + Image Gen   │    │   Audio         │
+│                 │    │   + TTS         │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-#### 生产环境 (Production)
+#### Production Environment
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   CDN/Static    │    │   Load Balancer │    │   GPU Cluster   │
-│   Frontend      │◄──►│   主API服务      │◄──►│   Stable Audio  │
-│   (Nginx)       │    │   (Nginx)       │    │   (Docker)      │
+│   CDN/Static    │    │   Load Balancer │    │   Stable Audio  │
+│   Frontend      │◄──►│   Main API      │◄──►│   Service       │
+│   (Nginx)       │    │   (Nginx)       │    │   (GPU)         │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
                                 ▼
@@ -138,55 +171,17 @@ graph TD
                        └─────────────────┘
 ```
 
-### API Endpoints
+### Technical Limitations
 
-#### 主API服务 (Port 8000)
-- `POST /api/generate-scene` - 场景生成
-- `POST /api/generate-background` - 图片生成
-- `POST /api/generate-options` - 选项生成
-- `POST /api/create-story` - 故事创建
-- `POST /api/generate-music` - 音乐生成
-- `POST /api/create-share` - 分享创建
-- `POST /api/edit-prompt` - 提示词编辑
-- `GET /api/share/{share_id}` - 获取分享
+#### Audio Generation Constraints
+- **Stable Audio Model**: Maximum 11-second audio clips
+- **Solution**: Looping with crossfade for longer durations
+- **Generation Time**: 10-20 seconds per audio generation
 
-#### Stable Audio服务 (Port 8001)
-- `POST /api/generate-audio` - 音频生成
-- `GET /health` - 健康检查
-
-### Scalability Considerations
-
-#### 1. **水平扩展**
-- **前端**: 静态文件，CDN分发
-- **主API服务**: 多实例，负载均衡
-- **Stable Audio服务**: GPU集群，任务队列
-
-#### 2. **性能优化**
-- **缓存策略**: Redis缓存热点数据
-- **异步处理**: 长时间任务异步执行
-- **资源池化**: 数据库连接池，GPU资源池
-
-#### 3. **监控和日志**
-- **应用监控**: Prometheus + Grafana
-- **日志聚合**: ELK Stack
-- **错误追踪**: Sentry
-
-### Security Architecture
-
-#### 1. **API安全**
-- **认证**: JWT Token
-- **授权**: Role-based Access Control
-- **限流**: Rate Limiting
-
-#### 2. **数据安全**
-- **传输加密**: HTTPS/TLS
-- **存储加密**: 数据库加密
-- **密钥管理**: 环境变量 + 密钥管理服务
-
-#### 3. **网络安全**
-- **防火墙**: 端口限制
-- **WAF**: Web应用防火墙
-- **DDoS防护**: 流量清洗
+#### Model Capabilities
+- **Complex Compositions**: Difficulty with multiple sound elements
+- **Semantic Understanding**: Limited nuanced modifier processing
+- **Quiet Sounds**: Challenges with low-amplitude generation
 
 ## 🚀 Quick Start
 
@@ -237,7 +232,7 @@ graph TD
 
 1. **Start backend services**
    ```bash
-   # Terminal 1: Gemini API (port 8000)
+   # Terminal 1: Main API (port 8000)
    cd backend
    .\venv_gemini\Scripts\activate
    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -256,7 +251,7 @@ graph TD
 
 3. **Access the application**
    - Frontend: http://localhost:3000
-   - Gemini API: http://localhost:8000
+   - Main API: http://localhost:8000
    - Stable Audio: http://localhost:8001
 
 ## 🔧 Configuration
@@ -343,4 +338,4 @@ This project is licensed under the MIT License for the application code.
 
 ---
 
-**Nightingale** - Let sound touch the soul 🎵 
+**Nightingale** - Let sound touch the soul 🎵
