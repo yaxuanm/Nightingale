@@ -24,9 +24,12 @@ Nightingale/
 ├── backend/                   # Python FastAPI backend
 │   ├── app/                  # Main application code
 │   ├── scripts/              # Utility scripts
-│   └── venv_gemini/         # Python virtual environment
+│   ├── venv_gemini/         # Gemini AI virtual environment
+│   ├── venv_stableaudio/    # Stable Audio virtual environment
+│   └── venv_audio/          # Audio processing virtual environment
 ├── docs/                     # Documentation
-└── scripts/                  # Project scripts
+├── scripts/                  # Project scripts
+└── venv_stableaudio/        # Root level Stable Audio environment
 ```
 
 ## 🏛️ Architecture Solution
@@ -85,7 +88,7 @@ graph TD
     D --> I[Stable Audio Model]
     F --> J[Supabase Storage]
     D --> J
-    J --> K[CDN Distribution]
+    J --> K[File Distribution]
     K --> B
 ```
 
@@ -105,7 +108,7 @@ graph TD
 
 3. **Result Integration**
    ```
-   Images/Audio/Music → Supabase Storage → CDN → Frontend Player
+   Images/Audio/Music → Supabase Storage → File Distribution → Frontend Player
    ```
 
 ### API Endpoints
