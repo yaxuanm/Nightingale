@@ -116,50 +116,6 @@ python scripts/stable_audio_fix.py
 # 选择 4 (Start All Services)
 ```
 
-### 方案2：离线部署（无网络环境）
-
-**适用场景**: 目标机器无法访问互联网或网络受限
-
-#### 步骤1：准备离线包
-在源机器上创建包含模型的完整包：
-
-```bash
-# 方式1：从 GitHub 克隆后准备
-git clone https://github.com/your-username/Nightingale.git
-cd Nightingale
-
-# 方式2：如果已有项目，直接使用
-# cd Nightingale
-
-# 创建部署目录
-mkdir Nightingale_Offline_Deploy
-xcopy . Nightingale_Offline_Deploy\Nightingale /E /I /H
-
-# 复制模型文件
-mkdir Nightingale_Offline_Deploy\model_cache
-xcopy "%USERPROFILE%\.cache\huggingface\hub\models--stabilityai--stable-audio-open-small" Nightingale_Offline_Deploy\model_cache\models--stabilityai--stable-audio-open-small /E /I /H
-
-# 创建安装脚本
-echo @echo off > Nightingale_Offline_Deploy\install.bat
-echo echo 正在安装 Nightingale... >> Nightingale_Offline_Deploy\install.bat
-echo mkdir "%USERPROFILE%\.cache\huggingface\hub" 2^>nul >> Nightingale_Offline_Deploy\install.bat
-echo xcopy model_cache\* "%USERPROFILE%\.cache\huggingface\hub\" /E /I /H >> Nightingale_Offline_Deploy\install.bat
-echo cd Nightingale >> Nightingale_Offline_Deploy\install.bat
-echo start_clean_new.bat >> Nightingale_Offline_Deploy\install.bat
-echo pause >> Nightingale_Offline_Deploy\install.bat
-
-# 压缩部署包
-powershell Compress-Archive -Path Nightingale_Offline_Deploy -DestinationPath Nightingale_Offline_Deploy.zip
-```
-
-#### 步骤2：在目标机器上安装
-```bash
-# 解压部署包（如果是 ZIP 文件）
-# 或直接复制文件夹到目标机器
-# 运行安装脚本
-install.bat
-```
-
 ### 方案3：分步部署（适合调试）
 
 #### 步骤1：获取项目并检查系统要求
@@ -241,18 +197,17 @@ deactivate
 ```env
 # 必需的 API 密钥
 GOOGLE_API_KEY=your-google-api-key-here
-
-# 可选的 API 密钥
 STABILITY_API_KEY=your-stability-api-key-here
 SUPABASE_URL=your-supabase-url-here
 SUPABASE_ANON_KEY=your-supabase-anon-key-here
+HF_TOKEN=your-hugging-face-token
 ```
 
 ## 📊 部署检查清单
 
 ### 环境检查
 - [ ] Git 2.0+ 已安装
-- [ ] Python 3.11 已安装（必需）
+- [ ] Python 3.11 已安装
 - [ ] Node.js 18.0+ 已安装
 - [ ] npm 8.0+ 已安装
 - [ ] 项目克隆成功
@@ -372,31 +327,7 @@ python -m pip install --upgrade setuptools wheel
 pip install -r requirements-gemini-utf8.txt
 ```
 
-#### 9. Python 3.12 兼容性错误
-```bash
-# 如果出现 "AttributeError: module 'pkgutil' has no attribute 'ImpImporter'" 错误
-# 运行修复脚本
-./backend/scripts/fix_python312_compatibility.bat
-
-# 或者手动修复
-cd backend
-# 修复 venv_stableaudio
-call venv_stableaudio\Scripts\activate.bat
-python -m pip install --upgrade pip setuptools wheel pkg_resources
-pip install -r requirements-stable-audio.txt --no-cache-dir
-
-# 修复 venv_gemini
-call venv_gemini\Scripts\activate.bat
-python -m pip install --upgrade pip setuptools wheel pkg_resources
-pip install -r requirements-gemini-utf8.txt --no-cache-dir
-
-# 修复 venv_audio
-call venv_audio\Scripts\activate.bat
-python -m pip install --upgrade pip setuptools wheel pkg_resources
-pip install -r requirements-audio.txt --no-cache-dir
-```
-
-#### 10. Stable Audio Int32 溢出错误
+#### 9. Stable Audio Int32 溢出错误
 ```bash
 # 如果出现 "OverflowError: Python int too large to convert to C long" 错误
 # 运行修复脚本
@@ -409,14 +340,14 @@ python scripts/stable_audio_fix.py
 # 选择 2 (Start Stable Audio Service)
 ```
 
-#### 11. 模型下载失败
+#### 10. 模型下载失败
 ```bash
 # 清理缓存重新下载
 rmdir /s /q "%USERPROFILE%\.cache\huggingface\hub\models--stabilityai--stable-audio-open-small"
 # 重新启动 Stable Audio 服务
 ```
 
-#### 12. 端口被占用
+#### 11. 端口被占用
 ```bash
 # 检查端口占用
 netstat -ano | findstr :8000
@@ -427,10 +358,36 @@ netstat -ano | findstr :3000
 taskkill /PID {进程ID} /F
 ```
 
-#### 13. 内存不足
+#### 12. 内存不足
 ```bash
 # 关闭其他程序释放内存
 # 或使用 CPU 模式（较慢但内存占用少）
+```
+
+#### 13. 500 Internal Server Error - FFmpeg 路径问题
+```bash
+# 如果出现 500 Internal Server Error，可能是 FFmpeg 路径问题
+# 在虚拟环境中设置 FFmpeg 路径
+
+# 对于 Stable Audio 环境
+cd backend
+.\venv_stableaudio\Scripts\activate
+set PATH=%PATH%;C:\ffmpeg\bin
+# 或者将 FFmpeg 添加到系统 PATH
+
+# 对于 Gemini 环境
+cd backend
+.\venv_gemini\Scripts\activate
+set PATH=%PATH%;C:\ffmpeg\bin
+
+# 验证 FFmpeg 是否可用
+ffmpeg -version
+
+# 如果 FFmpeg 未安装，下载并安装：
+# 1. 访问 https://ffmpeg.org/download.html
+# 2. 下载 Windows 版本
+# 3. 解压到 C:\ffmpeg
+# 4. 将 C:\ffmpeg\bin 添加到系统 PATH
 ```
 
 ### 调试模式

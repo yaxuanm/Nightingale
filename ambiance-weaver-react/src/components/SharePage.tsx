@@ -19,6 +19,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
+import { API_CONFIG } from '../config/api';
 
 const PlayPauseButton = styled(IconButton)(({ theme }) => ({
   width: 80,
@@ -76,7 +77,7 @@ const SharePage: React.FC = () => {
       if (!shareId) return;
       
       try {
-        const response = await fetch(`http://localhost:8000/api/share/${shareId}`);
+        const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/share/${shareId}`);
         if (!response.ok) {
           throw new Error('Share not found');
         }
