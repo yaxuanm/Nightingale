@@ -194,6 +194,8 @@ graph TD
 - Node.js 16+
 - FFmpeg installed and in PATH
 
+> **⚠️ Cross-Platform Compatibility**: This project has been updated for cross-platform deployment. For detailed instructions on Windows, Linux, and macOS deployment, see [Cross-Platform Deployment Guide](DEPLOYMENT_CROSS_PLATFORM.md).
+
 ### Installation
 
 1. **Clone the repository**
@@ -206,14 +208,20 @@ graph TD
    ```bash
    cd backend
    python -m venv venv_gemini
+   # Windows:
    .\venv_gemini\Scripts\activate
+   # Linux/macOS:
+   # source venv_gemini/bin/activate
    pip install -r requirements-gemini-working.txt
    ```
 
 3. **Set up Stable Audio environment**
    ```bash
    python -m venv venv_stableaudio
+   # Windows:
    .\venv_stableaudio\Scripts\activate
+   # Linux/macOS:
+   # source venv_stableaudio/bin/activate
    pip install -r requirements-stable-audio.txt
    python scripts/stable_audio_fix.py
    ```
@@ -237,12 +245,18 @@ graph TD
    ```bash
    # Terminal 1: Main API (port 8000)
    cd backend
+   # Windows:
    .\venv_gemini\Scripts\activate
+   # Linux/macOS:
+   # source venv_gemini/bin/activate
    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
    # Terminal 2: Stable Audio (port 8001)
    cd backend
+   # Windows:
    .\venv_stableaudio\Scripts\activate
+   # Linux/macOS:
+   # source venv_stableaudio/bin/activate
    python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001
    ```
 
@@ -281,6 +295,7 @@ REACT_APP_FRONTEND_URL=http://localhost:3000
 ## 📚 Documentation
 
 - [Deployment Guide](DEPLOYMENT.md) - Complete deployment instructions
+- [Cross-Platform Deployment](DEPLOYMENT_CROSS_PLATFORM.md) - Multi-OS deployment guide
 - [Start Instructions](start_instructions.txt) - Detailed setup guide
 - [Environment Setup](backend/README_ENVIRONMENTS.md) - Environment configuration
 

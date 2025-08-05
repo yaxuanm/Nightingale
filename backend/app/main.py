@@ -48,7 +48,11 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
         current_dir = os.path.dirname(os.path.abspath(__file__))
         base_dir = os.path.dirname(current_dir)  # backend 目录
         worker_script = os.path.join(base_dir, "scripts", "run_stable_audio_worker.py")
-        venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
+        # 跨平台兼容的Python路径
+        if os.name == 'nt':  # Windows
+            venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
+        else:  # Linux/Mac
+            venv_python = os.path.join(base_dir, "venv_stableaudio", "bin", "python")
         
         # 检查文件是否存在
         if not os.path.exists(worker_script):
@@ -369,6 +373,8 @@ async def generate_music(request: dict):
     except Exception as e:
         print(f"[ERROR] /api/generate-music: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @app.post("/api/create-story")
 async def create_story(request: dict):

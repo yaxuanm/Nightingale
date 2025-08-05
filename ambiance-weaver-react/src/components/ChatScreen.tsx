@@ -1,29 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
   Button,
-  Paper,
   IconButton,
   TextField,
   styled,
-  CircularProgress,
   Stack,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  Send as SendIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAiName } from '../utils/AiNameContext';
-import Player from './Player';
 import PageLayout from '../components/PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 import { buildAudioGenPrompt } from '../utils/promptBuilder';
@@ -193,14 +185,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [currentBackgroundImageUrl, setCurrentBackgroundImageUrl] = useState<string | null>(null);
   const [currentMusicUrl, setCurrentMusicUrl] = useState<string | null>(null);
 
-  // NEW STATE for controlling visibility of elements selection and button
-  const [showElementSelectionAndButton, setShowElementSelectionAndButton] = useState(false);
-
   // Add state for showing playback buttons
   const [showPlaybackButtons, setShowPlaybackButtons] = useState(false);
-
-  // 1. 在 useState 区域增加 isPromptGenerated 状态
-  const [isPromptGenerated, setIsPromptGenerated] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -219,12 +205,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     "Discovering the perfect blend of elements.",
   ];
 
-  const [currentLoadingMessageIndex, setCurrentLoadingMessageIndex] = useState(0);
-
-  const [atmosphereOptions, setAtmosphereOptions] = useState<string[]>([]);
   const [moodOptions, setMoodOptions] = useState<string[]>([]);
   const [elementOptions, setElementOptions] = useState<string[]>([]);
-  const defaultOptions = {
+  const defaultOptions = useMemo(() => ({
     audio_atmosphere: [
       "Cozy and intimate",
       "Spacious and airy",
@@ -245,7 +228,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       "Coffee machine sounds", "Distant chatter", "Footsteps", "Gentle music",
       "Thunderstorm", "Night crickets", "City hum", "Train passing",
     ],
-  };
+  }), []);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -253,7 +236,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [musicInstrumentOptions, setMusicInstrumentOptions] = useState<string[]>([]);
   const [musicTempoOptions, setMusicTempoOptions] = useState<string[]>([]);
   const [musicUsageOptions, setMusicUsageOptions] = useState<string[]>([]);
-
   // 静态音乐选项
   useEffect(() => {
     setMusicGenreOptions(['Ambient', 'Classical', 'Jazz', 'Electronic', 'Pop', 'Rock', 'Cinematic', 'Folk', 'Lo-fi', 'World']);
@@ -326,7 +308,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             newChoices.instruments = [...newChoices.instruments, option];
           }
         }
-        // 不自动进入下一阶段
+        // 如果选择了至少一个乐器，进入下一阶段
+        if (newChoices.instruments.length > 0) {
+          setCurrentStage('music_usage');
+        }
+      } else if (type === 'music_usage') {
+        newChoices.usage = option;
+        // 完成所有选择后，生成prompt并显示编辑弹窗
+        handleGenerateMusicPrompt();
+        return newChoices;
       }
       return newChoices;
     });
@@ -491,8 +481,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       setError(null);
       setShowPromptEdit(false); // 关闭编辑弹窗
       abortControllerRef.current = new AbortController();
-      let audioOrMusicUrl = null;
-      let prompt = '';
+
       const subjects = audioChoices.audio_elements;
       const actions = audioChoices.audio_mood ? [audioChoices.audio_mood] : [];
       const scenes = [
@@ -527,7 +516,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           throw new Error(errorData.detail || 'Failed to create story');
         }
         const storyData = await storyResponse.json();
-        audioOrMusicUrl = storyData.audio_url;
         setCurrentAudioUrl(storyData.audio_url);
         setMessages((prevMessages) => [
           ...prevMessages,
@@ -551,7 +539,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           throw new Error(errorData.detail || 'Failed to generate audio');
         }
         const audioData = await audioResponse.json();
-        audioOrMusicUrl = audioData.audio_url;
         setCurrentAudioUrl(audioData.audio_url);
       }
       
@@ -586,16 +573,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
-  const handlePlayback = () => {
-    const isMusic = selectedType === 'music';
-    navigate('/player', {
-      state: {
-        audioUrl: isMusic ? currentMusicUrl : currentAudioUrl,
-        backgroundImageUrl: currentBackgroundImageUrl,
-        description: finalPrompt
-      }
-    });
-  };
+
 
   const handleRegenerate = () => {
     setShowPlaybackButtons(false);
@@ -609,122 +587,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     setError(null);
   };
 
-  const handleSendMessage = async () => {
-    if (selectedType === 'music') {
-      if (inputText.trim() !== '') {
-        setMessages((prevMessages) => [...prevMessages, { sender: 'user', text: inputText, isUser: true }]);
-        setInputText('');
-      }
-      return;
-    }
-    if ((currentStage as string) === 'audio_elements') {
-      if (inputText.trim() !== '') {
-        setAudioChoices((prev) => ({
-          ...prev,
-          audio_elements: [...prev.audio_elements, inputText.trim()],
-        }));
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', text: `Added "${inputText.trim()}" to your elements. Click Generate Soundscape when ready!`, isUser: false }]);
-        setInputText('');
-      }
-      return;
-    }
-    if (inputText.trim() !== '') {
-      setMessages((prevMessages) => [...prevMessages, { sender: 'user', text: inputText, isUser: true }]);
-      setInputText('');
-    }
 
-    // If in elements stage and user types, assume they are adding custom elements or confirming
-    if ((currentStage as string) === 'audio_elements') {
-      if (inputText.trim() !== '') {
-        setAudioChoices((prev) => ({
-          ...prev,
-          audio_elements: [...prev.audio_elements, inputText.trim()],
-        }));
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', text: `Added "${inputText.trim()}" to your elements. Click Generate Soundscape when ready!`, isUser: false }]);
-      }
-      // Do not transition stage automatically here, wait for generate button click
-      return;
-    }
 
-    if (currentStage === 'selectType') {
-      // Should not happen as stage is set to atmosphere in useEffect
-      return;
-    }
 
-    // For other stages (atmosphere, mood, confirm) treat as direct answer
-    // For free_chat, send to AI service
-    if (currentStage === 'free_chat') {
-      try {
-        setIsLoading(true);
-        const aiResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/chat`, { // Replace with your actual chat API endpoint
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: inputText }),
-        });
-        if (!aiResponse.ok) {
-          throw new Error('Failed to get AI response');
-        }
-        const data = await aiResponse.json();
-        setMessages((prevMessages) => [...prevMessages, { sender: 'ai', text: data.response, isUser: false }]);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { sender: 'ai' as Message['sender'], text: `Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}. Please try again.`, isUser: false },
-        ]);
-        console.error("Error sending message:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // This is for atmosphere, mood stages if user types instead of selecting chip
-      handleOptionSelect(inputText, currentStage as 'audio_atmosphere' | 'audio_mood');
-    }
-  };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
 
-  const handleReturnToGuidedMode = () => {
-    setCurrentStage('audio_atmosphere');
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { sender: 'user' as Message['sender'], text: 'Return to guided mode', isUser: true },
-      { sender: 'ai' as Message['sender'], text: "Okay, let's start over. What kind of atmosphere are you looking for?", isUser: false }
-    ]);
-    // Reset choices and URLs if returning to beginning of guided mode
-    setAudioChoices({ audio_elements: [], extraInputs: [] });
-    setMusicChoices({ instruments: [] });
-    setCurrentAudioUrl(null);
-    setCurrentBackgroundImageUrl(null);
-    setCurrentMusicUrl(null);
-    setError(null);
-    // showElementSelectionAndButton will be handled by useEffect based on currentStage
-  };
 
-  const handleCancelGenerate = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setIsLoading(false);
-    setShowPlaybackButtons(false);
-    setCurrentStage('selectType');
-    setMessages([
-      { sender: 'ai', text: 'Generation cancelled. What do you want to generate?', isUser: false },
-    ]);
-    setAudioChoices({ audio_elements: [], extraInputs: [] });
-    setMusicChoices({ instruments: [] });
-    setCurrentAudioUrl(null);
-    setCurrentBackgroundImageUrl(null);
-    setCurrentMusicUrl(null);
-    setError(null);
-  };
+
 
   // 恢复 AI 选项 fetch 逻辑，去掉 audio_atmosphere 阶段
   useEffect(() => {
@@ -850,15 +719,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGenerateMusicPrompt = async () => {
     setIsLoading(true);
     try {
-      // 生成音乐描述prompt，usage直接用mode
-              const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/music-prompt`, {
+      // 生成音乐描述prompt
+      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/music-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           genre: musicChoices.genre,
           tempo: musicChoices.tempo,
           instruments: musicChoices.instruments,
-          usage: mode, // 直接用mode
+          usage: musicChoices.usage,
           input: initialInput,
         }),
       });
@@ -875,29 +744,25 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   };
 
   const handleGenerateMusic = async () => {
-    setShowPromptEdit(false); // 立即关闭编辑弹窗，与audio mode一致
     try {
       setIsLoading(true);
       setError(null);
+      setShowPromptEdit(false); // 关闭编辑弹窗
       abortControllerRef.current = new AbortController();
-      // Compose a music prompt string for display
-      const musicPrompt = `Genre: ${musicChoices.genre || ''}, Instruments: ${musicChoices.instruments.join(', ')}, Tempo: ${musicChoices.tempo || ''}, Usage: ${musicChoices.usage || ''}, Input: ${initialInput || ''}`;
-      setFinalPrompt(musicPrompt);
+      
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Generating your music...', isUser: false },
-        { sender: 'ai', text: musicPrompt, isUser: false },
+        { sender: 'ai', text: finalPrompt, isUser: false },
       ]);
-              const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-music`, {
+      
+      // 调用 /api/generate-music 生成音频
+      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          genre: musicChoices.genre,
-          instruments: musicChoices.instruments,
-          tempo: musicChoices.tempo,
-          usage: musicChoices.usage,
-          userInput: initialInput,
-          duration: 30,
+          description: finalPrompt, // 使用用户编辑后的prompt
+          duration: 20,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -906,14 +771,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         throw new Error(errorData.detail || 'Failed to generate music');
       }
       const data = await res.json();
-      setCurrentMusicUrl(data.music_url);
-      // Use the prompt from backend response
-      const finalMusicPrompt = data.prompt || musicPrompt;
-      setFinalPrompt(finalMusicPrompt);
-      // Set background image if available
-      if (data.background_url) {
-        setCurrentBackgroundImageUrl(data.background_url);
+      setCurrentMusicUrl(data.audio_url);
+      
+      // Generate background image for music mode
+      const backgroundDescription = initialInput || 'a beautiful music background';
+      const bgResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: backgroundDescription }),
+        signal: abortControllerRef.current.signal,
+      });
+      if (bgResponse.ok) {
+        const bgData = await bgResponse.json();
+        setCurrentBackgroundImageUrl(bgData.image_url);
       }
+      
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Your personalized music is ready! What would you like to do?', isUser: false },
@@ -936,9 +808,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     }
   };
 
-  const handleImprovePrompt = async () => {
-    // TODO: 实现 AI 改写逻辑
-  };
+
 
   // 1. 新增：通用 prompt 编辑状态
   // 2. 修改 handleOptionSelect，移除 setShowPromptEdit、setFinalPrompt、setIsPromptGenerated
@@ -951,18 +821,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     if (initialInput) {
       introMessage += ` And you've started with the idea: "${initialInput}".`;
     }
-    introMessage += ` What do you want to generate?`;
+    
+    // story mode直接进入audio流程，不需要选择类型
+    if (mode === 'story') {
+      introMessage += ` Let's build your perfect soundscape! What kind of mood or feeling do you want to evoke?`;
+      setSelectedType('audio');
+      setCurrentStage('audio_mood');
+    } else if (mode === 'asmr') {
+      // asmr模式直接跳到audio_elements阶段
+      setCurrentStage('audio_elements');
+      setSelectedType('audio');
+      introMessage += ` What do you want to generate?`;
+    } else {
+      // 其他模式需要选择类型
+      introMessage += ` What do you want to generate?`;
+      setCurrentStage('selectType');
+    }
+    
     setMessages([
       ...(initialInput ? [{ sender: 'user' as const, text: initialInput, isUser: true }] : []),
       { sender: 'ai' as const, text: introMessage, isUser: false },
     ]);
-    // asmr模式直接跳到audio_elements阶段
-    if (mode === 'asmr') {
-      setCurrentStage('audio_elements');
-      setSelectedType('audio');
-    } else {
-      setCurrentStage('selectType');
-    }
     setInputText('');
   }, [initialInput, mode, aiName]);
 
@@ -1052,13 +931,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                   marginRight: '8px', // Adjust spacing
                 }}
               />
-              <Typography sx={{ color: 'white', ml: 1 }}>{loadingMessages[currentLoadingMessageIndex]}</Typography>
+              <Typography sx={{ color: 'white', ml: 1 }}>{loadingMessages[0]}</Typography>
             </MessageBubbleContent>
           </Box>
         )}
         <div ref={messagesEndRef} />
       </Stack>
-      {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && mode !== 'asmr' && (
+      {currentStage === 'selectType' && !showPlaybackButtons && !showPromptEdit && mode !== 'asmr' && mode !== 'story' && (
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>What do you want to generate?</Typography>
           <Button
@@ -1083,27 +962,29 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           >
             Background Sound
           </Button>
-          <Button
-            variant="outlined"
-            sx={{
-              minWidth: 160,
-              borderRadius: 999,
-              fontWeight: 600,
-              background: selectedType === 'music' ? 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)' : 'none',
-              color: selectedType === 'music' ? 'white' : '#2d9c93',
-              borderColor: '#2d9c93',
-              '&:hover': {
-                background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)',
-                color: 'white',
-              },
-              ...(selectedType === 'music' && {
-                boxShadow: '0 2px 8px rgba(45,156,147,0.15)',
-              }),
-            }}
-            onClick={() => handleTypeSelect('music')}
-          >
-            Music
-          </Button>
+          {mode !== 'story' && (
+            <Button
+              variant="outlined"
+              sx={{
+                minWidth: 160,
+                borderRadius: 999,
+                fontWeight: 600,
+                background: selectedType === 'music' ? 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)' : 'none',
+                color: selectedType === 'music' ? 'white' : '#2d9c93',
+                borderColor: '#2d9c93',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #2d9c93 60%, #3be584 100%)',
+                  color: 'white',
+                },
+                ...(selectedType === 'music' && {
+                  boxShadow: '0 2px 8px rgba(45,156,147,0.15)',
+                }),
+              }}
+              onClick={() => handleTypeSelect('music')}
+            >
+              Music
+            </Button>
+          )}
         </Box>
       )}
       {currentStage === 'audio_mood' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
@@ -1539,7 +1420,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Stack>
         </OptionMessageBubbleContent>
       )}
-      {/* 移除music_usage相关UI和逻辑 */}
+      {currentStage === 'music_usage' && !isLoading && !showPlaybackButtons && !showPromptEdit && (
+        <OptionMessageBubbleContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 1 }}>How will you use this music?</Typography>
+          <Stack direction="row" flexWrap="wrap" spacing={1}>
+            {musicUsageOptions.map((option) => (
+              <OptionChip
+                key={option}
+                label={option}
+                onClick={() => handleOptionSelect(option, 'music_usage')}
+                variant={musicChoices.usage === option ? 'filled' : 'outlined'}
+                color={musicChoices.usage === option ? 'primary' : 'default'}
+              />
+            ))}
+          </Stack>
+        </OptionMessageBubbleContent>
+      )}
       {/* story_script_edit 阶段渲染 */}
       {/* 删除 story_script_edit 阶段的编辑弹窗，只保留 showPromptEdit 的弹窗 */}
       {false && currentStage === 'story_script_edit' && (

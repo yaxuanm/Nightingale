@@ -1,31 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Box, 
   Typography, 
-  Paper, 
   Grid, 
   Button, 
-  IconButton,
   Chip,
   Stack,
   Card,
-  CardContent,
-  CardMedia
+  CardContent
 } from '@mui/material';
 import {
   Chat as ChatIcon,
-  MusicNote as MusicIcon,
   PlayArrow as PlayIcon,
-  Settings as SettingsIcon,
-  Favorite as FavoriteIcon,
-  Mic as MicIcon,
-  HelpOutline as HelpIcon,
-  WorkOutline as WorkIcon,
-  Spa as SpaIcon,
-  AutoStories as StoryIcon,
-  SkipNext as NextIcon,
-  SkipPrevious as PreviousIcon,
-  Tune as TuneIcon
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -333,7 +320,7 @@ const DemoOverview = () => {
               }
             }}
           >
-            Back to Overview
+            Back to Home
           </Button>
           <Button
             variant="outlined"

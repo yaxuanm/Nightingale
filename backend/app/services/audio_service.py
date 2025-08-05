@@ -119,8 +119,12 @@ class AudioGenerationService:
             
             # Call the worker script
             worker_script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "audio_generate_worker.py")
-            # Use the audio virtual environment Python interpreter
-            audio_venv_python = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "venv_audio", "Scripts", "python.exe")
+            # Use the audio virtual environment Python interpreter - cross-platform compatible
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            if os.name == 'nt':  # Windows
+                audio_venv_python = os.path.join(base_dir, "venv_audio", "Scripts", "python.exe")
+            else:  # Linux/Mac
+                audio_venv_python = os.path.join(base_dir, "venv_audio", "bin", "python")
             cmd = [
                 audio_venv_python, worker_script_path,
                 "--desc", enhanced_prompt,
