@@ -1,5 +1,7 @@
 import { API_ENDPOINTS } from '../config/api';
 import React, { useState, useEffect, useRef } from 'react';
+import { copyTextWithMessage } from '../utils/clipboard';
+import { generateShareUrl, parseShareData } from '../utils/shareUtils';
 import {
   Box,
   Typography,
@@ -93,9 +95,18 @@ const Player: React.FC<PlayerProps> = ({
     description: stateDescription 
   } = location.state || {};
   
-  const currentAudioUrl = audioUrl || stateAudioUrl;
-  const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl;
-  const currentDescription = description || stateDescription;
+  // 尝试从 URL 参数读取分享数据
+  const urlShareData = parseShareData();
+  
+  const currentAudioUrl = audioUrl || stateAudioUrl || (urlShareData?.audio_url);
+  const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl || (urlShareData?.background_url);
+  const currentDescription = description || stateDescription || (urlShareData?.description);
+  
+  // 调试信息
+  console.log('URL Share Data:', urlShareData);
+  console.log('Current Audio URL:', currentAudioUrl);
+  console.log('Current Background URL:', currentBackgroundImageUrl);
+  console.log('Current Description:', currentDescription);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -168,28 +179,37 @@ const Player: React.FC<PlayerProps> = ({
     setShareDialogOpen(true);
     
     try {
-      // 调用后端API创建分享链接
-      const response = await fetch(API_ENDPOINTS.CREATE_SHARE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          audio_url: currentAudioUrl,
-          background_url: currentBackgroundImageUrl,
-          description: currentDescription,
-          title: 'My Nightingale Soundscape'
-        })
-      });
+      // 使用纯前端分享功能
+      const shareData = {
+        audio_url: currentAudioUrl,
+        background_url: currentBackgroundImageUrl,
+        description: currentDescription,
+        title: 'My Nightingale Soundscape'
+      };
       
-      if (!response.ok) {
-        throw new Error('Failed to create share');
+      // 生成分享 URL，使用当前路径
+      const baseUrl = window.location.origin + '/player';
+      const params = new URLSearchParams();
+      
+      if (shareData.audio_url) {
+        params.append('audio', shareData.audio_url);
       }
+      if (shareData.background_url) {
+        params.append('bg', shareData.background_url);
+      }
+      if (shareData.description) {
+        params.append('desc', shareData.description);
+      }
+      if (shareData.title) {
+        params.append('title', shareData.title);
+      }
+      params.append('t', Date.now().toString());
       
-      const shareData = await response.json();
-      const shareUrl = shareData.share_url;
+      const shareUrl = `${baseUrl}?${params.toString()}`;
       
       // 复制分享链接到剪贴板
-      await navigator.clipboard.writeText(shareUrl);
-      setSnackbar({ open: true, message: 'Share link copied to clipboard!' });
+      const copyResult = await copyTextWithMessage(shareUrl);
+      setSnackbar({ open: true, message: copyResult.message });
       
       // 更新对话框中的链接
       setShareUrl(shareUrl);
@@ -198,8 +218,8 @@ const Player: React.FC<PlayerProps> = ({
       console.error('Share creation failed:', error);
       // 回退到原来的方式
       const fallbackUrl = window.location.href;
-      await navigator.clipboard.writeText(fallbackUrl);
-      setSnackbar({ open: true, message: 'Failed to create share link. Copied current page URL instead.' });
+      const copyResult = await copyTextWithMessage(fallbackUrl);
+      setSnackbar({ open: true, message: `Failed to create share link. ${copyResult.message}` });
       setShareUrl(fallbackUrl);
     }
   };
@@ -497,12 +517,8 @@ const Player: React.FC<PlayerProps> = ({
               size="small"
             />
             <Button onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(shareUrl || window.location.href);
-                setSnackbar({ open: true, message: 'Link copied to clipboard!' });
-              } catch {
-                setSnackbar({ open: true, message: 'Failed to copy link. Please copy manually.' });
-              }
+              const copyResult = await copyTextWithMessage(shareUrl || window.location.href);
+              setSnackbar({ open: true, message: copyResult.message });
             }} sx={{ color: '#2d9c93', minWidth: 80 }}>
               Copy
             </Button>

@@ -4,59 +4,33 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Paper,
   IconButton,
-  styled,
   Slider,
+  Snackbar,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
   Share as ShareIcon,
-  ArrowBack as ArrowBackIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { API_CONFIG } from '../config/api';
+import { copyTextWithMessage } from '../utils/clipboard';
+import { parseShareData, isSharePage, cleanShareParams, generateShareTitle } from '../utils/shareUtils';
 
-const PlayPauseButton = styled(IconButton)(({ theme }) => ({
-  width: 80,
-  height: 80,
-  background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
-  border: 'none',
-  boxShadow: '0 8px 24px rgba(45, 156, 147, 0.3)',
-  color: '#ffffff',
-  '&:hover': {
-    background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)',
-  },
-}));
 
-const ActionButton = styled(Button)(({ theme }) => ({
-  flex: 1,
-  height: 40,
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(45, 156, 147, 0.2)',
-  borderRadius: '20px',
-  color: '#ffffff',
-  fontSize: 13,
-  fontWeight: 500,
-  backdropFilter: 'blur(10px)',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.1)',
-    transform: 'translateY(-1px)',
-  },
-}));
 
 interface ShareData {
-  id: string;
+  id?: string;
   audio_url: string;
   background_url?: string;
-  description: string;
-  title: string;
-  created_at: string;
-  views: number;
+  description?: string;
+  title?: string;
+  created_at?: string;
+  views?: number;
 }
 
 const SharePage: React.FC = () => {
@@ -69,12 +43,26 @@ const SharePage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    const fetchShareData = async () => {
-      if (!shareId) return;
+    const loadShareData = async () => {
+      // 首先尝试从 URL 参数加载数据（纯前端分享）
+      const urlShareData = parseShareData();
+      if (urlShareData) {
+        setShareData(urlShareData);
+        setLoading(false);
+        return;
+      }
+      
+      // 如果没有 URL 参数，尝试从后端 API 加载（传统方式）
+      if (!shareId) {
+        setError('No share data found');
+        setLoading(false);
+        return;
+      }
       
       try {
         const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/share/${shareId}`);
@@ -91,7 +79,7 @@ const SharePage: React.FC = () => {
       }
     };
 
-    fetchShareData();
+    loadShareData();
   }, [shareId]);
 
   const handlePlayPause = () => {
@@ -131,12 +119,8 @@ const SharePage: React.FC = () => {
   };
 
   const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      // 可以添加一个toast通知
-    } catch {
-      // 处理错误
-    }
+    const copyResult = await copyTextWithMessage(window.location.href);
+    setSnackbar({ open: true, message: copyResult.message });
   };
 
   const handleDownload = async () => {
@@ -174,6 +158,7 @@ const SharePage: React.FC = () => {
       }
     } catch (error) {
       console.error('Download failed:', error);
+      setSnackbar({ open: true, message: 'Download failed. Please try again.' });
     } finally {
       setIsDownloading(false);
     }
@@ -236,99 +221,84 @@ const SharePage: React.FC = () => {
           gap: 3,
         }}
       >
-        {/* Header */}
+        {/* Header with Logo and Prompt */}
         <Box sx={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-start',
+          gap: 2,
+          mb: 2,
           width: '100%',
-          mb: 3,
         }}>
-          <IconButton onClick={() => navigate('/')} sx={{ color: '#ffffff' }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 600 }}>
-            Shared Soundscape
-          </Typography>
-          <IconButton sx={{ color: '#ffffff' }} onClick={handleShare}>
-            <ShareIcon />
-          </IconButton>
-        </Box>
-
-        {/* Content */}
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
+          {/* Logo */}
           <Box sx={{
+            width: 48,
+            height: 48,
+            borderRadius: '12px',
+            overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            textAlign: 'center',
+            justifyContent: 'center',
+            background: 'rgba(45,156,147,0.10)',
+            flexShrink: 0,
           }}>
-            <Box sx={{
-              width: 120,
-              height: 120,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(45,156,147,0.10)',
-              mb: 2,
-            }}>
-              <img
-                src={`${process.env.PUBLIC_URL}/logo.png`}
-                alt="Nightingale Logo"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </Box>
-            
-            <Typography variant="h5" sx={{ color: '#ffffff', fontWeight: 700, mt: 2 }}>
-              {shareData.title}
-            </Typography>
-            
-            {shareData.description && (
+            <img
+              src={`${process.env.PUBLIC_URL}/logo.png`}
+              alt="Nightingale Logo"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </Box>
+          
+          {/* Prompt */}
+          <Box sx={{ flexGrow: 1 }}>
+            {/* Title */}
+            {shareData.title && (
               <Typography 
-                variant="body2" 
+                variant="h6" 
                 sx={{ 
-                  color: '#2d9c93',
-                  textAlign: 'center',
-                  maxWidth: '80%',
-                  mx: 'auto',
-                  mt: 1,
-                  mb: 2,
-                  fontFamily: 'monospace',
+                  color: '#ffffff',
                   fontSize: '0.9rem',
-                  wordBreak: 'break-word',
-                  bgcolor: 'rgba(45,156,147,0.08)',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 1,
-                  border: '1px solid rgba(45,156,147,0.15)',
+                  fontWeight: 600,
+                  mb: 1,
+                  wordWrap: 'break-word',
                 }}
               >
-                {shareData.description}
+                {shareData.title}
               </Typography>
             )}
             
-            <Typography variant="body2" sx={{ color: '#c0c0c0', mb: 3 }}>
-              Generated by Nightingale
-            </Typography>
+            {/* Description */}
+            {shareData.description && (
+              <Box sx={{ position: 'relative', mb: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: '#ffffff',
+                    fontSize: '0.7rem',
+                    lineHeight: 1.3,
+                    wordWrap: 'break-word',
+                    whiteSpace: 'pre-wrap',
+                    padding: '4px 0',
+                  }}
+                >
+                  {shareData.description}
+                </Typography>
+              </Box>
+            )}
           </Box>
-        </motion.div>
-
-        {/* Player Controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <PlayPauseButton onClick={handlePlayPause}>
-            {isPlaying ? <PauseIcon sx={{ fontSize: 40 }} /> : <PlayIcon sx={{ fontSize: 40 }} />}
-          </PlayPauseButton>
         </Box>
 
-        {/* Progress Bar and Time */}
-        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(currentTime)}</Typography>
+        {/* Progress Bar */}
+        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Typography sx={{ 
+            color: '#ffffff', 
+            fontSize: '8px !important',
+            fontWeight: 400,
+            lineHeight: 1,
+            minWidth: '20px',
+            textAlign: 'center',
+          }}>
+            {formatTime(currentTime)}
+          </Typography>
           <Slider
             aria-label="time-slider"
             value={currentTime}
@@ -337,14 +307,14 @@ const SharePage: React.FC = () => {
             onChange={handleSeek}
             sx={{
               color: '#2d9c93',
-              height: 4,
+              height: 3,
               '& .MuiSlider-thumb': {
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 backgroundColor: '#ffffff',
-                boxShadow: '0 0 0 4px rgba(45, 156, 147, 0.3)',
+                boxShadow: '0 0 0 2px rgba(45, 156, 147, 0.3)',
                 '&:hover, &.Mui-focusVisible': {
-                  boxShadow: '0 0 0 6px rgba(45, 156, 147, 0.4)',
+                  boxShadow: '0 0 0 4px rgba(45, 156, 147, 0.4)',
                 },
               },
               '& .MuiSlider-rail': {
@@ -352,31 +322,73 @@ const SharePage: React.FC = () => {
               },
             }}
           />
-          <Typography sx={{ color: '#ffffff', fontSize: 14 }}>{formatTime(duration)}</Typography>
+          <Typography sx={{ 
+            color: '#ffffff', 
+            fontSize: '8px !important',
+            fontWeight: 400,
+            lineHeight: 1,
+            minWidth: '20px',
+            textAlign: 'center',
+          }}>
+            {formatTime(duration)}
+          </Typography>
         </Box>
 
-        {/* Action Buttons */}
-        <Box sx={{
+        {/* Control Buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
           width: '100%',
-          display: 'flex',
-          gap: 2,
         }}>
-          <ActionButton 
+          <IconButton 
             onClick={handleDownload} 
-            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
             disabled={isDownloading}
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              color: '#ffffff',
+              fontSize: 20,
+            }}
           >
-            {isDownloading ? 'Downloading...' : 'Download'}
-          </ActionButton>
-          <ActionButton onClick={handleShare} startIcon={<ShareIcon />}>
-            Share
-          </ActionButton>
+            {isDownloading ? <CircularProgress size={16} /> : <DownloadIcon />}
+          </IconButton>
+          
+          <IconButton 
+            onClick={handlePlayPause}
+            sx={{ 
+              width: 40, 
+              height: 40, 
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '50%',
+              color: '#ffffff',
+              fontSize: 20,
+            }}
+          >
+            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+          </IconButton>
+          
+          <IconButton 
+            onClick={handleShare}
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              color: '#ffffff',
+              fontSize: 20,
+            }}
+          >
+            <ShareIcon />
+          </IconButton>
         </Box>
 
         {/* Stats */}
-        <Box sx={{ mt: 4, opacity: 0.7 }}>
-          <Typography variant="caption" sx={{ color: '#c0c0c0' }}>
-            Views: {shareData.views} • Created: {new Date(shareData.created_at).toLocaleDateString()}
+        <Box sx={{ mt: 2, opacity: 0.7, textAlign: 'center' }}>
+          <Typography variant="caption" sx={{ color: '#c0c0c0', fontSize: '10px' }}>
+            {shareData.created_at ? (
+              <>Views: {shareData.views || 0} • Created: {new Date(shareData.created_at).toLocaleDateString()}</>
+            ) : (
+              <>Shared via Nightingale</>
+            )}
           </Typography>
         </Box>
       </Box>
@@ -388,11 +400,19 @@ const SharePage: React.FC = () => {
         onTimeUpdate={handleTimeUpdate} 
         onLoadedMetadata={handleLoadedMetadata} 
       />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2500}
+        onClose={() => setSnackbar({ open: false, message: '' })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </>
   );
 
   return (
-    <PageLayout backgroundImageUrl={shareData.background_url} minHeight="700px">
+    <PageLayout backgroundImageUrl={shareData.background_url} maxWidth={420} minHeight="auto">
       {shareContent}
       <Box sx={{ width: '100%', textAlign: 'center', mt: 4, mb: 2 }}>
         <Typography variant="subtitle2" sx={{ color: '#c0c0c0', fontStyle: 'italic', letterSpacing: 1 }}>
