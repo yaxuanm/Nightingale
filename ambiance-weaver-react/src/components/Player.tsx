@@ -136,7 +136,7 @@ const Player: React.FC<PlayerProps> = ({
   }, [musicUrl]);
 
   // 文本截断函数
-  const truncateDescription = (text: string, maxLength: number = 300) => {
+  const truncateDescription = (text: string, maxLength: number = 200) => {
     if (text.length <= maxLength) return { truncated: text, isLong: false };
     // 找到最后一个完整的句子或单词边界
     const truncated = text.substring(0, maxLength);
@@ -338,6 +338,11 @@ const Player: React.FC<PlayerProps> = ({
                 const textInfo = truncateDescription(currentDescription);
                 const displayText = isDescriptionExpanded ? textInfo.full : textInfo.truncated;
                 
+                // 调试信息
+                console.log('Text length:', currentDescription.length);
+                console.log('Is long:', textInfo.isLong);
+                console.log('Is expanded:', isDescriptionExpanded);
+                
                 return (
                   <Box sx={{ position: 'relative', mb: 1 }}>
                     <Typography 
@@ -346,7 +351,7 @@ const Player: React.FC<PlayerProps> = ({
                         color: '#ffffff',
                         fontSize: '0.7rem',
                         lineHeight: 1.3,
-                        maxHeight: isDescriptionExpanded ? 'none' : '75px',
+                        maxHeight: isDescriptionExpanded ? 'none' : '60px',
                         overflow: 'hidden',
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-wrap',
@@ -367,12 +372,16 @@ const Player: React.FC<PlayerProps> = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          width: '20px',
-                          height: '20px',
-                          color: 'rgba(255,255,255,0.6)',
-                          fontSize: '14px',
+                          width: '24px',
+                          height: '24px',
+                          color: 'rgba(255,255,255,0.7)',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          backgroundColor: 'rgba(45,156,147,0.2)',
+                          borderRadius: '4px',
                           '&:hover': {
-                            color: 'rgba(255,255,255,0.8)',
+                            color: 'rgba(255,255,255,0.9)',
+                            backgroundColor: 'rgba(45,156,147,0.3)',
                           },
                         }}
                       >
