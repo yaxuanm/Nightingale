@@ -390,6 +390,49 @@ ffmpeg -version
 # 4. 将 C:\ffmpeg\bin 添加到系统 PATH
 ```
 
+#### 14. 500 Internal Server Error - 代码级 FFmpeg 解决方案
+如果上述方法仍然无法解决 500 错误，可以在代码中直接设置 FFmpeg 路径：
+
+**在 main.py 文件开头添加以下代码：**
+```python
+import os
+import warnings
+from dotenv import load_dotenv
+
+# 设置 FFmpeg PATH - 确保 pydub 能找到 FFmpeg
+ffmpeg_path = r"C:\ffmpeg\ffmpeg-master-latest-win64-gpl-shared\bin"
+if ffmpeg_path not in os.environ["PATH"]:
+    os.environ["PATH"] = ffmpeg_path + os.pathsep + os.environ["PATH"]
+
+# 忽略 ffmpeg 警告
+warnings.filterwarnings("ignore", message="Couldn't find ffprobe or avprobe")
+```
+
+**或者创建环境变量文件 (.env)：**
+```bash
+# .env 文件内容
+FFMPEG_PATH=C:\ffmpeg\ffmpeg-master-latest-win64-gpl-shared\bin
+```
+
+**然后在代码中读取：**
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # 加载 .env 文件
+
+# 从环境变量读取 FFmpeg 路径
+ffmpeg_path = os.getenv('FFMPEG_PATH', r"C:\ffmpeg\ffmpeg-master-latest-win64-gpl-shared\bin")
+if ffmpeg_path not in os.environ["PATH"]:
+    os.environ["PATH"] = ffmpeg_path + os.pathsep + os.environ["PATH"]
+```
+
+**注意事项：**
+- 确保 FFmpeg 路径正确
+- 路径中不要有中文字符
+- 重启服务后生效
+- 这种方法可以解决 pydub 找不到 FFmpeg 的问题
+
 ### 调试模式
 
 启用详细日志：
