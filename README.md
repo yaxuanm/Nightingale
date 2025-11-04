@@ -40,7 +40,7 @@ Nightingale uses a microservices architecture with the following core components
 #### 1. **Frontend Layer**
 - **Tech Stack**: React 18 + TypeScript + Material-UI v5.15.11
 - **Function**: User interface, interaction logic, state management
-- **Deployment**: Static file service, deployable to CDN
+- **Deployment**: Static file service
 - **Port**: 3000 (development)
 
 #### 2. **Main API Service Layer**
