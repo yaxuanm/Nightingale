@@ -35,6 +35,10 @@ jobs:
 
       - name: Build
         working-directory: ambiance-weaver-react
+        env:
+          REACT_APP_GEMINI_API_URL: https://yaxuanmmmmm-nightingale-backend.hf.space
+          REACT_APP_STABLE_AUDIO_API_URL: https://yaxuanmmmmm-nightingale-backend.hf.space
+          REACT_APP_FRONTEND_URL: https://yaxuanm.github.io/Nightingale
         run: npm run build
 
       - name: Add SPA fallback
