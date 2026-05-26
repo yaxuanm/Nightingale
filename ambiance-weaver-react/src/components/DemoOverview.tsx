@@ -12,7 +12,8 @@ import {
 import {
   Chat as ChatIcon,
   PlayArrow as PlayIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  GraphicEq as GraphicEqIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -132,6 +133,20 @@ const DemoOverview = () => {
         <Typography variant="h6" sx={{ mb: 4, color: 'rgba(255, 255, 255, 0.8)' }}>
           Intelligent Soundscape Generation App - Complete Feature Demo
         </Typography>
+        <Button
+          variant="contained"
+          startIcon={<GraphicEqIcon />}
+          onClick={() => navigate('/samples')}
+          sx={{
+            bgcolor: '#2d9c93',
+            color: '#fff',
+            borderRadius: '999px',
+            px: 3,
+            '&:hover': { bgcolor: '#23847d' },
+          }}
+        >
+          Listen to Stable Audio 3 Samples
+        </Button>
       </Box>
 
       {/* 页面预览网格 */}
@@ -352,4 +367,4 @@ const DemoOverview = () => {
   );
 };
 
-export default DemoOverview; 
+export default DemoOverview;

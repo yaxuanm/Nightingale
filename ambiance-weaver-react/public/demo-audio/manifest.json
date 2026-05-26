@@ -1,0 +1,42 @@
+[
+  {
+    "slug": "warm-summer-evening",
+    "title": "Warm Summer Evening",
+    "duration": 8,
+    "seed": 1742,
+    "prompt": "Warm summer evening ambience with cicadas, distant birds, soft wind through trees, nostalgic and calm.",
+    "model": "stabilityai/stable-audio-3-small-sfx",
+    "source": "Stability AI official Stable Audio 3 Hugging Face Space",
+    "file": "/demo-audio/warm-summer-evening.wav"
+  },
+  {
+    "slug": "rain-window-focus",
+    "title": "Rain Window Focus",
+    "duration": 8,
+    "seed": 2518,
+    "prompt": "Steady rain tapping on a window, soft room tone, muted city distance, focused and peaceful.",
+    "model": "stabilityai/stable-audio-3-small-sfx",
+    "source": "Stability AI official Stable Audio 3 Hugging Face Space",
+    "file": "/demo-audio/rain-window-focus.wav"
+  },
+  {
+    "slug": "ocean-breath-meditation",
+    "title": "Ocean Breath Meditation",
+    "duration": 8,
+    "seed": 3107,
+    "prompt": "Slow ocean waves rolling onto sand, airy coastal wind, spacious and meditative atmosphere.",
+    "model": "stabilityai/stable-audio-3-small-sfx",
+    "source": "Stability AI official Stable Audio 3 Hugging Face Space",
+    "file": "/demo-audio/ocean-breath-meditation.wav"
+  },
+  {
+    "slug": "midnight-library",
+    "title": "Midnight Library",
+    "duration": 8,
+    "seed": 4309,
+    "prompt": "Quiet midnight library ambience, soft page turns, faint wooden room tone, intimate and reflective.",
+    "model": "stabilityai/stable-audio-3-small-sfx",
+    "source": "Stability AI official Stable Audio 3 Hugging Face Space",
+    "file": "/demo-audio/midnight-library.wav"
+  }
+]

@@ -185,6 +185,9 @@ generated_prompts/
 # Keep some sample files
 !audio_test_output/fixed_test/audio_files/
 !docs/audio_files/
+!ambiance-weaver-react/public/demo-audio/
+!ambiance-weaver-react/public/demo-audio/*.wav
+!ambiance-weaver-react/public/demo-audio/*.json
 
 # Temporary files
 temp/
@@ -218,4 +221,4 @@ backend/app/image_output/
 
 # Keep some essential files
 !backend/app/audio_output/.gitkeep
-!backend/app/image_output/.gitkeep 
+!backend/app/image_output/.gitkeep

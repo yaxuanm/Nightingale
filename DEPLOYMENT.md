@@ -55,8 +55,11 @@ deploy/huggingface-space/
 The package uses:
 
 ```env
+STABLE_AUDIO_PROVIDER=hf-space
 STABLE_AUDIO_MODEL=stabilityai/stable-audio-3-small-sfx
 STABLE_AUDIO_MAX_DURATION=11.0
+STABLE_AUDIO_HF_SPACE_URL=https://stabilityai-stable-audio-3.hf.space
+STABLE_AUDIO_HF_SPACE_VARIANT=small-sfx
 ```
 
 Required Space secret:
@@ -75,6 +78,26 @@ Hardware note:
 - Personal Hugging Face accounts need PRO to host ZeroGPU Spaces.
 - Paid GPU hardware can be enabled temporarily for presentations, but should not
   be turned on without a deliberate cost decision.
+
+## Option 2A: Official Space Proxy
+
+For the lowest-cost real generation path, the backend can proxy Stability AI's
+official Stable Audio 3 Hugging Face Space instead of loading the model locally:
+
+```env
+STABLE_AUDIO_PROVIDER=hf-space
+STABLE_AUDIO_HF_SPACE_URL=https://stabilityai-stable-audio-3.hf.space
+STABLE_AUDIO_HF_SPACE_VARIANT=small-sfx
+HF_TOKEN=hf_your_token_here
+```
+
+The frontend still calls Nightingale's own `/api/generate-audio` endpoint. The
+backend submits the job to the official Space, waits for the generated WAV, saves
+it locally, then returns the same response shape as the local model path.
+
+This is appropriate for portfolio demos and sample generation. It is not a
+production guarantee because it depends on Hugging Face ZeroGPU queue capacity,
+quota, and the public Space API remaining compatible.
 
 ## Option 3: Production-Style Live Generation
 
@@ -153,9 +176,12 @@ STABILITY_API_KEY=your-stability-api-key
 SUPABASE_URL=your-supabase-url
 SUPABASE_ANON_KEY=your-supabase-anon-key
 HF_TOKEN=your-hugging-face-token
+STABLE_AUDIO_PROVIDER=hf-space
 STABLE_AUDIO_MODEL=stabilityai/stable-audio-3-small-sfx
 STABLE_AUDIO_DISPLAY_NAME=Stable Audio 3 Small SFX
 STABLE_AUDIO_MAX_DURATION=11.0
+STABLE_AUDIO_HF_SPACE_URL=https://stabilityai-stable-audio-3.hf.space
+STABLE_AUDIO_HF_SPACE_VARIANT=small-sfx
 CORS_ORIGINS=http://localhost:3000,https://yaxuanm.github.io
 ```
 

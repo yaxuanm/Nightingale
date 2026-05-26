@@ -95,23 +95,54 @@ Nightingale/
 
 ## Stable Audio 3 Integration
 
-The audio service now defaults to:
+The audio service now defaults to an official Hugging Face Space proxy:
 
 ```env
+STABLE_AUDIO_PROVIDER=hf-space
 STABLE_AUDIO_MODEL=stabilityai/stable-audio-3-small-sfx
 STABLE_AUDIO_DISPLAY_NAME=Stable Audio 3 Small SFX
 STABLE_AUDIO_MAX_DURATION=11.0
+STABLE_AUDIO_HF_SPACE_URL=https://stabilityai-stable-audio-3.hf.space
+STABLE_AUDIO_HF_SPACE_VARIANT=small-sfx
 ```
 
-Stable Audio 3 is a gated Hugging Face model. To run generation locally or in a
-Space, accept the model terms on Hugging Face and set a read-capable token:
+In `hf-space` mode, the Nightingale backend keeps the same `/api/generate-audio`
+contract for the frontend, but forwards generation to Stability AI's official
+Stable Audio 3 Hugging Face Space. This avoids hosting a GPU for the portfolio
+demo, while still producing real Stable Audio 3 outputs.
+
+Stable Audio 3 is a gated Hugging Face model. To run generation through the
+Space proxy or locally, accept the model terms on Hugging Face and set a token:
 
 ```env
 HF_TOKEN=hf_your_token_here
 ```
 
+The proxy is suitable for demos and sample generation, but it depends on
+Hugging Face queue availability and account quota. For production, use a
+dedicated GPU runtime or a serverless GPU provider.
+
+To run the model directly instead of proxying the official Space, set:
+
+```env
+STABLE_AUDIO_PROVIDER=local
+```
+
 Do not commit `.env` files or tokens. The repo keeps secrets out of source
 control.
+
+## Demo Audio Samples
+
+The portfolio includes four real Stable Audio 3 sample clips in:
+
+```text
+ambiance-weaver-react/public/demo-audio/
+```
+
+They were generated through the official Stability AI Stable Audio 3 Hugging
+Face Space using the prompts, seeds, and metadata recorded in
+`manifest.json`. The public app exposes them at `/samples` so reviewers can hear
+the product direction without requiring a live GPU backend.
 
 ## Running Locally
 

@@ -9,6 +9,7 @@ import Player from './components/Player';
 import ChatScreen from './components/ChatScreen';
 import AllScreensShowcase from './components/AllScreensShowcase';
 import SharePage from './components/SharePage';
+import DemoSamples from './components/DemoSamples';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Onboarding />} />
           <Route path="/demo" element={<DemoOverview />} />
+          <Route path="/samples" element={<DemoSamples />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/main" element={<MainScreen />} />
           <Route path="/chat" element={<ChatScreen />} />

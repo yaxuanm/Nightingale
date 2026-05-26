@@ -1,23 +1,28 @@
+import json
 import os
-import torch
-import torchaudio
-from einops import rearrange
-from stable_audio_tools import get_pretrained_model
-from stable_audio_tools.inference.generation import (
-    generate_diffusion_cond,
-    generate_diffusion_cond_inpaint,
-)
-from typing import Optional, Dict, Any
 import time
 import uuid
+from typing import Any, Dict, Optional
+
+import requests
 
 class StableAudioService:
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.provider = os.environ.get("STABLE_AUDIO_PROVIDER", "hf-space").lower()
+        if self.provider == "local":
+            import torch
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = "remote-api"
         self.model_name = os.environ.get(
             "STABLE_AUDIO_MODEL",
             "stabilityai/stable-audio-3-small-sfx",
         )
+        self.hf_space_url = os.environ.get(
+            "STABLE_AUDIO_HF_SPACE_URL",
+            "https://stabilityai-stable-audio-3.hf.space",
+        ).rstrip("/")
+        self.hf_space_variant = os.environ.get("STABLE_AUDIO_HF_SPACE_VARIANT", "small-sfx")
         self.display_name = os.environ.get("STABLE_AUDIO_DISPLAY_NAME", "Stable Audio 3 Small SFX")
         self.max_duration = float(os.environ.get("STABLE_AUDIO_MAX_DURATION", "11.0"))
         self.model = None
@@ -49,6 +54,7 @@ class StableAudioService:
             print("[WARN] Warning: HF_TOKEN environment variable not set")
         
         print(f"StableAudioService initialized on device: {self.device}")
+        print(f"Stable Audio provider: {self.provider}")
         print(f"Stable Audio model: {self.model_name}")
     
     def _optimize_prompt_for_stable_audio(self, prompt: str) -> str:
@@ -111,6 +117,12 @@ class StableAudioService:
     
     def load_model(self):
         """Load the configured Stable Audio model."""
+        if self.provider != "local":
+            raise RuntimeError("Local model loading is disabled when STABLE_AUDIO_PROVIDER is not 'local'.")
+
+        import torch
+        from stable_audio_tools import get_pretrained_model
+
         if self.is_loaded:
             return
             
@@ -181,6 +193,16 @@ class StableAudioService:
                       steps: int = 8,
                       cfg_scale: float = 1.0,
                       sampler_type: str = "pingpong") -> str:
+        if self.provider in {"hf-space", "huggingface-space", "remote"}:
+            return self._generate_audio_via_hf_space(prompt, duration, steps, cfg_scale, sampler_type)
+        return self._generate_audio_local(prompt, duration, steps, cfg_scale, sampler_type)
+
+    def _generate_audio_local(self,
+                      prompt: str,
+                      duration: float = 11.0,
+                      steps: int = 8,
+                      cfg_scale: float = 1.0,
+                      sampler_type: str = "pingpong") -> str:
         """
         生成音频文件
         
@@ -194,6 +216,17 @@ class StableAudioService:
         Returns:
             生成的音频文件路径
         """
+        import random
+
+        import numpy as np
+        import torch
+        import torchaudio
+        from einops import rearrange
+        from stable_audio_tools.inference.generation import (
+            generate_diffusion_cond,
+            generate_diffusion_cond_inpaint,
+        )
+
         if not self.is_loaded:
             self.load_model()
         
@@ -210,9 +243,6 @@ class StableAudioService:
             start_time = time.time()
             
             # === 修复：设置 numpy 随机数生成器 ===
-            import numpy as np
-            import random
-            
             # 设置固定的随机种子，避免 int32 溢出
             np.random.seed(42)
             random.seed(42)
@@ -340,6 +370,91 @@ class StableAudioService:
         except Exception as e:
             print(f"Error generating audio: {str(e)}")
             raise
+
+    def _generate_audio_via_hf_space(
+        self,
+        prompt: str,
+        duration: float = 11.0,
+        steps: int = 8,
+        cfg_scale: float = 1.0,
+        sampler_type: str = "pingpong",
+    ) -> str:
+        duration = min(float(duration), self.max_duration)
+        optimized_prompt = self._optimize_prompt_for_stable_audio(prompt)
+        print(f"[HF_SPACE] Original prompt: '{prompt}'")
+        print(f"[HF_SPACE] Optimized prompt: '{optimized_prompt}'")
+
+        payload = {
+            "data": [
+                self.hf_space_variant,
+                optimized_prompt,
+                duration,
+                int(steps),
+                float(cfg_scale),
+                sampler_type,
+                0,
+            ]
+        }
+
+        start_time = time.time()
+        event_id = self._submit_hf_space_generation(payload)
+        file_url = self._wait_for_hf_space_file(event_id)
+
+        filename = f"stable_audio_{uuid.uuid4().hex[:8]}.wav"
+        filepath = os.path.join(self.output_dir, filename)
+        response = requests.get(file_url, headers=self._hf_headers(), timeout=120)
+        response.raise_for_status()
+        with open(filepath, "wb") as audio_file:
+            audio_file.write(response.content)
+
+        generation_time = time.time() - start_time
+        print(f"[HF_SPACE] Audio generated in {generation_time:.2f} seconds")
+        print(f"[HF_SPACE] Saved to: {filepath}")
+        return filepath
+
+    def _submit_hf_space_generation(self, payload: Dict[str, Any]) -> str:
+        response = requests.post(
+            f"{self.hf_space_url}/gradio_api/call/infer",
+            json=payload,
+            headers=self._hf_headers(),
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()["event_id"]
+
+    def _wait_for_hf_space_file(self, event_id: str) -> str:
+        response = requests.get(
+            f"{self.hf_space_url}/gradio_api/call/infer/{event_id}",
+            headers=self._hf_headers(),
+            stream=True,
+            timeout=360,
+        )
+        response.raise_for_status()
+
+        last_event = None
+        for raw_line in response.iter_lines(decode_unicode=True):
+            if not raw_line:
+                continue
+            if raw_line.startswith("event:"):
+                last_event = raw_line.removeprefix("event:").strip()
+                continue
+            if not raw_line.startswith("data:"):
+                continue
+
+            payload = raw_line.removeprefix("data:").strip()
+            if last_event == "complete":
+                result = json.loads(payload)
+                return result[0]["url"]
+            if last_event == "error":
+                raise RuntimeError(payload)
+
+        raise RuntimeError(f"Hugging Face Space did not return audio for event {event_id}")
+
+    def _hf_headers(self) -> Dict[str, str]:
+        hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        if not hf_token:
+            return {}
+        return {"Authorization": f"Bearer {hf_token}"}
     
     def generate_audio_with_effects(self, 
                                   prompt: str, 
@@ -376,6 +491,8 @@ class StableAudioService:
         return {
             "model_name": self.display_name,
             "model_id": self.model_name,
+            "provider": self.provider,
+            "hf_space_url": self.hf_space_url if self.provider != "local" else None,
             "device": self.device,
             "is_loaded": self.is_loaded,
             "sample_rate": self.sample_rate,
