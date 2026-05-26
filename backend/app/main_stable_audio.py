@@ -33,10 +33,15 @@ from app.services.storage_service import storage_service
 app = FastAPI(title="Stable Audio Service", version="1.0.0")
 
 # 配置CORS
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -60,18 +65,23 @@ async def generate_audio(request: Request):
     try:
         data = await request.json()
         description = data.get('userInput') or data.get('description', '')
-        
+
+
         print(f"[STABLE_AUDIO] 开始生成音频 - 描述: {description[:50]}...")
-        
+
+
         # 使用 Stable Audio 服务生成音频
         local_audio_path = stable_audio_service.generate_audio(description)
-        
+
+
         print(f"[STABLE_AUDIO] 音频生成完成: {local_audio_path}")
-        
+
+
         # 上传到云存储
         print(f"[STABLE_AUDIO] 开始上传到云存储...")
         cloud_url = await storage_service.upload_audio(local_audio_path, description)
-        
+
+
         if cloud_url:
             print(f"[STABLE_AUDIO] 上传成功: {cloud_url}")
             return {
@@ -87,7 +97,8 @@ async def generate_audio(request: Request):
                 'prompt': description,
                 'service': 'stable-audio'
             }
-        
+
+
     except Exception as e:
         print(f"[STABLE_AUDIO] 错误: {str(e)}")
         return {
@@ -102,18 +113,23 @@ async def generate_stable_audio(request: Request):
         data = await request.json()
         description = data.get('prompt', '')
         duration = data.get('duration', 10.0)
-        
+
+
         print(f"[STABLE_AUDIO] 开始生成音频 - 描述: {description[:50]}... 时长: {duration}秒")
-        
+
+
         # 使用 Stable Audio 服务生成音频
         local_audio_path = stable_audio_service.generate_audio(description, duration)
-        
+
+
         print(f"[STABLE_AUDIO] 音频生成完成: {local_audio_path}")
-        
+
+
         # 上传到云存储
         print(f"[STABLE_AUDIO] 开始上传到云存储...")
         cloud_url = await storage_service.upload_audio(local_audio_path, description)
-        
+
+
         if cloud_url:
             print(f"[STABLE_AUDIO] 上传成功: {cloud_url}")
             return {
@@ -131,7 +147,8 @@ async def generate_stable_audio(request: Request):
                 'duration': duration,
                 'service': 'stable-audio'
             }
-        
+
+
     except Exception as e:
         print(f"[STABLE_AUDIO] 错误: {str(e)}")
         return {
@@ -141,14 +158,17 @@ async def generate_stable_audio(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
+
     # 从环境变量获取配置
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", 8001))
     reload = os.getenv("RELOAD", "True").lower() == "true"
-    
+
+
     print(f"🚀 启动 Stable Audio 服务...")
     print(f"📍 地址: http://{host}:{port}")
     print(f"🔄 热重载: {reload}")
-    
-    uvicorn.run(app, host=host, port=port, reload=reload) 
+
+
+    uvicorn.run(app, host=host, port=port, reload=reload)

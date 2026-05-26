@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 
 interface AiNameContextType {
   aiName: string;
@@ -24,4 +24,4 @@ export const useAiName = () => {
     throw new Error('useAiName must be used within an AiNameProvider');
   }
   return context;
-}; 
+};

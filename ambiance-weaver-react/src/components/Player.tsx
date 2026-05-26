@@ -1,14 +1,12 @@
-import { API_ENDPOINTS } from '../config/api';
 import React, { useState, useEffect, useRef } from 'react';
 import { copyTextWithMessage } from '../utils/clipboard';
-import { generateShareUrl, parseShareData } from '../utils/shareUtils';
+import { parseShareData } from '../utils/shareUtils';
 import {
   Box,
   Typography,
   IconButton,
   Slider,
   Button,
-  styled,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -19,54 +17,12 @@ import {
 import {
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
-  ArrowBack as ArrowBackIcon,
   Share as ShareIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import PageLayout from './PageLayout';
 import Snackbar from '@mui/material/Snackbar';
-
-const ControlButton = styled(IconButton)(({ theme }) => ({
-  width: 48,
-  height: 48,
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '50%',
-  color: '#ffffff',
-  backdropFilter: 'blur(10px)',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.1)',
-  },
-}));
-
-const PlayPauseButton = styled(ControlButton)(({ theme }) => ({
-  width: 64,
-  height: 64,
-  background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
-  border: 'none',
-  boxShadow: '0 8px 24px rgba(45, 156, 147, 0.3)',
-  '&:hover': {
-    background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)',
-  },
-}));
-
-const ActionButton = styled(Button)(({ theme }) => ({
-  flex: 1,
-  height: 40,
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(45, 156, 147, 0.2)',
-  borderRadius: '20px',
-  color: '#ffffff',
-  fontSize: 18,
-  fontWeight: 500,
-  backdropFilter: 'blur(10px)',
-  '&:hover': {
-    background: 'rgba(255, 255, 255, 0.1)',
-    transform: 'translateY(-1px)',
-  },
-}));
 
 interface PlayerProps {
   audioUrl?: string;
@@ -87,33 +43,30 @@ const Player: React.FC<PlayerProps> = ({
   musicUrl,
   usePageLayout = true
 }) => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { 
-    audioUrl: stateAudioUrl, 
+  const {
+
+    audioUrl: stateAudioUrl,
+
     backgroundImageUrl: stateBackgroundImageUrl,
-    description: stateDescription 
+    description: stateDescription
+
   } = location.state || {};
-  
+
+
   // 尝试从 URL 参数读取分享数据
   const urlShareData = parseShareData();
-  
+
+
   const currentAudioUrl = audioUrl || stateAudioUrl || (urlShareData?.audio_url);
   const currentBackgroundImageUrl = backgroundImageUrl || stateBackgroundImageUrl || (urlShareData?.background_url);
   const currentDescription = description || stateDescription || (urlShareData?.description);
-  
-  // 调试信息
-  console.log('URL Share Data:', urlShareData);
-  console.log('Current Audio URL:', currentAudioUrl);
-  console.log('Current Background URL:', currentBackgroundImageUrl);
-  console.log('Current Description:', currentDescription);
+
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const musicRef = useRef<HTMLAudioElement>(null);
@@ -143,18 +96,25 @@ const Player: React.FC<PlayerProps> = ({
     const lastPeriod = truncated.lastIndexOf('.');
     const lastSpace = truncated.lastIndexOf(' ');
     const cutPoint = Math.max(lastPeriod, lastSpace);
-    
+
+
     if (cutPoint > maxLength * 0.8) { // 如果截断点太靠前，就用空格
-      return { 
-        truncated: truncated.substring(0, lastSpace) + '...', 
+      return {
+
+        truncated: truncated.substring(0, lastSpace) + '...',
+
         isLong: true,
-        full: text 
+        full: text
+
       };
     } else {
-      return { 
-        truncated: truncated.substring(0, cutPoint) + '...', 
+      return {
+
+        truncated: truncated.substring(0, cutPoint) + '...',
+
         isLong: true,
-        full: text 
+        full: text
+
       };
     }
   };
@@ -175,9 +135,11 @@ const Player: React.FC<PlayerProps> = ({
       setSnackbar({ open: true, message: 'No audio available to share' });
       return;
     }
-    
+
+
     setShareDialogOpen(true);
-    
+
+
     try {
       // 使用纯前端分享功能
       const shareData = {
@@ -186,11 +148,13 @@ const Player: React.FC<PlayerProps> = ({
         description: currentDescription,
         title: 'My Nightingale Soundscape'
       };
-      
+
+
       // 生成分享 URL，兼容 GitHub Pages 的仓库子路径
       const baseUrl = `${window.location.origin}${process.env.PUBLIC_URL}/player`;
       const params = new URLSearchParams();
-      
+
+
       if (shareData.audio_url) {
         params.append('audio', shareData.audio_url);
       }
@@ -204,16 +168,20 @@ const Player: React.FC<PlayerProps> = ({
         params.append('title', shareData.title);
       }
       params.append('t', Date.now().toString());
-      
+
+
       const shareUrl = `${baseUrl}?${params.toString()}`;
-      
+
+
       // 复制分享链接到剪贴板
       const copyResult = await copyTextWithMessage(shareUrl);
       setSnackbar({ open: true, message: copyResult.message });
-      
+
+
       // 更新对话框中的链接
       setShareUrl(shareUrl);
-      
+
+
     } catch (error) {
       console.error('Share creation failed:', error);
       // 回退到原来的方式
@@ -229,9 +197,11 @@ const Player: React.FC<PlayerProps> = ({
       setSnackbar({ open: true, message: 'No audio available to download' });
       return;
     }
-    
+
+
     setIsDownloading(true);
-    
+
+
     try {
       // 下载音频文件
       if (currentAudioUrl) {
@@ -330,24 +300,30 @@ const Player: React.FC<PlayerProps> = ({
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </Box>
-          
+
+
           {/* Prompt */}
           {currentDescription && (
             <Box sx={{ flexGrow: 1 }}>
               {(() => {
                 const textInfo = truncateDescription(currentDescription);
                 const displayText = isDescriptionExpanded ? textInfo.full : textInfo.truncated;
-                
+
+
                 // 调试信息
                 console.log('Text length:', currentDescription.length);
                 console.log('Is long:', textInfo.isLong);
                 console.log('Is expanded:', isDescriptionExpanded);
-                
+
+
                 return (
                   <Box sx={{ position: 'relative', mb: 1 }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
+                    <Typography
+
+                      variant="body2"
+
+                      sx={{
+
                         color: '#ffffff',
                         fontSize: '0.7rem',
                         lineHeight: 1.3,
@@ -397,8 +373,10 @@ const Player: React.FC<PlayerProps> = ({
 
         {/* Progress Bar */}
         <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography sx={{ 
-            color: '#ffffff', 
+          <Typography sx={{
+
+            color: '#ffffff',
+
             fontSize: '8px !important',
             fontWeight: 400,
             lineHeight: 1,
@@ -430,8 +408,10 @@ const Player: React.FC<PlayerProps> = ({
               },
             }}
           />
-          <Typography sx={{ 
-            color: '#ffffff', 
+          <Typography sx={{
+
+            color: '#ffffff',
+
             fontSize: '8px !important',
             fontWeight: 400,
             lineHeight: 1,
@@ -443,30 +423,43 @@ const Player: React.FC<PlayerProps> = ({
         </Box>
 
         {/* Control Buttons */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+
+          display: 'flex',
+
+          justifyContent: 'space-between',
+
           alignItems: 'center',
           width: '100%',
         }}>
-          <IconButton 
-            onClick={handleDownload} 
+          <IconButton
+
+            onClick={handleDownload}
+
             disabled={isDownloading}
-            sx={{ 
-              width: 36, 
-              height: 36, 
+            sx={{
+
+              width: 36,
+
+              height: 36,
+
               color: '#ffffff',
               fontSize: 20,
             }}
           >
             {isDownloading ? <CircularProgress size={16} /> : <DownloadIcon />}
           </IconButton>
-          
-          <IconButton 
+
+
+          <IconButton
+
             onClick={handlePlayPause}
-            sx={{ 
-              width: 40, 
-              height: 40, 
+            sx={{
+
+              width: 40,
+
+              height: 40,
+
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: '50%',
               color: '#ffffff',
@@ -475,12 +468,17 @@ const Player: React.FC<PlayerProps> = ({
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
           </IconButton>
-          
-          <IconButton 
+
+
+          <IconButton
+
             onClick={handleShare}
-            sx={{ 
-              width: 36, 
-              height: 36, 
+            sx={{
+
+              width: 36,
+
+              height: 36,
+
               color: '#ffffff',
               fontSize: 20,
             }}
@@ -553,4 +551,4 @@ const Player: React.FC<PlayerProps> = ({
   );
 };
 
-export default Player; 
+export default Player;

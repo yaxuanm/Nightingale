@@ -5,11 +5,9 @@ import {
   TextField,
   Button,
   IconButton,
-  Tooltip,
   Popover,
   Chip,
   Stack,
-  Paper,
   CircularProgress,
 } from '@mui/material';
 import {
@@ -18,7 +16,6 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
 import { API_CONFIG } from '../config/api';
@@ -34,21 +31,12 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const location = useLocation();
   const { mode } = (location.state as { mode: string } | null) || { mode: 'default' };
 
-  
+
+
   // 新增状态用于动态inspiration chips
   // inspiration chips 状态，初始为默认prompts
   const [inspirationChips, setInspirationChips] = useState<string[]>([]);
   const [isLoadingChips, setIsLoadingChips] = useState(false);
-
-  // 默认的fallback选项
-  const defaultSuggestedPrompts = [
-    "The rain falls like silver threads on cobblestone streets",
-    "Grandma's kitchen on Sunday morning, cinnamon in the air",
-    "A library where time stands still, dust motes dance in sunbeams",
-    "The quiet before dawn, when the world holds its breath",
-    "A steampunk workshop where brass gears whisper secrets",
-    "Fresh snow crunching underfoot, breath visible in cold air",
-  ];
 
   // Story Mode: custom prompt and UI
   const isStoryMode = mode === 'story';
@@ -76,7 +64,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
           user_input: inputValue,
         }),
       });
-      
+
+
       if (response.ok) {
         const data = await response.json();
         if (data.chips && Array.isArray(data.chips)) {
@@ -120,10 +109,6 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
     navigate('/chat', { state: { initialInput: inputValue, mode: mode } });
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setInputValue(suggestion);
-  };
-
   const modePrompts: Record<string, string> = {
     focus: 'Describe a soundscape that helps you focus.',
     creative: 'Describe a scene or idea to spark your creativity.',
@@ -158,19 +143,26 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
       </Box>
       {/* Header Section */}
       <Box sx={{ textAlign: 'center', mb: uiSystem.spacing.section, p: uiSystem.spacing.large }}>
-        <Typography 
-          variant="h2" 
-          sx={{ 
-            mb: uiSystem.spacing.medium, 
+        <Typography
+
+          variant="h2"
+
+          sx={{
+
+            mb: uiSystem.spacing.medium,
+
             color: uiSystem.colors.white,
             ...uiSystem.typography.h2,
           }}
         >
           {isStoryMode ? 'Story Mode' : 'Welcome back, Scarlett'}
         </Typography>
-        <Typography 
-          variant="body1" 
-          sx={{ 
+        <Typography
+
+          variant="body1"
+
+          sx={{
+
             color: uiSystem.colors.white70,
             ...uiSystem.typography.body1,
           }}
@@ -208,7 +200,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 },
               },
             } : {}}
-            sx={{ 
+            sx={{
+
               mb: `calc(${uiSystem.spacing.large} * 1.5)`,
               '& .MuiOutlinedInput-root': {
                 color: uiSystem.colors.white,
@@ -231,7 +224,8 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: uiSystem.spacing.small }}>
             <Typography
               variant="subtitle2"
-              sx={{ 
+              sx={{
+
                 color: uiSystem.colors.white,
                 fontWeight: 600,
                 fontSize: { xs: '1.05rem', md: '1.18rem', xl: '1.25rem' },
@@ -322,10 +316,14 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
           }}
         >
           <Box sx={{ p: uiSystem.spacing.medium, maxWidth: 320, bgcolor: uiSystem.colors.background }}>
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
-                mb: uiSystem.spacing.small, 
+            <Typography
+
+              variant="subtitle1"
+
+              sx={{
+
+                mb: uiSystem.spacing.small,
+
                 color: uiSystem.colors.white,
                 ...uiSystem.typography.h4,
               }}
@@ -353,10 +351,14 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                 </>
               )}
             </Box>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                mt: uiSystem.spacing.small, 
+            <Typography
+
+              variant="body2"
+
+              sx={{
+
+                mt: uiSystem.spacing.small,
+
                 color: uiSystem.colors.primary,
                 ...uiSystem.typography.body3,
               }}
@@ -388,4 +390,4 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   return content;
 };
 
-export default MainScreen; 
+export default MainScreen;

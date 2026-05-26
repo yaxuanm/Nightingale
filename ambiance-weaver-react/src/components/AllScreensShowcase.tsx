@@ -6,10 +6,6 @@ import ChatScreen from './ChatScreen';
 import Player from './Player';
 import { styled } from '@mui/material/styles';
 
-const SCALE = 0.6;
-const DEMO_PAGE_WIDTH = 700; // 调整Demo页面宽度
-const DEMO_PAGE_HEIGHT = 750;
-
 // Custom wrapper for demo pages without scrollbars
 const DemoPageWrapper = styled(Paper)(({ theme }) => ({
   position: 'relative',
@@ -30,21 +26,6 @@ const DemoPageWrapper = styled(Paper)(({ theme }) => ({
   justifyContent: 'flex-start',
   padding: theme.spacing(3),
 }));
-
-const ScaledContent = ({ children }: { children: React.ReactNode }) => (
-  <div
-    style={{
-      transform: `scale(${SCALE})`,
-      transformOrigin: 'top left',
-      width: `${DEMO_PAGE_WIDTH}px`,
-      height: `${DEMO_PAGE_HEIGHT}px`,
-      pointerEvents: 'auto',
-      display: 'inline-block',
-    }}
-  >
-    {children}
-  </div>
-);
 
 // Custom components for demo that bypass PageLayout
 const DemoOnboarding = () => (
@@ -173,4 +154,4 @@ export default function AllScreensShowcase() {
       </Box>
     </Box>
   );
-} 
+}

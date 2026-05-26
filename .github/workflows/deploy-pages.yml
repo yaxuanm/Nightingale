@@ -35,7 +35,7 @@ jobs:
 
       - name: Build
         working-directory: ambiance-weaver-react
-        run: CI=false npm run build
+        run: npm run build
 
       - name: Add SPA fallback
         run: cp ambiance-weaver-react/build/index.html ambiance-weaver-react/build/404.html

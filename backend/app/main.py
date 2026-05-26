@@ -38,12 +38,14 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
     import uuid, os, subprocess
     print(f"[LONG_AUDIO] Starting generate_long_stable_audio with prompt: {prompt[:50]}...")
     print(f"[LONG_AUDIO] Current working directory: {os.getcwd()}")
-    
+
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # 只生成一次10秒的音频
         seg_dur = min(segment_duration, 11.0)  # 最大11秒
         seg_path = os.path.join(tmpdir, "single_segment.wav")
-        
+
+
         # 使用动态路径 - 指向 backend 目录的虚拟环境
         current_dir = os.path.dirname(os.path.abspath(__file__))
         base_dir = os.path.dirname(current_dir)  # backend 目录
@@ -53,17 +55,20 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             venv_python = os.path.join(base_dir, "venv_stableaudio", "Scripts", "python.exe")
         else:  # Linux/Mac
             venv_python = os.path.join(base_dir, "venv_stableaudio", "bin", "python")
-        
+
+
         # 检查文件是否存在
         if not os.path.exists(worker_script):
             raise Exception(f"Worker script not found: {worker_script}")
         if not os.path.exists(venv_python):
             raise Exception(f"Python executable not found: {venv_python}")
-        
+
+
         # 设置环境变量
         env = os.environ.copy()
         env['PYTHONPATH'] = base_dir
-        
+
+
         cmd = [venv_python, worker_script, "--prompt", prompt, "--duration", str(seg_dur), "--out", seg_path]
         print(f"[LONG_AUDIO] Running Stable Audio worker: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', env=env, cwd=base_dir)
@@ -73,22 +78,27 @@ def generate_long_stable_audio(prompt: str, total_duration: float = 20.0, segmen
             print(f"[ERROR] Return code: {result.returncode}")
             raise Exception(f"Stable Audio worker failed: {result.stderr}")
         print(f"[LONG_AUDIO] Single segment generated: {seg_path}")
-        
+
+
         # 加载音频并循环播放达到目标时长
         segment_audio = AudioSegment.from_file(seg_path)
         segment_duration_ms = len(segment_audio)
         target_duration_ms = int(total_duration * 1000)
-        
+
+
         # 计算需要重复多少次
         repeats_needed = int(target_duration_ms / segment_duration_ms) + 1
         print(f"[LONG_AUDIO] Segment duration: {segment_duration_ms}ms, target: {target_duration_ms}ms, repeats: {repeats_needed}")
-        
+
+
         # 重复音频片段
         final_audio = segment_audio * repeats_needed
-        
+
+
         # 截断到目标时长
         final_audio = final_audio[:target_duration_ms]
-        
+
+
         # 使用绝对路径保存
         audio_output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "audio_output")
         os.makedirs(audio_output_dir, exist_ok=True)
@@ -119,10 +129,15 @@ app = FastAPI(title="Nightingale API",
              version="1.0.0")
 
 # Configure CORS
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specific origins should be set
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -229,10 +244,12 @@ async def generate_background(request: ImageGenerationRequest):
         image_url = await image_service.generate_background(
             description=request.description
         )
-        
+
+
         if not image_url:
             raise HTTPException(status_code=500, detail="Failed to generate background image")
-            
+
+
         return {"image_url": image_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -309,7 +326,8 @@ async def generate_inspiration_chips(request: InspirationChipsRequest):
             return {"chips": chips}
     except Exception as e:
         print(f"Inspiration chips generation failed: {e}")
-    
+
+
     # Fallback options
     fallback_chips = [
         "A cozy cafe on a rainy afternoon",
@@ -408,7 +426,8 @@ Narrative script:"""
         narrative_script = response.text.strip() if response and response.text else None
         if not narrative_script:
             raise Exception("Failed to generate narrative script")
-        
+
+
         # 2. TTS 生成旁白音频
         print(f"[STORY] Starting TTS generation...")
         tts_filename = f"tts_{uuid.uuid4().hex}.mp3"
@@ -420,14 +439,16 @@ Narrative script:"""
         print(f"[STORY] tts_path: {tts_path}")
         await tts_to_audio(narrative_script, tts_path, voice="en-US-JennyNeural")
         print(f"[STORY] TTS generation completed")
-        
+
+
         # 3. 获取 TTS 音频长度
         from pydub import AudioSegment
         tts_audio = AudioSegment.from_file(tts_path)
         tts_duration_ms = len(tts_audio)
         tts_duration_seconds = tts_duration_ms / 1000
         print(f"[STORY] TTS duration: {tts_duration_seconds:.2f} seconds (target: {duration}s)")
-        
+
+
         # 4. 用 Stable Audio worker 生成 soundscape（总时长为 duration）
         print(f"[STORY] About to call generate_long_stable_audio with prompt: {prompt[:50]}...")
         try:
@@ -436,7 +457,8 @@ Narrative script:"""
         except Exception as e:
             print(f"[STORY] generate_long_stable_audio failed: {e}")
             raise e
-        
+
+
         # 5. 混音
         soundscape_audio = AudioSegment.from_file(stable_audio_out)
         # 确保 soundscape 长度与 TTS 匹配或稍长
@@ -450,7 +472,8 @@ Narrative script:"""
         mixed_filename = f"story_mix_{uuid.uuid4().hex}.mp3"
         mixed_path = os.path.join(audio_output_dir, mixed_filename)
         mixed.export(mixed_path, format="mp3")
-        
+
+
         # 6. 上传合成音频到 Supabase
         from .services.storage_service import storage_service
         cloud_url = await storage_service.upload_audio(mixed_path, mixed_filename)
@@ -622,14 +645,17 @@ async def create_share(request: dict):
     background_url = request.get("background_url")
     description = request.get("description", "")
     title = request.get("title", "My Soundscape")
-    
+
+
     if not audio_url:
         raise HTTPException(status_code=400, detail="Missing 'audio_url' parameter")
-    
+
+
     try:
         # 生成唯一的分享ID
         share_id = str(uuid.uuid4())
-        
+
+
         # 创建分享数据
         share_data = {
             "id": share_id,
@@ -640,24 +666,29 @@ async def create_share(request: dict):
             "created_at": str(datetime.now()),
             "views": 0
         }
-        
+
+
         # 保存到数据库或文件系统（这里简化处理，实际应该用数据库）
         shares_dir = os.path.join(BASE_DIR, "shares")
         os.makedirs(shares_dir, exist_ok=True)
-        
+
+
         share_file = os.path.join(shares_dir, f"{share_id}.json")
         with open(share_file, 'w', encoding='utf-8') as f:
             json.dump(share_data, f, ensure_ascii=False, indent=2)
-        
+
+
         # 使用环境变量中的域名生成分享URL
         share_url = f"{SHARE_BASE_URL}/share/{share_id}"
-        
+
+
         return {
             "share_id": share_id,
             "share_url": share_url,
             "message": "Share created successfully"
         }
-        
+
+
     except Exception as e:
         print(f"[ERROR] /api/create-share: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -673,19 +704,23 @@ async def edit_prompt(request: dict):
     edit_instruction = request.get("edit_instruction", "")
     mode = request.get("mode", "default")
     is_story = request.get("is_story", False)
-    
+
+
     if not current_prompt or not edit_instruction:
         raise HTTPException(status_code=400, detail="Missing 'current_prompt' or 'edit_instruction' parameter")
-    
+
+
     try:
         # 使用AI服务编辑prompt或narrative
         edited_prompt = await ai_service.edit_prompt(current_prompt, edit_instruction, mode, is_story)
-        
+
+
         return {
             "edited_prompt": edited_prompt,
             "message": "Prompt edited successfully"
         }
-        
+
+
     except Exception as e:
         print(f"[ERROR] /api/edit-prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -698,20 +733,25 @@ async def get_share(share_id: str):
     try:
         shares_dir = os.path.join(BASE_DIR, "shares")
         share_file = os.path.join(shares_dir, f"{share_id}.json")
-        
+
+
         if not os.path.exists(share_file):
             raise HTTPException(status_code=404, detail="Share not found")
-        
+
+
         with open(share_file, 'r', encoding='utf-8') as f:
             share_data = json.load(f)
-        
+
+
         # 增加访问计数
         share_data["views"] += 1
         with open(share_file, 'w', encoding='utf-8') as f:
             json.dump(share_data, f, ensure_ascii=False, indent=2)
-        
+
+
         return share_data
-        
+
+
     except Exception as e:
         print(f"[ERROR] /api/share/{share_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -720,4 +760,4 @@ async def get_share(share_id: str):
 async def startup_event():
     print("Nightingale Gemini API 启动完成！")
 
-app.include_router(router) 
+app.include_router(router)

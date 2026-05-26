@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
+  Alert,
   Box,
   Typography,
   Button,
@@ -164,7 +165,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const { aiName } = useAiName();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState<ChatStage>('selectType');
@@ -376,13 +376,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   // AI聊天编辑prompt的函数
   const handleAiEdit = async () => {
     if (!aiEditInput.trim() || isLoading) return;
-    
+
+
     setIsLoading(true);
     try {
       // 区分story模式和非story模式
       const isStory = mode === 'story';
       const contentType = isStory ? 'narrative' : 'prompt';
-      
+
+
       const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/edit-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -394,28 +396,33 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           content_type: contentType
         }),
       });
-      
+
+
       if (!response.ok) {
         throw new Error('Failed to edit prompt');
       }
-      
+
+
       const data = await response.json();
       setFinalPrompt(data.edited_prompt);
       setAiEditInput(''); // 清空输入框
-      
+
+
       // 添加用户消息到聊天记录
       setMessages((prev) => [
         ...prev,
         { sender: 'user', text: aiEditInput, isUser: true },
         { sender: 'ai', text: `I've updated your ${contentType}: "${data.edited_prompt}"`, isUser: false }
       ]);
-      
+
+
     } catch (error) {
       console.error('Error editing prompt:', error);
       // 如果API调用失败，使用简单的文本替换作为fallback
       const lowerInstruction = aiEditInput.toLowerCase();
       let editedPrompt = finalPrompt;
-      
+
+
       if (lowerInstruction.includes('shorter') || lowerInstruction.includes('shorten')) {
         editedPrompt = finalPrompt.split('.').slice(0, 2).join('.') + '.';
       } else if (lowerInstruction.includes('longer') || lowerInstruction.includes('expand')) {
@@ -425,10 +432,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       } else if (lowerInstruction.includes('dramatic') || lowerInstruction.includes('intense')) {
         editedPrompt = finalPrompt + ' with heightened dramatic tension.';
       }
-      
+
+
       setFinalPrompt(editedPrompt);
       setAiEditInput('');
-      
+
+
       const contentType = mode === 'story' ? 'narrative' : 'description';
       setMessages((prev) => [
         ...prev,
@@ -541,7 +550,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         const audioData = await audioResponse.json();
         setCurrentAudioUrl(audioData.audio_url);
       }
-      
+
+
       // 1.2 自动生成背景图片
       const backgroundDescription = initialInput || 'a beautiful soundscape background';
               const bgResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
@@ -629,7 +639,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         .catch(() => setElementOptions(defaultOptions.audio_elements))
         .finally(() => setIsLoading(false));
     }
-  }, [currentStage, mode, initialInput]);
+  }, [currentStage, mode, initialInput, defaultOptions]);
 
   // 添加调试useEffect
   useEffect(() => {
@@ -749,13 +759,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       setError(null);
       setShowPromptEdit(false); // 关闭编辑弹窗
       abortControllerRef.current = new AbortController();
-      
+
+
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Generating your music...', isUser: false },
         { sender: 'ai', text: finalPrompt, isUser: false },
       ]);
-      
+
+
       // 调用 /api/generate-music 生成音频
       const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-music`, {
         method: 'POST',
@@ -772,7 +784,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       }
       const data = await res.json();
       setCurrentMusicUrl(data.audio_url);
-      
+
+
       // Generate background image for music mode
       const backgroundDescription = initialInput || 'a beautiful music background';
       const bgResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
@@ -785,7 +798,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         const bgData = await bgResponse.json();
         setCurrentBackgroundImageUrl(bgData.image_url);
       }
-      
+
+
       setMessages((prevMessages) => [
         ...prevMessages,
         { sender: 'ai', text: 'Your personalized music is ready! What would you like to do?', isUser: false },
@@ -821,7 +835,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
     if (initialInput) {
       introMessage += ` And you've started with the idea: "${initialInput}".`;
     }
-    
+
+
     // story mode直接进入audio流程，不需要选择类型
     if (mode === 'story') {
       introMessage += ` Let's build your perfect soundscape! What kind of mood or feeling do you want to evoke?`;
@@ -837,12 +852,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       introMessage += ` What do you want to generate?`;
       setCurrentStage('selectType');
     }
-    
+
+
     setMessages([
       ...(initialInput ? [{ sender: 'user' as const, text: initialInput, isUser: true }] : []),
       { sender: 'ai' as const, text: introMessage, isUser: false },
     ]);
-    setInputText('');
   }, [initialInput, mode, aiName]);
 
   // 删除“Edit your soundscape description”相关 UI 和逻辑
@@ -881,6 +896,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         </Typography>
       </Box>
       <Stack spacing={2} sx={{ flex: 1, width: '100%', overflow: 'auto', p: uiSystem.spacing.large }} ref={chatContainerRef}>
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
         {messages.map((msg, index) => (
           <Box
             key={index}
@@ -1085,7 +1105,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
               <CloseIcon />
             </IconButton>
           </Box>
-          
+
+
           {/* 聊天编辑区域 */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
@@ -1113,9 +1134,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                       borderColor: '#2d9c93',
                     },
                   },
-                  '& .MuiInputBase-input': { 
+                  '& .MuiInputBase-input': {
+
                     color: 'white',
-                    '&::placeholder': { 
+                    '&::placeholder': {
+
                       color: 'rgba(255,255,255,0.5)',
                       opacity: 1,
                     },
@@ -1126,8 +1149,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                 variant="contained"
                 onClick={handleAiEdit}
                 disabled={!aiEditInput.trim() || isLoading}
-                sx={{ 
-                  minWidth: 80, 
+                sx={{
+
+                  minWidth: 80,
+
                   background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
                   '&:hover': { background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)' }
                 }}
@@ -1136,7 +1161,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
               </Button>
             </Box>
           </Box>
-          
+
+
           {/* 直接编辑区域 */}
           <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
             Or edit your story directly:
@@ -1194,7 +1220,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
               <CloseIcon />
             </IconButton>
           </Box>
-          
+
+
           {/* 聊天编辑区域 */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
@@ -1222,9 +1249,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                       borderColor: '#2d9c93',
                     },
                   },
-                  '& .MuiInputBase-input': { 
+                  '& .MuiInputBase-input': {
+
                     color: 'white',
-                    '&::placeholder': { 
+                    '&::placeholder': {
+
                       color: 'rgba(255,255,255,0.5)',
                       opacity: 1,
                     },
@@ -1235,8 +1264,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
                 variant="contained"
                 onClick={handleAiEdit}
                 disabled={!aiEditInput.trim() || isLoading}
-                sx={{ 
-                  minWidth: 80, 
+                sx={{
+
+                  minWidth: 80,
+
                   background: 'linear-gradient(135deg, #2d9c93 0%, #1a5f5a 100%)',
                   '&:hover': { background: 'linear-gradient(135deg, #1a5f5a 0%, #2d9c93 100%)' }
                 }}
@@ -1245,7 +1276,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
               </Button>
             </Box>
           </Box>
-          
+
+
           {/* 直接编辑区域 */}
           <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
             Or edit directly:
@@ -1476,7 +1508,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
           </Button>
         </Box>
       )}
-   
+
+
       {/* 删除底部聊天框 - 不再需要 */}
       {/* 原来的聊天框代码已删除，因为现在使用引导式流程和AI编辑弹窗 */}
     </>
@@ -1492,4 +1525,4 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   return chatMainContent;
 };
 
-export default ChatScreen; 
+export default ChatScreen;

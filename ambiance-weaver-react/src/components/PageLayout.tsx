@@ -10,7 +10,9 @@ interface PageLayoutProps {
   showBackground?: boolean;
 }
 
-const PageContainer = styled(Box)<{ backgroundImageUrl?: string; showBackground?: boolean }>(({ theme, backgroundImageUrl, showBackground }) => ({
+const PageContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'backgroundImageUrl' && prop !== 'showBackground',
+})<{ backgroundImageUrl?: string; showBackground?: boolean }>(({ theme, backgroundImageUrl, showBackground }) => ({
   minHeight: '100vh',
   display: 'flex',
   flexDirection: 'column',
@@ -88,7 +90,8 @@ const PageLayout: React.FC<PageLayoutProps> = ({
 }) => {
   // 检测是否为Player页面（通过maxWidth判断）
   const isPlayerPage = typeof maxWidth === 'number' && maxWidth <= 500;
-  
+
+
   return (
     <PageContainer backgroundImageUrl={backgroundImageUrl} showBackground={showBackground}>
       <ContentWrapper
@@ -125,4 +128,4 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   );
 };
 
-export default PageLayout; 
+export default PageLayout;

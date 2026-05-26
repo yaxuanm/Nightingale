@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Grid, TextField } from '@mui/material';
+import React from 'react';
+import { Box, Typography, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   WorkOutline as WorkIcon,
   Spa as SpaIcon,
-  AutoStories as StoryIcon,
   MusicNote as MusicIcon,
   Hearing as HearingIcon,
   MenuBook as BookIcon,
@@ -113,10 +111,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
       </Typography>
 
       {/* Title */}
-      <Typography 
-        variant="h1" 
-        sx={{ 
-          color: uiSystem.colors.white, 
+      <Typography
+
+        variant="h1"
+
+        sx={{
+
+          color: uiSystem.colors.white,
+
           textAlign: 'center',
           mb: uiSystem.spacing.large,
           ...uiSystem.typography.h1,
@@ -164,9 +166,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 }, mb: { xs: 2, md: 3 } }}>
                 <mode.icon sx={{ color: uiSystem.colors.white, fontSize: { xs: 32, md: 40, lg: 48 } }} />
-                <Typography 
-                  variant="h3" 
-                  sx={{ 
+                <Typography
+
+                  variant="h3"
+
+                  sx={{
+
                     color: uiSystem.colors.white,
                     ...uiSystem.typography.h3,
                     fontSize: { xs: '1.3rem', md: '1.5rem', lg: '1.8rem' },
@@ -175,9 +180,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
                   {mode.title}
                 </Typography>
               </Box>
-              <Typography 
-                variant="body2" 
-                sx={{ 
+              <Typography
+
+                variant="body2"
+
+                sx={{
+
                   color: uiSystem.colors.white70,
                   ...uiSystem.typography.body2,
                   fontSize: { xs: '1.1rem', md: '1.15rem', lg: '1.2rem' },
@@ -203,4 +211,4 @@ const Onboarding: React.FC<OnboardingProps> = ({ usePageLayout = true }) => {
   return content;
 };
 
-export default Onboarding; 
+export default Onboarding;

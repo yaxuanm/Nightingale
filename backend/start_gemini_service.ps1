@@ -18,10 +18,13 @@ Write-Host "📦 激活虚拟环境..." -ForegroundColor Cyan
 $pythonVersion = python --version
 Write-Host "✓ Python版本: $pythonVersion" -ForegroundColor Green
 
-# 设置API密钥
-$env:GEMINI_API_KEY = "AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI"
-$env:GOOGLE_API_KEY = "AIzaSyAqeUjWY_u59F_Tbxm3FfE9JTJqoGMdZAI"
-Write-Host "✓ API密钥已设置" -ForegroundColor Green
+# 检查API密钥
+if (-not $env:GOOGLE_API_KEY) {
+    Write-Host "❌ 错误: 未设置 GOOGLE_API_KEY 环境变量" -ForegroundColor Red
+    Write-Host "请先在当前终端设置: `$env:GOOGLE_API_KEY='your-google-api-key'" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "✓ API密钥已从环境变量读取" -ForegroundColor Green
 
 # 检查必要的包
 Write-Host "🔍 检查必要的包..." -ForegroundColor Cyan
@@ -46,4 +49,4 @@ Write-Host "API文档: http://127.0.0.1:8000/docs" -ForegroundColor Cyan
 Write-Host "按 Ctrl+C 停止服务" -ForegroundColor Yellow
 
 # 启动uvicorn服务器
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

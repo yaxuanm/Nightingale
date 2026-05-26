@@ -15,11 +15,10 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import PageLayout from './PageLayout';
 import { API_CONFIG } from '../config/api';
 import { copyTextWithMessage } from '../utils/clipboard';
-import { parseShareData, isSharePage, cleanShareParams, generateShareTitle } from '../utils/shareUtils';
+import { parseShareData } from '../utils/shareUtils';
 
 
 
@@ -56,20 +55,23 @@ const SharePage: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
+
       // 如果没有 URL 参数，尝试从后端 API 加载（传统方式）
       if (!shareId) {
         setError('No share data found');
         setLoading(false);
         return;
       }
-      
+
+
       try {
         const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/share/${shareId}`);
         if (!response.ok) {
           throw new Error('Share not found');
         }
-        
+
+
         const data = await response.json();
         setShareData(data);
       } catch (err) {
@@ -125,9 +127,11 @@ const SharePage: React.FC = () => {
 
   const handleDownload = async () => {
     if (!shareData) return;
-    
+
+
     setIsDownloading(true);
-    
+
+
     try {
       // 下载音频文件
       if (shareData.audio_url) {
@@ -247,14 +251,18 @@ const SharePage: React.FC = () => {
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </Box>
-          
+
+
           {/* Prompt */}
           <Box sx={{ flexGrow: 1 }}>
             {/* Title */}
             {shareData.title && (
-              <Typography 
-                variant="h6" 
-                sx={{ 
+              <Typography
+
+                variant="h6"
+
+                sx={{
+
                   color: '#ffffff',
                   fontSize: '0.9rem',
                   fontWeight: 600,
@@ -265,13 +273,17 @@ const SharePage: React.FC = () => {
                 {shareData.title}
               </Typography>
             )}
-            
+
+
             {/* Description */}
             {shareData.description && (
               <Box sx={{ position: 'relative', mb: 1 }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
+                <Typography
+
+                  variant="body2"
+
+                  sx={{
+
                     color: '#ffffff',
                     fontSize: '0.7rem',
                     lineHeight: 1.3,
@@ -289,8 +301,10 @@ const SharePage: React.FC = () => {
 
         {/* Progress Bar */}
         <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography sx={{ 
-            color: '#ffffff', 
+          <Typography sx={{
+
+            color: '#ffffff',
+
             fontSize: '8px !important',
             fontWeight: 400,
             lineHeight: 1,
@@ -322,8 +336,10 @@ const SharePage: React.FC = () => {
               },
             }}
           />
-          <Typography sx={{ 
-            color: '#ffffff', 
+          <Typography sx={{
+
+            color: '#ffffff',
+
             fontSize: '8px !important',
             fontWeight: 400,
             lineHeight: 1,
@@ -335,30 +351,43 @@ const SharePage: React.FC = () => {
         </Box>
 
         {/* Control Buttons */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+
+          display: 'flex',
+
+          justifyContent: 'space-between',
+
           alignItems: 'center',
           width: '100%',
         }}>
-          <IconButton 
-            onClick={handleDownload} 
+          <IconButton
+
+            onClick={handleDownload}
+
             disabled={isDownloading}
-            sx={{ 
-              width: 36, 
-              height: 36, 
+            sx={{
+
+              width: 36,
+
+              height: 36,
+
               color: '#ffffff',
               fontSize: 20,
             }}
           >
             {isDownloading ? <CircularProgress size={16} /> : <DownloadIcon />}
           </IconButton>
-          
-          <IconButton 
+
+
+          <IconButton
+
             onClick={handlePlayPause}
-            sx={{ 
-              width: 40, 
-              height: 40, 
+            sx={{
+
+              width: 40,
+
+              height: 40,
+
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: '50%',
               color: '#ffffff',
@@ -367,12 +396,17 @@ const SharePage: React.FC = () => {
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
           </IconButton>
-          
-          <IconButton 
+
+
+          <IconButton
+
             onClick={handleShare}
-            sx={{ 
-              width: 36, 
-              height: 36, 
+            sx={{
+
+              width: 36,
+
+              height: 36,
+
               color: '#ffffff',
               fontSize: 20,
             }}
@@ -394,11 +428,15 @@ const SharePage: React.FC = () => {
       </Box>
 
       {/* Hidden audio element */}
-      <audio 
-        ref={audioRef} 
+      <audio
+
+        ref={audioRef}
+
         src={shareData.audio_url}
-        onTimeUpdate={handleTimeUpdate} 
-        onLoadedMetadata={handleLoadedMetadata} 
+        onTimeUpdate={handleTimeUpdate}
+
+        onLoadedMetadata={handleLoadedMetadata}
+
       />
 
       <Snackbar
@@ -423,4 +461,4 @@ const SharePage: React.FC = () => {
   );
 };
 
-export default SharePage; 
+export default SharePage;
