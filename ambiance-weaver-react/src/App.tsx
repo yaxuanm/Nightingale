@@ -1,6 +1,6 @@
 import React from 'react';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { theme } from './theme';
 import MainScreen from './components/MainScreen';
 import DemoOverview from './components/DemoOverview';
@@ -11,11 +11,28 @@ import AllScreensShowcase from './components/AllScreensShowcase';
 import SharePage from './components/SharePage';
 import DemoSamples from './components/DemoSamples';
 
+const RedirectFromQuery = () => {
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    if (redirect) {
+      const nextRoute = redirect.startsWith('/') ? redirect : `/${redirect}`;
+      window.history.replaceState(null, '', `${process.env.PUBLIC_URL}${nextRoute}`);
+      navigate(nextRoute, { replace: true });
+    }
+  }, [navigate]);
+
+  return null;
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router basename={process.env.PUBLIC_URL}>
+        <RedirectFromQuery />
         <Routes>
           <Route path="/" element={<Onboarding />} />
           <Route path="/demo" element={<DemoOverview />} />
