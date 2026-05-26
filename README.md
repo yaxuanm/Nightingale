@@ -1,359 +1,231 @@
-# Nightingale - Let Sound Touch the Soul
+# Nightingale
 
-> AI-powered personalized soundscape platform that transforms emotions and inspirations into immersive audio experiences
+Let sound touch the soul.
 
-## 🌟 Overview
+Nightingale is an AI-powered soundscape experience that turns a person's mood,
+memory, or creative prompt into a personalized ambience. The product combines a
+guided React interface, Gemini-powered prompt interpretation, Stable Audio 3
+sound generation, image generation, playback, and shareable scene links.
 
-Nightingale is an innovative AI-powered platform that generates highly personalized, real-time soundscapes based on user descriptions. Using advanced AI models including Gemini and Stable Audio, it creates immersive audio experiences for focus, creativity, meditation, and relaxation.
+Live portfolio build: https://yaxuanm.github.io/Nightingale/
 
-## ✨ Features
+Stable Audio 3 demo Space: https://huggingface.co/spaces/yaxuanmmmmm/nightingale-stable-audio-3-demo
 
-- **AI-Powered Generation**: Uses Gemini AI for text processing and Stable Audio for high-quality sound generation
-- **Multiple Modes**: Support for Focus, Creative Flow, Mindful Escape, Sleep, Story, and ASMR modes
-- **Real-time Processing**: Fast audio generation with progress tracking
-- **Interactive UI**: Modern React-based interface with intuitive controls
-- **Audio Player**: Built-in player with background image support
-- **Sharing**: Easy sharing of generated soundscapes
-- **Cross-platform**: Web-based application accessible from any device
+## Product Concept
 
-## 🏗️ Architecture
+Most sound apps ask people to choose from a fixed catalog. Nightingale starts
+from something more human: "I want the feeling of a warm summer evening at my
+grandmother's house" or "I need a focused, rain-washed room for writing."
 
+The app translates that intent into a playable soundscape and visual scene. It
+is designed for focus, creative flow, mindful escape, sleep, storytelling, and
+ASMR-style listening.
+
+## What It Does
+
+- Guided onboarding for selecting listening intent and emotional direction.
+- Conversational prompt flow for describing a memory, scene, or mood.
+- Gemini-based prompt refinement for scene, music, and story generation.
+- Stable Audio 3 Small SFX integration for short ambience generation.
+- Background image generation and an immersive audio player.
+- Share links for generated experiences.
+- Separate frontend, main API, audio generation, and storage layers so the demo
+  can be deployed incrementally.
+
+## Current Deployment
+
+The portfolio frontend is deployed on GitHub Pages:
+
+```text
+https://yaxuanm.github.io/Nightingale/
 ```
-Nightingale/
-├── ambiance-weaver-react/     # Frontend React application
-├── backend/                   # Python FastAPI backend
-│   ├── app/                  # Main application code
-│   ├── scripts/              # Utility scripts
-│   ├── venv_gemini/         # Gemini AI virtual environment
-│   └── venv_stableaudio/    # Stable Audio virtual environment
-├── docs/                     # Documentation
-├── scripts/                  # Project scripts
-└── venv_stableaudio/        # Root level Stable Audio environment
+
+The Stable Audio 3 demo has also been packaged as a Hugging Face Gradio Space:
+
+```text
+https://huggingface.co/spaces/yaxuanmmmmm/nightingale-stable-audio-3-demo
 ```
 
-## 🏛️ Architecture Solution
+The Space is configured with the Stable Audio 3 Small SFX model and the required
+Hugging Face secret. Hugging Face currently requires a PRO account to host a
+personal ZeroGPU Space, so the public Space may remain on CPU unless GPU
+hardware is enabled. The zero-cost portfolio strategy is to keep the frontend
+public, use pre-generated audio samples for stable presentation, and run
+real-time generation locally, on Colab, or on temporary GPU hardware for live
+demos.
 
-### System Components
-
-Nightingale uses a microservices architecture with the following core components:
-
-#### 1. **Frontend Layer**
-- **Tech Stack**: React 18 + TypeScript + Material-UI v5.15.11
-- **Function**: User interface, interaction logic, state management
-- **Deployment**: Static file service
-- **Port**: 3000 (development)
-
-#### 2. **Main API Service Layer**
-- **Tech Stack**: FastAPI v0.116.0 + Gemini AI
-- **Function**: 
-  - User input processing and scene generation
-  - Prompt generation and optimization
-  - Image generation (Stability AI)
-  - Text-to-Speech (Edge TTS)
-  - Music generation
-  - Story creation
-  - Sharing functionality
-- **Deployment**: Independent service, load balanced
-- **Port**: 8000
-
-#### 3. **Stable Audio Service Layer**
-- **Tech Stack**: FastAPI + Stable Audio Tools v0.0.19
-- **Function**: 
-  - High-quality audio generation
-  - Audio processing and optimization
-  - Audio format conversion
-- **Deployment**: Independent service, GPU accelerated
-- **Port**: 8001
-
-#### 4. **Storage Layer**
-- **Tech Stack**: Supabase v2.16.0
-- **Function**: 
-  - Audio file storage
-  - Image file storage
-  - User data management
-- **Deployment**: Cloud service, auto-scaling
-
-### Data Flow
+## Architecture
 
 ```mermaid
-graph TD
-    A[User Input] --> B[Frontend React:3000]
-    B --> C[Main API Service FastAPI:8000]
-    B --> D[Stable Audio Service:8001]
-    C --> E[Gemini AI Text Processing]
-    C --> F[Image Generation]
-    C --> G[TTS Service]
-    C --> H[Music Generation]
-    D --> I[Stable Audio Model]
-    F --> J[Supabase Storage]
-    D --> J
-    J --> K[File Distribution]
-    K --> B
+flowchart LR
+    User["Listener"] --> Frontend["React + TypeScript frontend"]
+    Frontend --> MainAPI["FastAPI main API"]
+    Frontend --> AudioAPI["Stable Audio service"]
+    MainAPI --> Gemini["Google Gemini"]
+    MainAPI --> ImageGen["Stability image generation"]
+    AudioAPI --> SA3["Stable Audio 3 Small SFX"]
+    MainAPI --> Storage["Supabase storage"]
+    AudioAPI --> Storage
+    Storage --> Frontend
 ```
 
-#### Data Flow Process:
+## Repository Structure
 
-1. **User Input Processing**
-   ```
-   User → Frontend → Main API Service → Gemini AI → Optimized Prompts
-   ```
-
-2. **Parallel Generation**
-   ```
-   Main API Service → Image Generation (parallel)
-   Main API Service → TTS/Music Generation (parallel)
-   Frontend → Stable Audio Service → Audio Generation (parallel)
-   ```
-
-3. **Result Integration**
-   ```
-   Images/Audio/Music → Supabase Storage → File Distribution → Frontend Player
-   ```
-
-### API Endpoints
-
-#### Main API Service (Port 8000)
-- `POST /api/generate-scene` - Scene generation
-- `POST /api/generate-background` - Image generation
-- `POST /api/generate-options` - Option generation
-- `POST /api/create-story` - Story creation with TTS
-- `POST /api/generate-music` - Music generation
-- `POST /api/create-share` - Share creation
-- `POST /api/edit-prompt` - Prompt editing
-- `GET /api/share/{share_id}` - Get shared content
-
-#### Stable Audio Service (Port 8001)
-- `POST /api/generate-audio` - Audio generation
-- `GET /health` - Health check
-
-### Technical Stack
-
-#### Frontend
-- React 18, TypeScript, Material-UI v5.15.11
-- Framer Motion v11.18.2, React Router DOM v6.22.1
-
-#### Backend
-- Python 3.11, FastAPI v0.116.0, Uvicorn v0.35.0
-- Pydub v0.25.1, Supabase v2.16.0
-
-#### AI Models & Services
-- **Text Processing**: Google Gemini (gemini-2.5-flash, gemini-1.5-flash)
-- **Audio Generation**: Stable Audio Tools v0.0.19, stable-audio-open-small
-- **Text-to-Speech**: Edge TTS
-- **Image Generation**: Stability AI
-- **Deep Learning**: PyTorch v2.7.1, TorchAudio v2.7.1, Transformers v4.53.1
-
-### Deployment Architecture
-
-#### Development Environment
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Main API      │    │  Stable Audio   │
-│   (Port 3000)   │◄──►│   (Port 8000)   │◄──►│   (Port 8001)   │
-│   React Dev     │    │   FastAPI       │    │   FastAPI       │
-│                 │    │   + Gemini      │    │   + Stable      │
-│                 │    │   + Image Gen   │    │   Audio         │
-│                 │    │   + TTS         │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```text
+Nightingale/
+|-- ambiance-weaver-react/        # React portfolio app
+|-- backend/                      # FastAPI services and AI integrations
+|   |-- app/main.py               # Main API: scenes, stories, images, sharing
+|   |-- app/main_stable_audio.py  # Audio generation API
+|   `-- app/services/             # Gemini, Stable Audio, storage, media helpers
+|-- deploy/huggingface-space/     # Gradio Space package for Stable Audio 3 demo
+|-- docs/                         # Supporting demo and submission artifacts
+|-- .github/workflows/            # GitHub Pages deployment
+`-- DEPLOYMENT.md                 # Deployment notes and options
 ```
 
-#### Production Environment
+## Tech Stack
+
+- Frontend: React 18, TypeScript, Material UI, Framer Motion, React Router.
+- Backend: Python, FastAPI, Uvicorn, Pydub, Supabase.
+- AI services: Google Gemini, Stable Audio 3 Small SFX, Stability image models,
+  Edge TTS.
+- Deployment: GitHub Pages for the frontend, Hugging Face Space for the audio
+  demo package, optional GPU runtime for real-time generation.
+
+## Stable Audio 3 Integration
+
+The audio service now defaults to:
+
+```env
+STABLE_AUDIO_MODEL=stabilityai/stable-audio-3-small-sfx
+STABLE_AUDIO_DISPLAY_NAME=Stable Audio 3 Small SFX
+STABLE_AUDIO_MAX_DURATION=11.0
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Static Files  │    │   Load Balancer │    │   Stable Audio  │
-│   Frontend      │◄──►│   Main API      │◄──►│   Service       │
-│   (Web Server)  │    │   (Reverse      │    │   (CPU)         │
-│                 │    │   Proxy)        │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   Supabase      │
-                       │   Storage       │
-                       │   (Cloud)       │
-                       └─────────────────┘
+
+Stable Audio 3 is a gated Hugging Face model. To run generation locally or in a
+Space, accept the model terms on Hugging Face and set a read-capable token:
+
+```env
+HF_TOKEN=hf_your_token_here
 ```
 
-### Technical Limitations
+Do not commit `.env` files or tokens. The repo keeps secrets out of source
+control.
 
-#### Audio Generation Constraints
-- **Stable Audio Model**: Maximum 11-second audio clips
-- **Solution**: Looping with crossfade for longer durations
-- **Generation Time**: 10-20 seconds per audio generation
+## Running Locally
 
-#### Model Capabilities
-- **Complex Compositions**: Difficulty with multiple sound elements
-- **Semantic Understanding**: Limited nuanced modifier processing
-- **Quiet Sounds**: Challenges with low-amplitude generation
+### Frontend
 
-## 🚀 Quick Start
+```bash
+cd ambiance-weaver-react
+npm install
+npm start
+```
 
-### Prerequisites
+The app runs at `http://localhost:3000`.
 
-- Python 3.11 (required, not compatible with 3.12 or 3.13)
-- Node.js 16+
-- FFmpeg installed and in PATH
+### Main API
 
-> **⚠️ Cross-Platform Compatibility**: This project has been updated for cross-platform deployment. For detailed instructions on Windows, Linux, and macOS deployment, see [Cross-Platform Deployment Guide](DEPLOYMENT_CROSS_PLATFORM.md).
+```bash
+cd backend
+python -m venv venv_gemini
+source venv_gemini/bin/activate
+pip install -r requirements-gemini-working.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-### Installation
+On Windows, activate with:
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yaxuanm/Nightingale.git
-   cd Nightingale
-   ```
+```powershell
+.\venv_gemini\Scripts\activate
+```
 
-2. **Set up backend environment**
-   ```bash
-   cd backend
-   python -m venv venv_gemini
-   # Windows:
-   .\venv_gemini\Scripts\activate
-   # Linux/macOS:
-   # source venv_gemini/bin/activate
-   pip install -r requirements-gemini-working.txt
-   ```
+### Stable Audio Service
 
-3. **Set up Stable Audio environment**
-   ```bash
-   python -m venv venv_stableaudio
-   # Windows:
-   .\venv_stableaudio\Scripts\activate
-   # Linux/macOS:
-   # source venv_stableaudio/bin/activate
-   pip install -r requirements-stable-audio.txt
-   python scripts/stable_audio_fix.py
-   ```
+```bash
+cd backend
+python -m venv venv_stableaudio
+source venv_stableaudio/bin/activate
+pip install -r requirements-stable-audio.txt
+python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001
+```
 
-4. **Set up frontend**
-   ```bash
-   cd ../ambiance-weaver-react
-   npm install
-   ```
+Real-time audio generation is strongly recommended on a CUDA GPU or equivalent
+hosted GPU runtime. CPU is useful for verifying that the service starts, but it
+is not a good user experience for generation.
 
-5. **Configure environment variables**
-   ```bash
-   # Copy and edit environment files
-   cp backend/env.example backend/.env
-   cp ambiance-weaver-react/env.example ambiance-weaver-react/.env
-   ```
+## Environment Variables
 
-### Running the Application
+Backend:
 
-1. **Start backend services**
-   ```bash
-   # Terminal 1: Main API (port 8000)
-   cd backend
-   # Windows:
-   .\venv_gemini\Scripts\activate
-   # Linux/macOS:
-   # source venv_gemini/bin/activate
-   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-   # Terminal 2: Stable Audio (port 8001)
-   cd backend
-   # Windows:
-   .\venv_stableaudio\Scripts\activate
-   # Linux/macOS:
-   # source venv_stableaudio/bin/activate
-   python -m uvicorn app.main_stable_audio:app --host 0.0.0.0 --port 8001
-   ```
-
-2. **Start frontend**
-   ```bash
-   cd ambiance-weaver-react
-   npm start
-   ```
-
-3. **Access the application**
-   - Frontend: http://localhost:3000
-   - Main API: http://localhost:8000
-   - Stable Audio: http://localhost:8001
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create `.env` files in both `backend/` and `ambiance-weaver-react/` directories:
-
-**Backend (.env)**
 ```env
 GOOGLE_API_KEY=your-google-api-key
 STABILITY_API_KEY=your-stability-api-key
+SUPABASE_URL=your-supabase-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
 HF_TOKEN=your-hugging-face-token
-FFMPEG_PATH=C:\ffmpeg\bin
+STABLE_AUDIO_MODEL=stabilityai/stable-audio-3-small-sfx
+STABLE_AUDIO_DISPLAY_NAME=Stable Audio 3 Small SFX
+STABLE_AUDIO_MAX_DURATION=11.0
+CORS_ORIGINS=http://localhost:3000,https://yaxuanm.github.io
 ```
 
-**Frontend (.env)**
+Frontend:
+
 ```env
 REACT_APP_GEMINI_API_URL=http://localhost:8000
 REACT_APP_STABLE_AUDIO_API_URL=http://localhost:8001
 REACT_APP_FRONTEND_URL=http://localhost:3000
 ```
 
-## 📚 Documentation
+## Deployment Options
 
-- [Deployment Guide](DEPLOYMENT.md) - Complete deployment instructions
-- [Cross-Platform Deployment](DEPLOYMENT_CROSS_PLATFORM.md) - Multi-OS deployment guide
-- [Start Instructions](start_instructions.txt) - Detailed setup guide
-- [Environment Setup](backend/README_ENVIRONMENTS.md) - Environment configuration
+### Portfolio deployment, zero cost
 
-## 🛠️ Development
+- Frontend: GitHub Pages.
+- Audio: pre-generated sample clips or a manually started local/Colab runtime.
+- Best for: portfolio review, stable links, no ongoing hosting bill.
 
-### Project Structure
+### Live demo deployment, low cost
 
-- **Frontend**: React with TypeScript, Material-UI components
-- **Backend**: FastAPI with async/await support
-- **AI Services**: Gemini for text processing, Stable Audio for sound generation
-- **Storage**: Supabase for cloud storage
+- Frontend: GitHub Pages.
+- Stable Audio 3 demo: Hugging Face Space with ZeroGPU if the account supports
+  hosting ZeroGPU Spaces, or temporary paid GPU hardware for presentations.
+- Best for: interviews, demos, short review windows.
 
-### Key Components
+### Production-style deployment
 
-- `ChatScreen.tsx` - Main interaction interface
-- `Player.tsx` - Audio playback component
-- `main.py` - Primary API endpoints
-- `main_stable_audio.py` - Stable Audio service
-- `ai_service.py` - AI integration layer
+- Frontend: GitHub Pages, Vercel, or Netlify.
+- Main API: Render, Fly.io, Railway, or another CPU web service.
+- Audio generation: serverless GPU runtime such as Modal, with scale-to-zero and
+  prompt-result caching.
+- Storage: Supabase bucket for generated media.
 
-## 🚀 Deployment
+## Verification
 
-For production deployment, see [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions including:
+Useful checks before publishing:
 
-- Environment setup
-- Service configuration
-- Performance optimization
-- Troubleshooting guide
+```bash
+cd ambiance-weaver-react
+CI=true npm test -- --watchAll=false
+CI=true npm run build
 
-## 🤝 Contributing
+cd ../backend
+python -m py_compile app/main.py app/main_stable_audio.py app/services/stable_audio_service.py
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+## License And Model Terms
 
-## 📄 License
+The application code is licensed under the MIT License unless otherwise noted.
 
-This project is licensed under the MIT License for the application code.
+Model and service usage is governed by each provider's terms:
 
-**AI Model Licenses:**
-- **Stable Audio**: Uses Stability AI Community License Agreement
-  - Free for research, non-commercial, and limited commercial use (organizations with <$1M annual revenue)
-  - Commercial licensing required for organizations with >$1M annual revenue
-  - See [Stability AI License](https://huggingface.co/stabilityai/stable-audio-open-small/blob/main/LICENSE) for full terms
+- Stable Audio 3: Stability AI Community License and the Hugging Face gated
+  model terms.
+- Google Gemini: Google API terms.
+- Stability image generation: Stability AI API terms.
+- Edge TTS and Supabase: their respective service terms.
 
-- **Google Gemini**: Subject to Google's API Terms of Service
-  - Requires valid Google API key
-  - Usage subject to Google's rate limits and terms
-
-## 🙏 Acknowledgments
-
-- [Google Gemini AI](https://ai.google.dev/) for text processing
-- [Stability AI](https://stability.ai/) for audio generation
-- React and FastAPI communities
-- All contributors and testers
-
----
-
-**Nightingale** - Let sound touch the soul 🎵
+Commercial use of generated audio should be reviewed against Stability AI's
+current license terms before launch.
