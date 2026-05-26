@@ -3,7 +3,10 @@ import torch
 import torchaudio
 from einops import rearrange
 from stable_audio_tools import get_pretrained_model
-from stable_audio_tools.inference.generation import generate_diffusion_cond
+from stable_audio_tools.inference.generation import (
+    generate_diffusion_cond,
+    generate_diffusion_cond_inpaint,
+)
 from typing import Optional, Dict, Any
 import time
 import uuid
@@ -11,6 +14,12 @@ import uuid
 class StableAudioService:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model_name = os.environ.get(
+            "STABLE_AUDIO_MODEL",
+            "stabilityai/stable-audio-3-small-sfx",
+        )
+        self.display_name = os.environ.get("STABLE_AUDIO_DISPLAY_NAME", "Stable Audio 3 Small SFX")
+        self.max_duration = float(os.environ.get("STABLE_AUDIO_MAX_DURATION", "11.0"))
         self.model = None
         self.model_config = None
         self.sample_rate = None
@@ -40,6 +49,7 @@ class StableAudioService:
             print("[WARN] Warning: HF_TOKEN environment variable not set")
         
         print(f"StableAudioService initialized on device: {self.device}")
+        print(f"Stable Audio model: {self.model_name}")
     
     def _optimize_prompt_for_stable_audio(self, prompt: str) -> str:
         """
@@ -100,12 +110,12 @@ class StableAudioService:
         return optimized
     
     def load_model(self):
-        """Load Stable Audio Open Small model"""
+        """Load the configured Stable Audio model."""
         if self.is_loaded:
             return
             
         try:
-            print("Loading Stable Audio Open Small model...")
+            print(f"Loading {self.display_name} model ({self.model_name})...")
             start_time = time.time()
             
             # === Fix: Set random seed before model loading ===
@@ -134,17 +144,21 @@ class StableAudioService:
             os.environ['HUGGING_FACE_HUB_TOKEN'] = hf_token
             
             # 下载并加载模型
-            self.model, self.model_config = get_pretrained_model("stabilityai/stable-audio-open-small")
+            self.model, self.model_config = get_pretrained_model(self.model_name)
             self.sample_rate = self.model_config["sample_rate"]
             self.sample_size = self.model_config["sample_size"]
 
-            # === 关键修复：强制float32，避免CPU卡死 ===
+            # === 关键修复：CPU 使用 float32；CUDA 上 SA3 官方示例使用 float16 以省显存 ===
             try:
-                self.model.pretransform.model_half = False
-                self.model = self.model.to(torch.float32)
-                print("[INFO] 强制模型为float32 (CPU友好)")
+                if self.device == "cuda":
+                    self.model = self.model.to(torch.float16)
+                    print("[INFO] CUDA detected; using float16 for lower VRAM usage")
+                else:
+                    self.model.pretransform.model_half = False
+                    self.model = self.model.to(torch.float32)
+                    print("[INFO] Using float32 for CPU compatibility")
             except Exception as e:
-                print("[WARN] 设置float32失败:", e)
+                print("[WARN] Failed to set model precision:", e)
             # === END ===
 
             # 将模型移动到指定设备
@@ -172,7 +186,7 @@ class StableAudioService:
         
         Args:
             prompt: 文本描述
-            duration: 音频时长（秒），最大11秒
+            duration: 音频时长（秒），由 STABLE_AUDIO_MAX_DURATION 控制上限
             steps: 扩散步数
             cfg_scale: CFG缩放因子
             sampler_type: 采样器类型
@@ -183,8 +197,8 @@ class StableAudioService:
         if not self.is_loaded:
             self.load_model()
         
-        # 限制时长在模型范围内
-        duration = min(duration, 11.0)
+        # 限制 demo 生成时长，避免误触发过长生成导致成本和等待时间变高
+        duration = min(duration, self.max_duration)
         
         # 优化 prompt 以适应 Stable Audio 模型的特性
         optimized_prompt = self._optimize_prompt_for_stable_audio(prompt)
@@ -217,7 +231,8 @@ class StableAudioService:
             
             # 生成立体声音频
             try:
-                output = generate_diffusion_cond(
+                generator = generate_diffusion_cond_inpaint if self._uses_inpaint_generation else generate_diffusion_cond
+                output = generator(
                     self.model,
                     steps=steps,
                     cfg_scale=cfg_scale,
@@ -238,7 +253,8 @@ class StableAudioService:
                         torch.cuda.manual_seed(123)
                     
                     # 重试生成
-                    output = generate_diffusion_cond(
+                    generator = generate_diffusion_cond_inpaint if self._uses_inpaint_generation else generate_diffusion_cond
+                    output = generator(
                         self.model,
                         steps=steps,
                         cfg_scale=cfg_scale,
@@ -358,14 +374,20 @@ class StableAudioService:
     def get_model_info(self) -> Dict[str, Any]:
         """获取模型信息"""
         return {
-            "model_name": "Stable Audio Open Small",
+            "model_name": self.display_name,
+            "model_id": self.model_name,
             "device": self.device,
             "is_loaded": self.is_loaded,
             "sample_rate": self.sample_rate,
             "sample_size": self.sample_size,
-            "max_duration": 11.0,
+            "max_duration": self.max_duration,
             "supported_sampler_types": ["pingpong", "ddpm", "ddim"]
         }
+
+    @property
+    def _uses_inpaint_generation(self) -> bool:
+        """Stable Audio 3 model cards use the inpaint generation helper."""
+        return "stable-audio-3" in self.model_name.lower()
 
 # 创建单例实例
 stable_audio_service = StableAudioService() 
