@@ -187,8 +187,8 @@ const Player: React.FC<PlayerProps> = ({
         title: 'My Nightingale Soundscape'
       };
       
-      // 生成分享 URL，使用当前路径
-      const baseUrl = window.location.origin + '/player';
+      // 生成分享 URL，兼容 GitHub Pages 的仓库子路径
+      const baseUrl = `${window.location.origin}${process.env.PUBLIC_URL}/player`;
       const params = new URLSearchParams();
       
       if (shareData.audio_url) {
