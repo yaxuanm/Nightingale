@@ -1,0 +1,12 @@
+stable-audio-tools==0.0.19
+gradio==5.35.0
+spaces==0.35.0
+torch==2.8.0
+torchaudio==2.8.0
+transformers==4.53.1
+huggingface-hub==0.33.2
+einops==0.8.1
+numpy==1.26.4
+soundfile==0.13.1
+pydub==0.25.1
+tqdm==4.67.1
