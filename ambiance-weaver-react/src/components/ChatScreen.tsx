@@ -69,6 +69,66 @@ interface ChatScreenProps {
   usePageLayout?: boolean;
 }
 
+const AVAILABLE_DURATIONS = [10, 30, 60, 120, 180];
+
+const demoAudioSamples = [
+  { keywords: ['rain', 'focus', 'storm'], file: 'rain-window-focus.wav' },
+  { keywords: ['ocean', 'wave', 'meditat', 'coast'], file: 'ocean-breath-meditation.wav' },
+  { keywords: ['library', 'book', 'page', 'quiet'], file: 'midnight-library.wav' },
+  { keywords: ['summer', 'cicada', 'garden', 'night'], file: 'warm-summer-evening.wav' },
+];
+
+const demoAudioForPrompt = (prompt: string): string => {
+  const normalizedPrompt = prompt.toLowerCase();
+  const sample = demoAudioSamples.find(({ keywords }) => keywords.some((keyword) => normalizedPrompt.includes(keyword)))
+    || demoAudioSamples[0];
+  return `${process.env.PUBLIC_URL}/demo-audio/${sample.file}`;
+};
+
+const fallbackBackgroundForPrompt = (prompt: string): string => {
+  const normalizedPrompt = prompt.toLowerCase();
+  if (/(forest|garden|bird|wind|cicada|nature)/.test(normalizedPrompt)) {
+    return `${process.env.PUBLIC_URL}/forest.png`;
+  }
+  if (/(cafe|coffee|espresso|study|work)/.test(normalizedPrompt)) {
+    return `${process.env.PUBLIC_URL}/coffee.png`;
+  }
+  return `${process.env.PUBLIC_URL}/cover.png`;
+};
+
+const createSoundscapePrompt = (input: string, mood: string, elements: string[]): string => {
+  const selectedElements = elements.length ? elements.join(', ') : 'gentle environmental texture';
+  return `${input || 'A personal ambient soundscape'}. Mood: ${mood || 'calm'}. Key sound elements: ${selectedElements}. Immersive, natural, and well-balanced.`;
+};
+
+const createMusicPrompt = (
+  input: string,
+  genre?: string,
+  instruments: string[] = [],
+  tempo?: string,
+  usage?: string,
+): string => {
+  const instrumentText = instruments.length ? instruments.join(', ') : 'soft synthesizer textures';
+  return `${genre || 'Ambient'} music for ${usage || 'relaxation'}. ${tempo || 'Slow'} tempo. Instruments: ${instrumentText}. Inspired by: ${input || 'a calm, immersive scene'}. Instrumental, atmospheric, and gently evolving.`;
+};
+
+const applyLocalEdit = (prompt: string, instruction: string): string => {
+  const normalizedInstruction = instruction.toLowerCase();
+  if (normalizedInstruction.includes('shorter') || normalizedInstruction.includes('shorten')) {
+    return prompt.split('.').slice(0, 2).join('.').trim() + '.';
+  }
+  if (normalizedInstruction.includes('longer') || normalizedInstruction.includes('expand')) {
+    return `${prompt} Add nuanced layers, gradual transitions, and a spacious sense of depth.`;
+  }
+  if (normalizedInstruction.includes('poetic') || normalizedInstruction.includes('poetry')) {
+    return `${prompt} Let the sound unfold with a gentle, cinematic sense of wonder.`;
+  }
+  if (normalizedInstruction.includes('dramatic') || normalizedInstruction.includes('intense')) {
+    return `${prompt} Build a more dramatic arc while keeping the soundscape cohesive.`;
+  }
+  return `${prompt} ${instruction}`.trim();
+};
+
 const AiAvatar = styled(Box)(({ theme }) => ({
   width: 64,
   height: 64,
@@ -248,6 +308,72 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const [finalPrompt, setFinalPrompt] = useState<string>('');
   const [showPromptEdit, setShowPromptEdit] = useState(false);
   const [aiEditInput, setAiEditInput] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState(30);
+
+  const generateAudio = async (prompt: string, duration: number): Promise<{ url: string; isSample: boolean }> => {
+    try {
+      const response = await fetch(`${API_CONFIG.STABLE_AUDIO_API_BASE_URL}/api/generate-audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: prompt, duration }),
+        signal: abortControllerRef.current?.signal,
+      });
+      if (!response.ok) {
+        throw new Error('Audio service unavailable');
+      }
+      const data = await response.json();
+      if (!data.audio_url) {
+        throw new Error('Audio service did not return a file');
+      }
+      return { url: data.audio_url, isSample: false };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
+      return { url: demoAudioForPrompt(prompt), isSample: true };
+    }
+  };
+
+  const generateBackground = async (description: string): Promise<string> => {
+    try {
+      const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description }),
+        signal: abortControllerRef.current?.signal,
+      });
+      const data = response.ok ? await response.json() : {};
+      return data.image_url || fallbackBackgroundForPrompt(description);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
+      return fallbackBackgroundForPrompt(description);
+    }
+  };
+
+  const durationPicker = (
+    <Box sx={{ mb: 2.5 }}>
+      <Typography variant="body2" sx={{ mb: 1, color: 'white', opacity: 0.8 }}>
+        Length: {selectedDuration < 60 ? `${selectedDuration} seconds` : `${selectedDuration / 60} minute${selectedDuration === 60 ? '' : 's'}`}
+      </Typography>
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        {AVAILABLE_DURATIONS.map((duration) => (
+          <Chip
+            key={duration}
+            label={duration < 60 ? `${duration}s` : `${duration / 60} min`}
+            onClick={() => setSelectedDuration(duration)}
+            color={selectedDuration === duration ? 'primary' : 'default'}
+            variant={selectedDuration === duration ? 'filled' : 'outlined'}
+            sx={{ color: selectedDuration === duration ? 'white' : 'rgba(255,255,255,0.86)' }}
+          />
+        ))}
+      </Stack>
+      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'rgba(255,255,255,0.6)' }}>
+        Stable Audio 2.5 supports up to 3 minutes per generation.
+      </Typography>
+    </Box>
+  );
 
   // 2. 修改 handleOptionSelect，移除 setShowPromptEdit、setFinalPrompt、setIsPromptGenerated
   const handleOptionSelect = (
@@ -355,18 +481,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGenerateStoryScript = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-scene`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: initialInput,
-          mode: 'story',
-          mood: audioChoices.audio_mood,
-          elements: audioChoices.audio_elements,
-        }),
-      });
-      const data = await res.json();
-      setFinalPrompt(data.narrative_script || '');
+      try {
+        const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-scene`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: initialInput,
+            mode: 'story',
+            mood: audioChoices.audio_mood,
+            elements: audioChoices.audio_elements,
+          }),
+        });
+        const data = res.ok ? await res.json() : {};
+        setFinalPrompt(data.narrative_script || createSoundscapePrompt(initialInput, audioChoices.audio_mood || '', audioChoices.audio_elements));
+      } catch {
+        setFinalPrompt(createSoundscapePrompt(initialInput, audioChoices.audio_mood || '', audioChoices.audio_elements));
+      }
       setShowPromptEdit(true); // 只弹出编辑弹窗
     } finally {
       setIsLoading(false);
@@ -377,68 +507,34 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleAiEdit = async () => {
     if (!aiEditInput.trim() || isLoading) return;
 
-
     setIsLoading(true);
     try {
-      // 区分story模式和非story模式
       const isStory = mode === 'story';
       const contentType = isStory ? 'narrative' : 'prompt';
+      let editedPrompt = applyLocalEdit(finalPrompt, aiEditInput);
 
-
-      const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/edit-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          current_prompt: finalPrompt,
-          edit_instruction: aiEditInput,
-          mode: mode,
-          is_story: isStory,
-          content_type: contentType
-        }),
-      });
-
-
-      if (!response.ok) {
-        throw new Error('Failed to edit prompt');
+      try {
+        const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/edit-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current_prompt: finalPrompt,
+            edit_instruction: aiEditInput,
+            mode,
+            is_story: isStory,
+            content_type: contentType,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          editedPrompt = data.edited_prompt || editedPrompt;
+        }
+      } catch {
+        // Editing continues locally whenever the optional Gemini service is unavailable.
       }
-
-
-      const data = await response.json();
-      setFinalPrompt(data.edited_prompt);
-      setAiEditInput(''); // 清空输入框
-
-
-      // 添加用户消息到聊天记录
-      setMessages((prev) => [
-        ...prev,
-        { sender: 'user', text: aiEditInput, isUser: true },
-        { sender: 'ai', text: `I've updated your ${contentType}: "${data.edited_prompt}"`, isUser: false }
-      ]);
-
-
-    } catch (error) {
-      console.error('Error editing prompt:', error);
-      // 如果API调用失败，使用简单的文本替换作为fallback
-      const lowerInstruction = aiEditInput.toLowerCase();
-      let editedPrompt = finalPrompt;
-
-
-      if (lowerInstruction.includes('shorter') || lowerInstruction.includes('shorten')) {
-        editedPrompt = finalPrompt.split('.').slice(0, 2).join('.') + '.';
-      } else if (lowerInstruction.includes('longer') || lowerInstruction.includes('expand')) {
-        editedPrompt = finalPrompt + ' with more detailed atmospheric elements.';
-      } else if (lowerInstruction.includes('poetic') || lowerInstruction.includes('poetry')) {
-        editedPrompt = finalPrompt.replace(/\./g, ', like poetry in motion.');
-      } else if (lowerInstruction.includes('dramatic') || lowerInstruction.includes('intense')) {
-        editedPrompt = finalPrompt + ' with heightened dramatic tension.';
-      }
-
 
       setFinalPrompt(editedPrompt);
       setAiEditInput('');
-
-
-      const contentType = mode === 'story' ? 'narrative' : 'description';
       setMessages((prev) => [
         ...prev,
         { sender: 'user', text: aiEditInput, isUser: true },
@@ -453,30 +549,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGeneratePrompt = async () => {
     setIsLoading(true);
     try {
-      // 收集参数
       const userInput = initialInput;
       const mood = audioChoices.audio_mood || '';
       const elements = audioChoices.audio_elements;
-      // 调用后端LLM生成自然语言prompt
-      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_input: userInput,
-          mood: mood,
-          elements: elements,
-          mode: mode
-        })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to generate prompt');
+      let prompt = createSoundscapePrompt(userInput, mood, elements);
+      try {
+        const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_input: userInput, mood, elements, mode })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          prompt = data.prompt || prompt;
+        }
+      } catch {
+        // The local prompt builder below keeps the flow usable without a backend.
       }
-      const data = await res.json();
-      setFinalPrompt(data.prompt || '');
+      setFinalPrompt(prompt);
       setShowPromptEdit(true); // 显示编辑弹窗
     } catch (error) {
-      console.error('Error generating prompt:', error);
-      setFinalPrompt('');
+      setFinalPrompt(createSoundscapePrompt(initialInput, audioChoices.audio_mood || '', audioChoices.audio_elements));
       setShowPromptEdit(true);
     } finally {
       setIsLoading(false);
@@ -510,61 +603,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
         initialInput,
         structuredPrompt
       ].filter(Boolean).join('\n\n');
-      if (mode === 'story') {
-        const storyResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/create-story`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: storyPrompt,
-            original_description: initialInput || ''
-          }),
-          signal: abortControllerRef.current.signal,
-        });
-        if (!storyResponse.ok) {
-          const errorData = await storyResponse.json();
-          throw new Error(errorData.detail || 'Failed to create story');
-        }
-        const storyData = await storyResponse.json();
-        setCurrentAudioUrl(storyData.audio_url);
+      const [audio, backgroundUrl] = await Promise.all([
+        generateAudio(storyPrompt, selectedDuration),
+        generateBackground(initialInput || finalPrompt),
+      ]);
+      setCurrentAudioUrl(audio.url);
+      setCurrentBackgroundImageUrl(backgroundUrl);
+      if (audio.isSample) {
         setMessages((prevMessages) => [
           ...prevMessages,
-          { sender: 'ai' as Message['sender'], text: 'Your personalized story with narration and soundscape is ready! What would you like to do?', isUser: false },
+          { sender: 'ai' as Message['sender'], text: 'The audio service is not configured yet, so this is a prepared demo sample.', isUser: false },
         ]);
-      } else {
-        const audioResponse = await fetch(`${API_CONFIG.STABLE_AUDIO_API_BASE_URL}/api/generate-audio`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            description: finalPrompt, // 使用用户编辑后的prompt
-            duration: 10,
-            is_poem: false,
-            mode: mode,
-            effects_config: null,
-          }),
-          signal: abortControllerRef.current.signal,
-        });
-        if (!audioResponse.ok) {
-          const errorData = await audioResponse.json();
-          throw new Error(errorData.detail || 'Failed to generate audio');
-        }
-        const audioData = await audioResponse.json();
-        setCurrentAudioUrl(audioData.audio_url);
       }
-
-
-      // 1.2 自动生成背景图片
-      const backgroundDescription = initialInput || 'a beautiful soundscape background';
-              const bgResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: backgroundDescription }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (bgResponse.ok) {
-        const bgData = await bgResponse.json();
-        setCurrentBackgroundImageUrl(bgData.image_url);
-      }
-      // 1.3 完成后显示播放/再生成按钮
       setShowPlaybackButtons(true); // 只显示 Enter Player/Regenerate 按钮
       setCurrentStage('complete');
     } catch (err) {
@@ -605,50 +655,28 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
 
 
 
-  // 恢复 AI 选项 fetch 逻辑，去掉 audio_atmosphere 阶段
   useEffect(() => {
-    if (currentStage === 'audio_mood') {
-      setIsLoading(true);
-      fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-options`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          input: initialInput,
-          stage: 'mood',
-        }),
-      })
-        .then(res => res.json())
-        .then(data => setMoodOptions(data.options || defaultOptions.audio_mood))
-        .catch(() => setMoodOptions(defaultOptions.audio_mood))
-        .finally(() => setIsLoading(false));
-    }
-    if (currentStage === 'audio_elements') {
-      setIsLoading(true);
-      fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-options`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          input: initialInput,
-          stage: 'elements',
-        }),
-      })
-        .then(res => res.json())
-        .then(data => setElementOptions(data.options || defaultOptions.audio_elements))
-        .catch(() => setElementOptions(defaultOptions.audio_elements))
-        .finally(() => setIsLoading(false));
-    }
-  }, [currentStage, mode, initialInput, defaultOptions]);
+    const loadOptions = async (stage: 'mood' | 'elements', fallback: string[], setter: (options: string[]) => void) => {
+      try {
+        const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-options`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode, input: initialInput, stage }),
+        });
+        const data = await response.json();
+        setter(Array.isArray(data.options) && data.options.length ? data.options : fallback);
+      } catch {
+        setter(fallback);
+      }
+    };
 
-  // 添加调试useEffect
-  useEffect(() => {
-    if (currentStage === 'audio_elements') {
-      console.log('Debug - currentStage:', currentStage);
-      console.log('Debug - elementOptions:', elementOptions);
-      console.log('Debug - audioChoices.audio_elements:', audioChoices.audio_elements);
+    if (currentStage === 'audio_mood') {
+      void loadOptions('mood', defaultOptions.audio_mood, setMoodOptions);
     }
-  }, [currentStage, elementOptions, audioChoices.audio_elements]);
+    if (currentStage === 'audio_elements') {
+      void loadOptions('elements', defaultOptions.audio_elements, setElementOptions);
+    }
+  }, [currentStage, defaultOptions, initialInput, mode]);
 
   useEffect(() => {
     if (currentStage === 'music_usage') {
@@ -663,50 +691,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       setShowPromptEdit(false);
       abortControllerRef.current = new AbortController();
 
-      // 旁白内容：用户在AI编辑弹窗中编辑的内容
       const narrative = finalPrompt;
-
-      // 1. 先用musicChoices和initialInput生成music prompt（调用后端）
-      let musicPrompt = '';
-      try {
-        const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/music-prompt`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            genre: musicChoices.genre,
-            tempo: musicChoices.tempo,
-            instruments: musicChoices.instruments,
-            usage: mode,
-            input: initialInput,
-          }),
-        });
-        const data = await res.json();
-        musicPrompt = data.prompt || '';
-      } catch (e) {
-        musicPrompt = '';
-      }
-
-      // 2. 生成story+music
-      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/create-story-music`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          narrative,
-          music_prompt: musicPrompt,
-          duration: 30,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || 'Failed to generate story music');
-      }
-      const data = await res.json();
-      setCurrentMusicUrl(data.audio_url);
-      setFinalPrompt(data.narrative_script || narrative);
+      const musicPrompt = createMusicPrompt(
+        initialInput,
+        musicChoices.genre,
+        musicChoices.instruments,
+        musicChoices.tempo,
+        'storytelling',
+      );
+      const [audio, backgroundUrl] = await Promise.all([
+        generateAudio(`${narrative}\n\n${musicPrompt}`, selectedDuration),
+        generateBackground(initialInput || narrative),
+      ]);
+      setCurrentMusicUrl(audio.url);
+      setCurrentBackgroundImageUrl(backgroundUrl);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: 'ai', text: 'Your personalized story with music is ready! What would you like to do?', isUser: false },
+        { sender: 'ai', text: audio.isSample ? 'The audio service is not configured yet, so this is a prepared demo sample.' : 'Your music is ready!', isUser: false },
       ]);
       setShowPlaybackButtons(true);
       setCurrentStage('complete');
@@ -729,24 +730,30 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
   const handleGenerateMusicPrompt = async () => {
     setIsLoading(true);
     try {
-      // 生成音乐描述prompt
-      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/music-prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          genre: musicChoices.genre,
-          tempo: musicChoices.tempo,
-          instruments: musicChoices.instruments,
-          usage: musicChoices.usage,
-          input: initialInput,
-        }),
-      });
-      const data = await res.json();
-      setFinalPrompt(data.prompt || '');
+      let prompt = createMusicPrompt(initialInput, musicChoices.genre, musicChoices.instruments, musicChoices.tempo, musicChoices.usage);
+      try {
+        const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/music-prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            genre: musicChoices.genre,
+            tempo: musicChoices.tempo,
+            instruments: musicChoices.instruments,
+            usage: musicChoices.usage,
+            input: initialInput,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          prompt = data.prompt || prompt;
+        }
+      } catch {
+        // The local prompt builder above is the offline fallback.
+      }
+      setFinalPrompt(prompt);
       setShowPromptEdit(true); // 显示编辑弹窗
     } catch (error) {
-      console.error('Error generating music prompt:', error);
-      setFinalPrompt('');
+      setFinalPrompt(createMusicPrompt(initialInput, musicChoices.genre, musicChoices.instruments, musicChoices.tempo, musicChoices.usage));
       setShowPromptEdit(true);
     } finally {
       setIsLoading(false);
@@ -768,41 +775,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
       ]);
 
 
-      // 调用 /api/generate-music 生成音频
-      const res = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-music`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: finalPrompt, // 使用用户编辑后的prompt
-          duration: 20,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || 'Failed to generate music');
-      }
-      const data = await res.json();
-      setCurrentMusicUrl(data.audio_url);
-
-
-      // Generate background image for music mode
-      const backgroundDescription = initialInput || 'a beautiful music background';
-      const bgResponse = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-background`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: backgroundDescription }),
-        signal: abortControllerRef.current.signal,
-      });
-      if (bgResponse.ok) {
-        const bgData = await bgResponse.json();
-        setCurrentBackgroundImageUrl(bgData.image_url);
-      }
+      const [audio, backgroundUrl] = await Promise.all([
+        generateAudio(finalPrompt, selectedDuration),
+        generateBackground(initialInput || finalPrompt),
+      ]);
+      setCurrentMusicUrl(audio.url);
+      setCurrentBackgroundImageUrl(backgroundUrl);
 
 
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: 'ai', text: 'Your personalized music is ready! What would you like to do?', isUser: false },
+        { sender: 'ai', text: audio.isSample ? 'The audio service is not configured yet, so this is a prepared demo sample.' : 'Your personalized music is ready! What would you like to do?', isUser: false },
       ]);
       setShowPlaybackButtons(true);
       setCurrentStage('complete');
@@ -1183,9 +1166,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             }}
             InputProps={{
               style: { color: 'white' },
-              disableUnderline: true,
-            }}
+            disableUnderline: true,
+          }}
           />
+          {durationPicker}
           <Button
             variant="contained"
             onClick={handleGenerate}
@@ -1298,9 +1282,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ usePageLayout = true }) => {
             }}
             InputProps={{
               style: { color: 'white' },
-              disableUnderline: true,
-            }}
+            disableUnderline: true,
+          }}
           />
+          {durationPicker}
           <Button
             variant="contained"
             onClick={

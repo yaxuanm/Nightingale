@@ -99,6 +99,19 @@ This is appropriate for portfolio demos and sample generation. It is not a
 production guarantee because it depends on Hugging Face ZeroGPU queue capacity,
 quota, and the public Space API remaining compatible.
 
+## Option 2B: Owner-managed Stability API key
+
+For a no-signup public experience, set `STABILITY_API_KEY` in the backend's
+secret manager. The browser never receives the key; the backend uses it to call
+Stable Audio 2.5 directly. Limit the UI to 180 seconds per generation, which is
+the three-minute maximum for this model path, and rate-limit this endpoint
+before making the public site widely available.
+
+- Store the key only as a deployment secret, never in the React build, a repo,
+  browser storage, or logs.
+- The site owner pays for generated audio, so add a per-IP or per-session limit
+  before sharing the production URL broadly.
+
 ## Option 3: Production-Style Live Generation
 
 Use this when the project needs reliable real-time generation.

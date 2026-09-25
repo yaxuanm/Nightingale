@@ -122,6 +122,15 @@ The proxy is suitable for demos and sample generation, but it depends on
 Hugging Face queue availability and account quota. For production, use a
 dedicated GPU runtime or a serverless GPU provider.
 
+### Owner-managed Stable Audio
+
+The public generation screen never asks visitors for an API key. Configure
+`STABILITY_API_KEY` as a backend secret and the service calls Stable Audio 2.5
+directly; no local GPU is required. The UI offers 10 seconds, 30 seconds,
+1 minute, 2 minutes, and 3 minutes—the maximum length supported by this model
+path. If the secret is absent or the service is unavailable, the app clearly
+falls back to a prepared sample rather than presenting it as a new generation.
+
 To run the model directly instead of proxying the official Space, set:
 
 ```env

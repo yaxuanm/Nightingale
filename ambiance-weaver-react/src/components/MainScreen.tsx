@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -8,7 +8,6 @@ import {
   Popover,
   Chip,
   Stack,
-  CircularProgress,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -18,11 +17,37 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageLayout from './PageLayout';
 import { uiSystem } from '../theme/uiSystem';
-import { API_CONFIG } from '../config/api';
 
 interface MainScreenProps {
   usePageLayout?: boolean;
 }
+
+const inspirationByMode: Record<string, string[]> = {
+  focus: [
+    'Rain tapping against a window in a quiet room',
+    'Low café murmur and a distant espresso machine',
+    'A calm library with soft page turns',
+    'Gentle forest rain with no thunder',
+  ],
+  sleep: [
+    'Warm summer night with cicadas and a soft breeze',
+    'Slow ocean waves under a moonlit sky',
+    'A fireplace in a quiet wooden cabin',
+    'Light rain on a tent in the woods',
+  ],
+  asmr: [
+    'Soft page turning in a quiet library',
+    'Gentle rain on a window',
+    'A brush moving slowly across fabric',
+    'Quiet keyboard typing in a warm room',
+  ],
+  default: [
+    'A rainy window for deep focus',
+    'A summer evening from childhood',
+    'A quiet library after midnight',
+    'Ocean air for meditation',
+  ],
+};
 
 const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -30,69 +55,17 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = (location.state as { mode: string } | null) || { mode: 'default' };
-
-
-
-  // 新增状态用于动态inspiration chips
-  // inspiration chips 状态，初始为默认prompts
-  const [inspirationChips, setInspirationChips] = useState<string[]>([]);
-  const [isLoadingChips, setIsLoadingChips] = useState(false);
+  const [inspirationChips, setInspirationChips] = useState<string[]>(inspirationByMode[mode] || inspirationByMode.default);
 
   // Story Mode: custom prompt and UI
   const isStoryMode = mode === 'story';
 
-  // 在story模式下重置inspiration chips状态
   useEffect(() => {
-    if (isStoryMode) {
-      setInspirationChips([]);
-      setIsLoadingChips(false);
-      fetchedRef.current = false;
-    }
-  }, [isStoryMode]);
-
-  // 获取随机的inspiration chips，支持是否显示loading
-  const fetchInspirationChips = async (showLoading = false) => {
-    if (showLoading) setIsLoadingChips(true);
-    try {
-      const response = await fetch(`${API_CONFIG.GEMINI_API_BASE_URL}/api/generate-inspiration-chips`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mode: mode,
-          user_input: inputValue,
-        }),
-      });
-
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.chips && Array.isArray(data.chips)) {
-          setInspirationChips(data.chips);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch inspiration chips:', error);
-    } finally {
-      if (showLoading) setIsLoadingChips(false);
-    }
-  };
-
-  // 防止 inspirations 自动刷新两次
-  // 用 useRef 保证 fetchInspirationChips 只在首次加载时调用
-  const fetchedRef = useRef(false);
-  useEffect(() => {
-    // 只在首次加载时获取inspiration chips
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchInspirationChips(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setInspirationChips(inspirationByMode[mode] || inspirationByMode.default);
   }, [mode]);
 
-  // 刷新inspiration chips（手动刷新时才显示loading）
   const handleRefreshChips = () => {
-      fetchInspirationChips(true);
+    setInspirationChips((current) => current.length > 1 ? [...current.slice(1), current[0]] : current);
   };
 
   const handleHelpClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -244,15 +217,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
             </Box>
           </Box>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mb: uiSystem.spacing.large, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-            {isLoadingChips ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <CircularProgress size={20} color="primary" />
-                <Typography variant="body2" sx={{ color: uiSystem.colors.white70 }}>
-                  Generating new inspirations...
-                </Typography>
-              </Box>
-            ) : (
-              inspirationChips.map((prompt, idx) => {
+            {inspirationChips.map((prompt, idx) => {
                 // 去掉末尾括号和模式标签
                 const cleanPrompt = prompt.replace(/\s*\([^)]*\)\s*$/, '');
                 return (
@@ -297,8 +262,7 @@ const MainScreen: React.FC<MainScreenProps> = ({ usePageLayout = true }) => {
                     }}
                   />
                 );
-              })
-            )}
+              })}
           </Stack>
         </Box>
         {/* Help Popover */}
