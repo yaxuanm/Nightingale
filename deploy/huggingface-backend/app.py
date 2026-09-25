@@ -32,7 +32,10 @@ STABILITY_AUDIO_API_URL = os.getenv(
     "STABILITY_AUDIO_API_URL",
     "https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio",
 )
-STABILITY_AUDIO_MODEL = os.getenv("STABILITY_AUDIO_MODEL", "stable-audio-2.5")
+# Keep this separate from the legacy STABLE_AUDIO_MODEL setting used by the
+# Hugging Face proxy fallback. Existing Spaces can retain that old setting
+# without changing which model the direct Stability API uses.
+STABILITY_API_MODEL = os.getenv("STABILITY_API_MODEL", "stable-audio-2.5")
 STABILITY_AUDIO_MAX_DURATION = float(os.getenv("STABILITY_AUDIO_MAX_DURATION", "180"))
 STABILITY_AUDIO_STEPS = int(os.getenv("STABILITY_AUDIO_STEPS", "8"))
 STABILITY_AUDIO_CFG_SCALE = float(os.getenv("STABILITY_AUDIO_CFG_SCALE", "1.0"))
@@ -249,7 +252,7 @@ def generate_audio_file_via_stability_api(
                 "steps": STABILITY_AUDIO_STEPS,
                 "cfg_scale": STABILITY_AUDIO_CFG_SCALE,
                 "output_format": "wav",
-                "model": STABILITY_AUDIO_MODEL,
+                "model": STABILITY_API_MODEL,
             },
             timeout=120,
         )
@@ -299,7 +302,7 @@ async def generate_audio_response(request: Request):
         if STABILITY_API_KEY:
             output_path, actual_duration = generate_audio_file_via_stability_api(STABILITY_API_KEY, prompt, duration)
             provider = "stability-api"
-            model = STABILITY_AUDIO_MODEL
+            model = STABILITY_API_MODEL
         else:
             output_path = generate_audio_file(prompt, duration, DEFAULT_STEPS, DEFAULT_CFG_SCALE, "pingpong")
             actual_duration = min(float(duration), MAX_DURATION)

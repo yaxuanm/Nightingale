@@ -131,6 +131,13 @@ directly; no local GPU is required. The UI offers 10 seconds, 30 seconds,
 path. If the secret is absent or the service is unavailable, the app clearly
 falls back to a prepared sample rather than presenting it as a new generation.
 
+The direct API model is configured independently of the optional legacy
+Hugging Face proxy setting:
+
+```env
+STABILITY_API_MODEL=stable-audio-2.5
+```
+
 To run the model directly instead of proxying the official Space, set:
 
 ```env

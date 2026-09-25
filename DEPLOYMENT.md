@@ -107,6 +107,10 @@ Stable Audio 2.5 directly. Limit the UI to 180 seconds per generation, which is
 the three-minute maximum for this model path, and rate-limit this endpoint
 before making the public site widely available.
 
+If the Space previously used the optional Hugging Face proxy, set
+`STABILITY_API_MODEL=stable-audio-2.5` as well. This keeps the direct API model
+independent from the proxy's legacy `STABLE_AUDIO_MODEL` setting.
+
 - Store the key only as a deployment secret, never in the React build, a repo,
   browser storage, or logs.
 - The site owner pays for generated audio, so add a per-IP or per-session limit
