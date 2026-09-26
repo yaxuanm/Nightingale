@@ -151,7 +151,6 @@ def gemini_background_image(description: str) -> Optional[bytes]:
             timeout=120,
         )
         if not response.ok:
-            print(f"Gemini background request failed with HTTP {response.status_code}")
             return None
         payload = response.json()
         image = payload.get("output_image") or payload.get("outputImage") or {}
@@ -160,7 +159,6 @@ def gemini_background_image(description: str) -> Optional[bytes]:
             return base64.b64decode(image_data)
         if isinstance(image_data, (bytes, bytearray)):
             return bytes(image_data)
-        print(f"Gemini background response has no image payload; keys={sorted(payload.keys())}")
     except Exception:
         # A missing image entitlement, quota issue, or model error should not
         # prevent the audio experience from using its local visual fallback.
