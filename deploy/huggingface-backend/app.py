@@ -47,6 +47,14 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 
+# OpenAI is the preferred provider for scene backgrounds. This key is an
+# owner-managed Hugging Face Space secret and is never returned to the browser.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2.5-flare")
+OPENAI_IMAGE_SIZE = os.getenv("OPENAI_IMAGE_SIZE", "1536x864")
+OPENAI_IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "low")
+
 
 app = FastAPI(title="Nightingale Backend", version="1.0.0")
 
@@ -166,6 +174,44 @@ def gemini_background_image(description: str) -> Optional[bytes]:
     return None
 
 
+def openai_background_image(description: str) -> Optional[bytes]:
+    """Create a fast, low-cost 16:9 player background with OpenAI Images."""
+    if not OPENAI_API_KEY:
+        return None
+    prompt = (
+        "Create a serene cinematic landscape background for an ambient-audio player. "
+        "No people, text, logos, watermarks, interface elements, or borders. "
+        f"Scene: {optimize_prompt(description)}"
+    )
+    try:
+        response = requests.post(
+            OPENAI_IMAGES_URL,
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_IMAGE_MODEL,
+                "prompt": prompt,
+                "size": OPENAI_IMAGE_SIZE,
+                "quality": OPENAI_IMAGE_QUALITY,
+                "output_format": "jpeg",
+                "output_compression": 75,
+                "n": 1,
+            },
+            timeout=120,
+        )
+        if not response.ok:
+            return None
+        images = response.json().get("data") or []
+        image_data = images[0].get("b64_json") if images and isinstance(images[0], dict) else None
+        return base64.b64decode(image_data) if isinstance(image_data, str) else None
+    except Exception:
+        # Keep the player usable if an owner quota, entitlement, or provider
+        # issue occurs; the frontend supplies its curated local fallback.
+        return None
+
+
 class AudioProviderError(RuntimeError):
     """A safe, user-facing audio provider error without credentials or response bodies."""
 
@@ -283,6 +329,8 @@ async def root():
         "stable_audio_provider": "stability-api" if STABILITY_API_KEY else "official-huggingface-space-proxy",
         "stable_audio_enabled": bool(STABILITY_API_KEY),
         "gemini_demo_enabled": bool(GEMINI_API_KEY),
+        "openai_image_enabled": bool(OPENAI_API_KEY),
+        "background_provider": "openai" if OPENAI_API_KEY else "gemini" if GEMINI_API_KEY else "local",
     }
 
 
@@ -293,6 +341,8 @@ async def health_check():
         "service": "nightingale-backend",
         "gemini_demo_enabled": bool(GEMINI_API_KEY),
         "stable_audio_enabled": bool(STABILITY_API_KEY),
+        "openai_image_enabled": bool(OPENAI_API_KEY),
+        "background_provider": "openai" if OPENAI_API_KEY else "gemini" if GEMINI_API_KEY else "local",
     }
 
 
@@ -396,7 +446,7 @@ async def generate_inspiration_chips(request: Request):
 async def generate_background(request: Request):
     data = await request.json()
     description = data.get("description") or "a calm ambient soundscape"
-    image_bytes = gemini_background_image(description)
+    image_bytes = openai_background_image(description) if OPENAI_API_KEY else gemini_background_image(description)
     if not image_bytes:
         return {"image_url": None}
     output_path = OUTPUT_DIR / f"background_{uuid.uuid4().hex[:10]}.jpg"
