@@ -137,7 +137,10 @@ def gemini_background_image(description: str) -> Optional[bytes]:
             },
             json={
                 "model": GEMINI_IMAGE_MODEL,
-                "input": prompt,
+                # The REST Interactions endpoint accepts structured content
+                # blocks, unlike the Python SDK convenience overload that
+                # also accepts a bare string.
+                "input": [{"type": "text", "text": prompt}],
                 "response_format": {
                     "type": "image",
                     "mime_type": "image/jpeg",
